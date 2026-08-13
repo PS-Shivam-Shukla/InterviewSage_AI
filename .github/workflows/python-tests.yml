@@ -11,19 +11,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
       - name: Install dependencies
         working-directory: backend
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install -r requirements-dev.txt
       - name: Install linting tools
         working-directory: backend
         run: |
-          pip install ruff black
+          pip install ruff black mypy
       - name: Run linter and formatter checks
         working-directory: backend
         run: |
@@ -31,11 +34,16 @@ jobs:
           black --check app || true
       - name: Run tests
         working-directory: backend
+        env:
+          ENVIRONMENT: test
+          SECRET_KEY: test-secret-key-for-ci-pipeline-execution-32bytes
+          DATABASE_URL: sqlite:///./ci_test.db
         run: |
-          pytest -q
+          pytest app/tests --cov=app --cov-report=term-missing
       - name: Upload coverage
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-html
           path: backend/htmlcov || true
+
