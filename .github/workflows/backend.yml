@@ -1,0 +1,94 @@
+name: Backend CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  lint-and-typecheck:
+    name: Code Quality & Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff black mypy
+          pip install -r backend/requirements.txt
+          pip install -r backend/requirements-dev.txt
+
+      - name: Run Ruff Linter
+        run: ruff check backend/app
+
+      - name: Run Black Code Formatter Check
+        run: black --check backend/app
+
+      - name: Run MyPy Type Checker
+        run: mypy backend/app
+
+  unit-and-integration-tests:
+    name: Unit & Integration Test Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install -r backend/requirements-dev.txt
+
+      - name: Execute Pytest Suite with Coverage
+        env:
+          PYTHONPATH: ./backend
+          ENVIRONMENT: test
+          SECRET_KEY: ci-test-secret-key-for-github-actions-32bytes
+        run: |
+          pytest backend/app/tests --cov=backend/app --cov-report=term-missing --cov-fail-under=80
+
+  docker-build:
+    name: Docker Image Build & Validation
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, unit-and-integration-tests]
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: interviewsage-backend:latest
+
+      - name: Build Frontend Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: false
+          tags: interviewsage-frontend:latest

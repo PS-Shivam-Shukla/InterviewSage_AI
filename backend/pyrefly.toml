@@ -1,0 +1,20 @@
+# pyrefly.toml — Pyrefly type checker configuration for InterviewSage AI backend
+# Docs: https://pyrefly.org/en/docs/configuration/
+
+# Point Pyrefly to the correct Python interpreter (adjust path if using venv)
+python_interpreter = "C:/Python314/python.exe"
+
+# Exclude generated, test-fixture, and migration files from analysis
+project_excludes = [
+    "**/__pycache__/**",
+    "**/migrations/**",
+    "**/alembic/versions/**",
+    "**/.venv/**",
+    "**/venv/**",
+    "**/node_modules/**",
+    "**/.mypy_cache/**",
+]
+
+# Suppress errors on third-party stubs that are missing
+# (fitz/PyMuPDF ships its own stubs; python-docx has partial stubs)
+use_untyped_imports = true

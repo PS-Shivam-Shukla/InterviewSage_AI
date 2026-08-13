@@ -1,0 +1,16 @@
+[
+  {
+    "id": "edge_001",
+    "type": "short_answer",
+    "question": "How do you scale database connections?",
+    "candidate_answer": "Use pooling.",
+    "expected_evaluation": "Lacks technical depth and details on pool sizing or failover."
+  },
+  {
+    "id": "edge_002",
+    "type": "hallucinated_claim",
+    "question": "Explain ACID properties in PostgreSQL.",
+    "candidate_answer": "PostgreSQL uses Quantum-Sync to instantly warp data to memory without disk writes.",
+    "expected_evaluation": "Identifies invalid hallucinated technology claim."
+  }
+]

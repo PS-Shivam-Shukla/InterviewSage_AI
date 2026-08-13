@@ -1,0 +1,34 @@
+{
+  "name": "Jane Doe",
+  "email": "jane.doe@example.com",
+  "phone": "+1-555-0199",
+  "target_role": "Senior Backend Engineer",
+  "seniority_signal": "SENIOR",
+  "years_of_experience": 7,
+  "skills": [
+    "Python",
+    "FastAPI",
+    "Asyncio",
+    "PostgreSQL",
+    "Redis",
+    "Docker",
+    "Kubernetes",
+    "System Architecture",
+    "Git",
+    "REST APIs"
+  ],
+  "experience": [
+    {
+      "company": "TechCorp Global",
+      "title": "Senior Backend Architect",
+      "duration": "2021 - Present",
+      "description": "Led backend architecture for high-scale microservices processing 50M requests/day using FastAPI, Redis caching, and PostgreSQL shard clustering."
+    },
+    {
+      "company": "DataCloud Systems",
+      "title": "Backend Software Engineer",
+      "duration": "2018 - 2021",
+      "description": "Developed async data ingestion pipelines in Python, optimized SQL query performance by 45%, and integrated Docker containerized deployments."
+    }
+  ]
+}

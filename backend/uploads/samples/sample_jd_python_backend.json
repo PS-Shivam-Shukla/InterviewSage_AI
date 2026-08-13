@@ -1,0 +1,35 @@
+{
+  "title": "Senior Python Backend Engineer",
+  "target_role": "Senior Python Backend Engineer",
+  "seniority_level": "SENIOR",
+  "industry": "FinTech / Enterprise Software",
+  "required_skills": [
+    "Python",
+    "FastAPI",
+    "PostgreSQL",
+    "System Design",
+    "Asyncio",
+    "Redis",
+    "REST APIs"
+  ],
+  "preferred_skills": [
+    "Kubernetes",
+    "Docker",
+    "Microservices"
+  ],
+  "negative_skills": [
+    "React",
+    "Vue",
+    "Angular",
+    "CSS",
+    "HTML",
+    "Frontend",
+    "UI"
+  ],
+  "responsibilities": [
+    "Design and scale high-throughput REST APIs and async microservices.",
+    "Optimize PostgreSQL database schema, indexes, and complex queries.",
+    "Architect distributed Redis caching strategies to ensure low latency.",
+    "Collaborate with security and platform teams on zero-downtime deployments."
+  ]
+}

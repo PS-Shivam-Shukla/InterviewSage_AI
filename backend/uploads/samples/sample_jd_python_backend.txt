@@ -1,0 +1,21 @@
+Job Title: Senior Python Backend Engineer
+Seniority: Senior Level (5+ Years Experience)
+Industry: FinTech & High-Scale Cloud Systems
+
+Role Summary:
+We are seeking an experienced Senior Backend Engineer to join our core architecture team. You will be responsible for building, scaling, and maintaining high-throughput REST APIs, asynchronous task processing pipelines, and resilient database storage solutions.
+
+Key Responsibilities:
+- Design, build, and deploy production-grade microservices in Python using FastAPI.
+- Architect high-performance PostgreSQL relational schemas, query optimizations, and database partitioning.
+- Implement distributed Redis caching strategies to maintain sub-50ms latency across API endpoints.
+- Lead system design discussions and mentor junior backend engineers.
+
+Required Technical Skills:
+- 5+ years of software development experience using Python.
+- Proven expertise with FastAPI, Asyncio, and RESTful API design.
+- Advanced SQL proficiency with PostgreSQL (indexing, query execution plans, transactions).
+- Deep understanding of System Design, Distributed Systems, Caching, and Message Queues (Redis/Kafka).
+
+Preferred Skills:
+- Docker, Kubernetes, and CI/CD automation experience.

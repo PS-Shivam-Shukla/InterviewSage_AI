@@ -1,0 +1,148 @@
+# ============================================================
+# Environment & Secrets
+# ============================================================
+
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+
+# Local credentials / certificates
+*.pem
+*.key
+*.p12
+*.pfx
+
+
+# ============================================================
+# Python & Caches
+# ============================================================
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+.pytest_cache/
+.coverage
+coverage/
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+pytest_output.txt
+
+
+# ============================================================
+# Virtual Environments
+# ============================================================
+
+.venv/
+venv/
+ENV/
+env/
+
+
+# ============================================================
+# Testing
+# ============================================================
+
+.vitest/
+
+
+# ============================================================
+# Node / Frontend
+# ============================================================
+
+node_modules/
+
+dist/
+dist-ssr/
+build/
+.output/
+
+*.tsbuildinfo
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+
+# ============================================================
+# Databases & Local Storage
+# ============================================================
+
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.shm
+*.wal
+
+interviewsage.db*
+
+
+# ============================================================
+# Candidate / Runtime Data
+# ============================================================
+
+uploads/*
+!uploads/.gitkeep
+
+outputs/*
+!outputs/.gitkeep
+
+storage/*
+!storage/.gitkeep
+
+generated/*
+!generated/.gitkeep
+
+
+# ============================================================
+# Logs & Temporary Artifacts
+# ============================================================
+
+logs/*
+!logs/.gitkeep
+
+*.log
+
+scratch/
+tmp/
+temp/
+
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+
+
+# ============================================================
+# IDE & Operating System
+# ============================================================
+
+.vscode/
+.idea/
+
+.DS_Store
+Thumbs.db
+
+*.swp
+*.swo
+*.sw?
+
+
+# ============================================================
+# AI Coding Tools
+# ============================================================
+
+.gemini/
+.antigravity/
+brain/
+.cursor/
+.claude/
+
+

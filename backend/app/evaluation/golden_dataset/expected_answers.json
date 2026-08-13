@@ -1,0 +1,17 @@
+[
+  {
+    "id": "q101",
+    "expected_answer": "Connection pooling avoids connection overhead using pool sizes and max overflow. Read replicas offload queries, while health probes detect database failure and trigger circuit breaking with exponential backoff.",
+    "min_score": 75.0
+  },
+  {
+    "id": "q102",
+    "expected_answer": "Strong consistency guarantees all nodes see identical data immediately via synchronous replication or quorum consensus. Eventual consistency allows temporary divergence, guaranteeing convergence over time.",
+    "min_score": 80.0
+  },
+  {
+    "id": "q103",
+    "expected_answer": "Durable checkpointing persists state dictionaries into a relational database after each node transition, tied to a unique thread_id. If a worker process fails, execution resumes from the latest checkpoint.",
+    "min_score": 85.0
+  }
+]

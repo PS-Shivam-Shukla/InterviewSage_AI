@@ -1,0 +1,23 @@
+[
+  {
+    "id": "q101",
+    "domain": "System Architecture",
+    "question": "How do you handle database connection pooling and failover in high-concurrency microservices?",
+    "seniority": "Senior",
+    "target_concepts": ["HikariCP/SQLAlchemy pooling", "read replicas", "pg_isready health checks", "circuit breaking", "retry backoff"]
+  },
+  {
+    "id": "q102",
+    "domain": "Distributed Systems",
+    "question": "Explain the difference between strong consistency and eventual consistency under the CAP theorem.",
+    "seniority": "Mid-Senior",
+    "target_concepts": ["CAP theorem", "partition tolerance", "two-phase commit", "quorum reads/writes", "eventual consistency"]
+  },
+  {
+    "id": "q103",
+    "domain": "AI Agent Architecture",
+    "question": "How do stateful checkpointing and durable state machines prevent lost progress during LLM agent workflow execution?",
+    "seniority": "Staff",
+    "target_concepts": ["LangGraph PostgresSaver", "thread_id identity", "state snapshotting", "resumption after restart", "atomic transaction boundaries"]
+  }
+]

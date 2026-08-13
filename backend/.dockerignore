@@ -1,0 +1,27 @@
+# Virtual Environments & Python Caches
+.venv
+venv
+env
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.ruff_cache
+.coverage
+htmlcov
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs & Temporary Data
+*.log
+logs/
+outputs/
+temp/
+
+# IDE & OS Files
+.vscode
+.idea
+.DS_Store
+Thumbs.db
