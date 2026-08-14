@@ -39,7 +39,9 @@ async def create_interview(
         payload=payload,
     )
     if not interview:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create interview")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create interview"
+        )
 
     # If new interview created in PLANNING status, trigger background LLM plan generation
     if interview.status == "PLANNING":

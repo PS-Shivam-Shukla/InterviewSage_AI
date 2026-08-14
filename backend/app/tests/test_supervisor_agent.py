@@ -106,17 +106,32 @@ def test_last_question_round_complete(supervisor):
 # 9. Round complete -> next round
 def test_round_complete_to_next_round(supervisor):
     # Transition validation test
-    assert supervisor.validate_transition(WorkflowState.ROUND_COMPLETE.value, WorkflowState.NEXT_ROUND.value) is True
+    assert (
+        supervisor.validate_transition(
+            WorkflowState.ROUND_COMPLETE.value, WorkflowState.NEXT_ROUND.value
+        )
+        is True
+    )
 
 
 # 10. Final round -> interview complete
 def test_final_round_interview_complete(supervisor):
-    assert supervisor.validate_transition(WorkflowState.ROUND_COMPLETE.value, WorkflowState.INTERVIEW_COMPLETED.value) is True
+    assert (
+        supervisor.validate_transition(
+            WorkflowState.ROUND_COMPLETE.value, WorkflowState.INTERVIEW_COMPLETED.value
+        )
+        is True
+    )
 
 
 # 11. Interview complete -> report generation
 def test_interview_complete_report_generation(supervisor):
-    assert supervisor.validate_transition(WorkflowState.INTERVIEW_COMPLETED.value, WorkflowState.REPORT_GENERATION.value) is True
+    assert (
+        supervisor.validate_transition(
+            WorkflowState.INTERVIEW_COMPLETED.value, WorkflowState.REPORT_GENERATION.value
+        )
+        is True
+    )
 
 
 # 12. Report -> completed

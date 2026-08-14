@@ -79,7 +79,9 @@ class AIGateway:
                         if response_text:
                             return response_text
                         raise RuntimeError("Ollama returned empty response string")
-                    raise RuntimeError(f"Ollama HTTP request failed with status code {res.status_code}: {res.text}")
+                    raise RuntimeError(
+                        f"Ollama HTTP request failed with status code {res.status_code}: {res.text}"
+                    )
             except Exception as exc:
                 logger.error(f"Ollama direct HTTP call failed: {exc}")
                 raise RuntimeError(f"LLM Provider 'ollama' request failed: {exc}") from exc
@@ -125,7 +127,9 @@ class AIGateway:
 
         def _fallback_invocation() -> str:
             fb_spec = self.router.get_fallback(spec)
-            logger.info(f"AIGateway executing fallback provider [{fb_spec.provider}] model [{fb_spec.model_name}]")
+            logger.info(
+                f"AIGateway executing fallback provider [{fb_spec.provider}] model [{fb_spec.model_name}]"
+            )
             return self._execute_llm_call(
                 provider=fb_spec.provider,
                 model_name=fb_spec.model_name,
@@ -153,7 +157,9 @@ class AIGateway:
             logger.error(f"AIGateway request execution failed: {exc}", exc_info=True)
 
         duration_ms = int((time.perf_counter() - start_t) * 1000)
-        LLM_LATENCY_SECONDS.labels(provider=spec.provider, model_name=spec.model_name).observe(duration_ms / 1000.0)
+        LLM_LATENCY_SECONDS.labels(provider=spec.provider, model_name=spec.model_name).observe(
+            duration_ms / 1000.0
+        )
 
         # JSON Validation & Structured Output Repair
         parsed_json = None

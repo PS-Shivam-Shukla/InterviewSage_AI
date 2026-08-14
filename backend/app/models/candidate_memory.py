@@ -21,8 +21,11 @@ class CandidateProfile(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "candidate_profiles"
 
     candidate_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False, unique=True, index=True
+        String(36),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
     )
     experience_years: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     skills: Mapped[str] = mapped_column(Text, nullable=False, default="[]")  # JSON list
@@ -70,12 +73,10 @@ class CandidateMemory(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "candidate_memories"
 
     candidate_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     interview_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("interviews.id", ondelete="SET NULL"),
-        nullable=True, index=True
+        String(36), ForeignKey("interviews.id", ondelete="SET NULL"), nullable=True, index=True
     )
     # EPISODIC | SEMANTIC | SUMMARY
     memory_type: Mapped[str] = mapped_column(String(50), nullable=False, default="EPISODIC")
@@ -108,13 +109,10 @@ class CandidateMemory(UUIDPrimaryKeyMixin, Base):
 
 class SkillProgress(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "skill_progress"
-    __table_args__ = (
-        UniqueConstraint("candidate_id", "skill_name", name="uq_candidate_skill"),
-    )
+    __table_args__ = (UniqueConstraint("candidate_id", "skill_name", name="uq_candidate_skill"),)
 
     candidate_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     skill_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     current_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
@@ -145,12 +143,10 @@ class LearningRecommendation(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "learning_recommendations"
 
     candidate_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     interview_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("interviews.id", ondelete="SET NULL"),
-        nullable=True
+        String(36), ForeignKey("interviews.id", ondelete="SET NULL"), nullable=True
     )
     target_topic: Mapped[str] = mapped_column(String(100), nullable=False)
     # HIGH | MEDIUM | LOW
@@ -179,8 +175,7 @@ class MemorySummary(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "memory_summaries"
 
     candidate_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     compressed_summary: Mapped[str] = mapped_column(Text, nullable=False)
     interview_count_covered: Mapped[int] = mapped_column(Integer, nullable=False, default=1)

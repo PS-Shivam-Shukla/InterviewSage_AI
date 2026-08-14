@@ -69,7 +69,11 @@ class PersonalizationEngine:
                 reasoning="First interview session for candidate - start with baseline assessment.",
             )
 
-        diff = "HARD" if weakest.current_score > 70.0 else ("MEDIUM" if weakest.current_score > 50.0 else "EASY")
+        diff = (
+            "HARD"
+            if weakest.current_score > 70.0
+            else ("MEDIUM" if weakest.current_score > 50.0 else "EASY")
+        )
         return PersonalizedQuestionRecommendation(
             target_skill=weakest.skill_name,
             recommended_difficulty=diff,
@@ -87,10 +91,30 @@ class PersonalizationEngine:
         weak_skills = sorted(skills, key=lambda s: s.current_score)
 
         default_topics = [
-            ("Docker & Containerization", "HIGH", "Practice building multi-stage Dockerfiles and container networks.", 1),
-            ("Database Query Optimization", "HIGH", "Study PostgreSQL indexing, execution plans, and JOIN tuning.", 2),
-            ("Concurrency & Async Python", "MEDIUM", "Implement async worker loops using asyncio and task pools.", 3),
-            ("Distributed System Design", "MEDIUM", "Design resilient API rate limiters and circuit breaker patterns.", 4),
+            (
+                "Docker & Containerization",
+                "HIGH",
+                "Practice building multi-stage Dockerfiles and container networks.",
+                1,
+            ),
+            (
+                "Database Query Optimization",
+                "HIGH",
+                "Study PostgreSQL indexing, execution plans, and JOIN tuning.",
+                2,
+            ),
+            (
+                "Concurrency & Async Python",
+                "MEDIUM",
+                "Implement async worker loops using asyncio and task pools.",
+                3,
+            ),
+            (
+                "Distributed System Design",
+                "MEDIUM",
+                "Design resilient API rate limiters and circuit breaker patterns.",
+                4,
+            ),
         ]
 
         created_recs = []

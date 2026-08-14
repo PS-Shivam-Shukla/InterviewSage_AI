@@ -25,7 +25,9 @@ ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc", ".txt"}
 
 # Dangerous filename patterns (path traversal, hidden files, dangerous double extensions)
 PATH_TRAVERSAL_REGEX = re.compile(r"(\.\.[/\\]|[/\\]\.\.)")
-DOUBLE_EXT_REGEX = re.compile(r"\.(pdf|docx|doc|txt)\.(exe|bat|sh|py|php|js|html|vbs|jar)$", re.IGNORECASE)
+DOUBLE_EXT_REGEX = re.compile(
+    r"\.(pdf|docx|doc|txt)\.(exe|bat|sh|py|php|js|html|vbs|jar)$", re.IGNORECASE
+)
 
 
 def sanitize_filename(filename: str) -> str:
@@ -42,7 +44,12 @@ def sanitize_filename(filename: str) -> str:
     clean_name = os.path.basename(filename.strip())
 
     # Check path traversal attempts
-    if PATH_TRAVERSAL_REGEX.search(filename) or ".." in filename or "/" in filename or "\\" in filename:
+    if (
+        PATH_TRAVERSAL_REGEX.search(filename)
+        or ".." in filename
+        or "/" in filename
+        or "\\" in filename
+    ):
         # Check if basename stripped traversal attempts
         if PATH_TRAVERSAL_REGEX.search(filename) or ".." in filename:
             raise HTTPException(
@@ -101,7 +108,11 @@ def validate_upload_file(file: UploadFile, content: bytes) -> str:
 
     # 5. Content-Type (MIME type) validation
     content_type = (file.content_type or "").lower().split(";")[0].strip()
-    if content_type and content_type not in ALLOWED_MIME_TYPES and content_type != "application/octet-stream":
+    if (
+        content_type
+        and content_type not in ALLOWED_MIME_TYPES
+        and content_type != "application/octet-stream"
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unsupported MIME type '{content_type}'. Allowed MIME types: {sorted(ALLOWED_MIME_TYPES)}.",

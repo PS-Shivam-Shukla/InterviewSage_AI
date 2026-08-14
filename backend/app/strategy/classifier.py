@@ -29,7 +29,9 @@ class CandidateClassifier:
         7: "Engineering Manager",
     }
 
-    def classify(self, resume_json: dict[str, Any], skill_graph: dict[str, Any] | None = None) -> CandidateClassification:
+    def classify(
+        self, resume_json: dict[str, Any], skill_graph: dict[str, Any] | None = None
+    ) -> CandidateClassification:
         """
         Classify candidate into seniority tier based on resume metadata and skill graph.
         """
@@ -108,7 +110,16 @@ class CandidateClassifier:
     def _evaluate_project_complexity(projects: list[dict[str, Any]]) -> float:
         if not projects:
             return 0.2
-        keywords = ["distributed", "scale", "microservices", "high-throughput", "kafka", "redis", "kubernetes", "cloud"]
+        keywords = [
+            "distributed",
+            "scale",
+            "microservices",
+            "high-throughput",
+            "kafka",
+            "redis",
+            "kubernetes",
+            "cloud",
+        ]
         score = 0.3
         for proj in projects:
             desc = str(proj.get("description", "")).lower()
@@ -120,14 +131,33 @@ class CandidateClassifier:
     def _evaluate_tech_depth(skills: list[str]) -> float:
         if not skills:
             return 0.2
-        depth_indicators = ["asyncio", "concurrency", "memory", "profiling", "rust", "cpp", "distributed systems", "optimiz"]
+        depth_indicators = [
+            "asyncio",
+            "concurrency",
+            "memory",
+            "profiling",
+            "rust",
+            "cpp",
+            "distributed systems",
+            "optimiz",
+        ]
         matched = sum(1 for s in skills if any(d in str(s).lower() for d in depth_indicators))
         return min(1.0, 0.3 + (matched * 0.15))
 
     @staticmethod
-    def _evaluate_architecture_exposure(exp: list[dict[str, Any]], proj: list[dict[str, Any]]) -> float:
+    def _evaluate_architecture_exposure(
+        exp: list[dict[str, Any]], proj: list[dict[str, Any]]
+    ) -> float:
         combined = str(exp) + str(proj)
-        arch_words = ["architecture", "designed", "microservice", "infrastructure", "replication", "sharding", "system design"]
+        arch_words = [
+            "architecture",
+            "designed",
+            "microservice",
+            "infrastructure",
+            "replication",
+            "sharding",
+            "system design",
+        ]
         matches = sum(1 for w in arch_words if w in combined.lower())
         return min(1.0, 0.2 + (matches * 0.15))
 

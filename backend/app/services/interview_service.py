@@ -55,6 +55,7 @@ difficulty_engine = DifficultyEngine()
 
 # ── Module-level helpers ──────────────────────────────────────────────────────
 
+
 def _parse_json_field(value: str | None, default=None) -> Any:
     """Safely parse a JSON string field from a database model."""
     if not value:
@@ -114,11 +115,13 @@ def _build_competency_matrix(role: str, jd_skills: list, resume_skills: list) ->
         if norm not in seen:
             seen.add(norm)
             weight = max(8, 22 - i * 2)
-            competencies.append({
-                "name": skill,
-                "weight": weight,
-                "description": f"{skill} proficiency required for {role or 'this role'}",
-            })
+            competencies.append(
+                {
+                    "name": skill,
+                    "weight": weight,
+                    "description": f"{skill} proficiency required for {role or 'this role'}",
+                }
+            )
 
     # Resume skills: supplemental competencies
     for skill in resume_skills[:4]:
@@ -127,14 +130,22 @@ def _build_competency_matrix(role: str, jd_skills: list, resume_skills: list) ->
         norm = skill.lower().strip()
         if norm not in seen:
             seen.add(norm)
-            competencies.append({
-                "name": skill,
-                "weight": 6,
-                "description": f"{skill} from candidate background",
-            })
+            competencies.append(
+                {
+                    "name": skill,
+                    "weight": 6,
+                    "description": f"{skill} from candidate background",
+                }
+            )
 
     if not competencies:
-        return [{"name": "General", "weight": 100, "description": f"General {role or 'Software Engineering'} knowledge"}]
+        return [
+            {
+                "name": "General",
+                "weight": 100,
+                "description": f"General {role or 'Software Engineering'} knowledge",
+            }
+        ]
 
     # Normalize weights to ~100
     total = sum(c["weight"] for c in competencies)
@@ -161,7 +172,12 @@ def _difficulty_int_to_str(level: int) -> str:
 def _is_fresher(seniority: str) -> bool:
     """Determine if a candidate is Fresher/Junior tier based on seniority signal."""
     return (seniority or "").strip().upper() in {
-        "FRESHER", "JUNIOR", "0-1", "ENTRY", "INTERN", "1",
+        "FRESHER",
+        "JUNIOR",
+        "0-1",
+        "ENTRY",
+        "INTERN",
+        "1",
     }
 
 
@@ -204,6 +220,7 @@ def _run_graph_in_worker_thread(initial_state: dict, config: dict) -> dict:
 
 # ── InterviewService ──────────────────────────────────────────────────────────
 
+
 class InterviewService:
     def __init__(self, db: Session) -> None:
         self.db = db
@@ -237,8 +254,8 @@ class InterviewService:
 
         # ── CORRECT STATE KEYS per QuestionGeneratorAgent._run() contract ─────
         state = {
-            "resume_data": resume_data,          # ← was "resume_json" (WRONG)
-            "jd_data": jd_data,                  # ← was "jd_json" (WRONG)
+            "resume_data": resume_data,  # ← was "resume_json" (WRONG)
+            "jd_data": jd_data,  # ← was "jd_json" (WRONG)
             "competency_matrix": competency_matrix,
             "questions_asked": questions_asked,
             "evaluations": evaluations,
@@ -247,9 +264,7 @@ class InterviewService:
 
         # Detect agent failure: _on_failure sets error_log
         if output.get("error_log"):
-            logger.warning(
-                f"QuestionGeneratorAgent failed for {round_type}: {output['error_log']}"
-            )
+            logger.warning(f"QuestionGeneratorAgent failed for {round_type}: {output['error_log']}")
             return None
 
         # ── CORRECT OUTPUT KEY per QuestionGeneratorAgent._run() contract ─────
@@ -367,12 +382,15 @@ class InterviewService:
         Opens an isolated DB session, updates status to READY on success or FAILED on error.
         """
         from app.core.database import SessionLocal
+
         db = SessionLocal()
         try:
             logger.info(f"Background plan generation started for interview {interview_id}")
             service = InterviewService(db)
             service.get_interview_plan(interview_id, context_override=context_override)
-            logger.info(f"Background plan generation completed successfully for interview {interview_id}")
+            logger.info(
+                f"Background plan generation completed successfully for interview {interview_id}"
+            )
         except Exception as exc:
             logger.error(
                 f"Background plan generation failed for interview {interview_id}: {exc}",
@@ -417,12 +435,10 @@ class InterviewService:
         set_request_context(interview_id=interview_id, user_id=interview_obj.user_id)
 
         # ── Fetch Resume and JobDescription ───────────────────────────────────
-        jd_obj = self.db.query(JobDescription).filter(
-            JobDescription.id == interview_obj.jd_id
-        ).first()
-        resume_obj = self.db.query(Resume).filter(
-            Resume.id == interview_obj.resume_id
-        ).first()
+        jd_obj = (
+            self.db.query(JobDescription).filter(JobDescription.id == interview_obj.jd_id).first()
+        )
+        resume_obj = self.db.query(Resume).filter(Resume.id == interview_obj.resume_id).first()
 
         # ── Build authoritative interview context ─────────────────────────────
         resume_data = _build_resume_data(resume_obj)
@@ -430,9 +446,10 @@ class InterviewService:
 
         # Role: from context_override → JD → never hardcode
         role_title = (
-            (context_override and (
-                context_override.get("role") or context_override.get("target_role")
-            ))
+            (
+                context_override
+                and (context_override.get("role") or context_override.get("target_role"))
+            )
             or jd_data.get("target_role")
             or "Interview"
         )
@@ -478,7 +495,11 @@ class InterviewService:
                     "interview_id": interview_id,
                     "role": role_title,
                     "classification": {
-                        "tier": "Junior Engineer / Fresher" if is_fresher_candidate else "Senior Engineer",
+                        "tier": (
+                            "Junior Engineer / Fresher"
+                            if is_fresher_candidate
+                            else "Senior Engineer"
+                        ),
                         "level": 1 if is_fresher_candidate else 3,
                         "vector_scores": {"tech_depth": 0.5 if is_fresher_candidate else 0.85},
                         "summary": f"Classified for {role_title} role.",
@@ -515,11 +536,13 @@ class InterviewService:
                 )
                 self.db.add(db_q)
                 db_questions_created.append(db_q)
-                history_so_far.append({
-                    "question_text": apt["question_text"],
-                    "competency_targeted": apt["competency_targeted"],
-                    "round_type": "APTITUDE",
-                })
+                history_so_far.append(
+                    {
+                        "question_text": apt["question_text"],
+                        "competency_targeted": apt["competency_targeted"],
+                        "round_type": "APTITUDE",
+                    }
+                )
 
             # Q5, Q6, Q7: Technical — 3 LLM generated technical questions
             for seq_num in range(5, 8):
@@ -535,7 +558,8 @@ class InterviewService:
                     id=str(uuid.uuid4()),
                     interview_id=interview_id,
                     round_type="TECHNICAL",
-                    competency_targeted=t_q.get("competency_targeted") or f"{role_title} Fundamentals",
+                    competency_targeted=t_q.get("competency_targeted")
+                    or f"{role_title} Fundamentals",
                     difficulty=t_q.get("difficulty") or "EASY",
                     question_text=t_q["question_text"],
                     sequence_number=seq_num,
@@ -543,11 +567,13 @@ class InterviewService:
                 )
                 self.db.add(db_t)
                 db_questions_created.append(db_t)
-                history_so_far.append({
-                    "question_text": t_q["question_text"],
-                    "competency_targeted": t_q.get("competency_targeted", "Technical"),
-                    "round_type": "TECHNICAL",
-                })
+                history_so_far.append(
+                    {
+                        "question_text": t_q["question_text"],
+                        "competency_targeted": t_q.get("competency_targeted", "Technical"),
+                        "round_type": "TECHNICAL",
+                    }
+                )
 
             # Q8, Q9: HR — 2 LLM generated HR questions
             for seq_num in range(8, 10):
@@ -563,7 +589,8 @@ class InterviewService:
                     id=str(uuid.uuid4()),
                     interview_id=interview_id,
                     round_type="HR",
-                    competency_targeted=hr_q.get("competency_targeted") or "Behavioural & Cultural Fit",
+                    competency_targeted=hr_q.get("competency_targeted")
+                    or "Behavioural & Cultural Fit",
                     difficulty=hr_q.get("difficulty") or "EASY",
                     question_text=hr_q["question_text"],
                     sequence_number=seq_num,
@@ -571,11 +598,13 @@ class InterviewService:
                 )
                 self.db.add(db_hr)
                 db_questions_created.append(db_hr)
-                history_so_far.append({
-                    "question_text": hr_q["question_text"],
-                    "competency_targeted": hr_q.get("competency_targeted", "HR"),
-                    "round_type": "HR",
-                })
+                history_so_far.append(
+                    {
+                        "question_text": hr_q["question_text"],
+                        "competency_targeted": hr_q.get("competency_targeted", "HR"),
+                        "round_type": "HR",
+                    }
+                )
 
         else:
             # EXPERIENCED: Q1, Q2, Q3 Technical + Q4, Q5 HR — all LLM generated
@@ -595,7 +624,8 @@ class InterviewService:
                 id=str(uuid.uuid4()),
                 interview_id=interview_id,
                 round_type="TECHNICAL",
-                competency_targeted=q1.get("competency_targeted") or (jd_skills[0] if jd_skills else role_title),
+                competency_targeted=q1.get("competency_targeted")
+                or (jd_skills[0] if jd_skills else role_title),
                 difficulty=q1.get("difficulty") or "MEDIUM",
                 question_text=q1["question_text"],
                 sequence_number=1,
@@ -617,7 +647,8 @@ class InterviewService:
                 id=str(uuid.uuid4()),
                 interview_id=interview_id,
                 round_type="TECHNICAL",
-                competency_targeted=q2.get("competency_targeted") or (jd_skills[1] if len(jd_skills) > 1 else role_title),
+                competency_targeted=q2.get("competency_targeted")
+                or (jd_skills[1] if len(jd_skills) > 1 else role_title),
                 difficulty=q2.get("difficulty") or "MEDIUM",
                 question_text=q2["question_text"],
                 sequence_number=2,
@@ -639,7 +670,8 @@ class InterviewService:
                 id=str(uuid.uuid4()),
                 interview_id=interview_id,
                 round_type="TECHNICAL",
-                competency_targeted=q3.get("competency_targeted") or (jd_skills[2] if len(jd_skills) > 2 else role_title),
+                competency_targeted=q3.get("competency_targeted")
+                or (jd_skills[2] if len(jd_skills) > 2 else role_title),
                 difficulty=q3.get("difficulty") or "MEDIUM",
                 question_text=q3["question_text"],
                 sequence_number=3,
@@ -683,7 +715,8 @@ class InterviewService:
                 id=str(uuid.uuid4()),
                 interview_id=interview_id,
                 round_type="HR",
-                competency_targeted=q5.get("competency_targeted") or "Culture & Conflict Resolution",
+                competency_targeted=q5.get("competency_targeted")
+                or "Culture & Conflict Resolution",
                 difficulty=q5.get("difficulty") or "MEDIUM",
                 question_text=q5["question_text"],
                 sequence_number=5,
@@ -706,9 +739,7 @@ class InterviewService:
                 f"Failed to persist interview questions for {interview_id}: {exc}",
                 exc_info=True,
             )
-            raise HTTPException(
-                status_code=500, detail="Failed to persist interview questions."
-            )
+            raise HTTPException(status_code=500, detail="Failed to persist interview questions.")
 
         first_db_q = db_questions_created[0]
         blueprint_items = [
@@ -728,14 +759,16 @@ class InterviewService:
                 "interview_id": interview_id,
                 "role": role_title,
                 "classification": {
-                    "tier": "Junior Engineer / Fresher" if is_fresher_candidate else "Senior Engineer",
+                    "tier": (
+                        "Junior Engineer / Fresher" if is_fresher_candidate else "Senior Engineer"
+                    ),
                     "level": 1 if is_fresher_candidate else 3,
                     "vector_scores": {"tech_depth": 0.5 if is_fresher_candidate else 0.85},
                     "summary": f"Classified for {role_title} role.",
                 },
                 "blueprint_items": blueprint_items,
                 "first_question": {
-                    "id": first_db_q.id,           # ← actual DB UUID (was "q-1" hardcoded)
+                    "id": first_db_q.id,  # ← actual DB UUID (was "q-1" hardcoded)
                     "type": first_db_q.round_type,
                     "competency": first_db_q.competency_targeted,
                     "difficulty": first_db_q.difficulty,
@@ -832,7 +865,9 @@ class InterviewService:
             }
 
         # ── 1. Load previous answers and determine current sequence ───────────
-        existing_answered = self.answer_repo.list_answers_with_evaluations_by_interview(interview_id)
+        existing_answered = self.answer_repo.list_answers_with_evaluations_by_interview(
+            interview_id
+        )
         current_seq_from_count = len(existing_answered) + 1
 
         # ── 2. Resolve actual DB question ─────────────────────────────────────
@@ -841,10 +876,14 @@ class InterviewService:
 
         # Try by UUID (frontend sends actual DB ID now)
         if question_id and question_id not in ("q-1", ""):
-            db_question = self.db.query(InterviewQuestion).filter(
-                InterviewQuestion.id == question_id,
-                InterviewQuestion.interview_id == interview_id,
-            ).first()
+            db_question = (
+                self.db.query(InterviewQuestion)
+                .filter(
+                    InterviewQuestion.id == question_id,
+                    InterviewQuestion.interview_id == interview_id,
+                )
+                .first()
+            )
 
         # Fall back to sequence-based lookup
         if not db_question:
@@ -870,9 +909,11 @@ class InterviewService:
             current_seq = db_question.sequence_number
         else:
             # Ad-hoc: derive from context
-            jd_tmp = self.db.query(JobDescription).filter(
-                JobDescription.id == interview_obj.jd_id
-            ).first()
+            jd_tmp = (
+                self.db.query(JobDescription)
+                .filter(JobDescription.id == interview_obj.jd_id)
+                .first()
+            )
             q_text = question_text
             competency = (jd_tmp.target_role if jd_tmp else "General") + " Competency"
             difficulty = "MEDIUM"
@@ -886,12 +927,10 @@ class InterviewService:
         )
 
         # ── 3. Fetch Resume and JD context ────────────────────────────────────
-        resume_obj = self.db.query(Resume).filter(
-            Resume.id == interview_obj.resume_id
-        ).first()
-        jd_obj = self.db.query(JobDescription).filter(
-            JobDescription.id == interview_obj.jd_id
-        ).first()
+        resume_obj = self.db.query(Resume).filter(Resume.id == interview_obj.resume_id).first()
+        jd_obj = (
+            self.db.query(JobDescription).filter(JobDescription.id == interview_obj.jd_id).first()
+        )
 
         resume_data = _build_resume_data(resume_obj)
         jd_data = _build_jd_data(jd_obj)
@@ -904,7 +943,11 @@ class InterviewService:
         seniority = resume_data.get("seniority_signal", "MID")
         is_fresher_candidate = _is_fresher(seniority)
         all_configured_questions = self.question_repo.list_by_interview(interview_id)
-        total_questions = len(all_configured_questions) if all_configured_questions else (7 if is_fresher_candidate else 5)
+        total_questions = (
+            len(all_configured_questions)
+            if all_configured_questions
+            else (7 if is_fresher_candidate else 5)
+        )
 
         # ── 4. Build previous evaluations list for adaptive difficulty ─────────
         previous_evaluations: list[dict] = []
@@ -913,33 +956,37 @@ class InterviewService:
             if eval_d and isinstance(eval_d, dict):
                 pct = eval_d.get("score", 0)
                 # Store in 1-10 scale for the DifficultyEngine / QuestionGeneratorAgent
-                previous_evaluations.append({
-                    "score": round(pct / 10) if pct > 10 else pct,
-                    "competency_targeted": eval_d.get("competency_targeted", ""),
-                    "question_type": eval_d.get("question_type", ""),
-                })
+                previous_evaluations.append(
+                    {
+                        "score": round(pct / 10) if pct > 10 else pct,
+                        "competency_targeted": eval_d.get("competency_targeted", ""),
+                        "question_type": eval_d.get("question_type", ""),
+                    }
+                )
 
         # ── 5. EvaluationAgent — PRIMARY LLM evaluator ───────────────────────
         MCP_TOOL_CALLS_TOTAL.labels(tool_name="evaluation_agent", status="success").inc()
 
         eval_agent = EvaluationAgent()
-        agent_eval = eval_agent({
-            "interview_id": interview_id,
-            "current_question": {
-                "question_text": q_text,
-                "competency_targeted": competency,   # ← actual competency (was "System Architecture")
-                "question_type": round_type.lower() if round_type else "fundamentals",
-                "round_type": round_type,
-                "difficulty": difficulty,
-            },
-            "answers": [{"answer_text": ans_str}],
-            "competency_matrix": competency_matrix,
-            "profile_summary": {"calibrated_seniority": seniority},
-            # Pass full resume/jd context so EvaluationAgent's LLM prompt is role-aware
-            "resume_data": resume_data,
-            "jd_data": jd_data,
-            "evaluations": previous_evaluations,
-        })
+        agent_eval = eval_agent(
+            {
+                "interview_id": interview_id,
+                "current_question": {
+                    "question_text": q_text,
+                    "competency_targeted": competency,  # ← actual competency (was "System Architecture")
+                    "question_type": round_type.lower() if round_type else "fundamentals",
+                    "round_type": round_type,
+                    "difficulty": difficulty,
+                },
+                "answers": [{"answer_text": ans_str}],
+                "competency_matrix": competency_matrix,
+                "profile_summary": {"calibrated_seniority": seniority},
+                # Pass full resume/jd context so EvaluationAgent's LLM prompt is role-aware
+                "resume_data": resume_data,
+                "jd_data": jd_data,
+                "evaluations": previous_evaluations,
+            }
+        )
 
         # ── 6. Extract LLM evaluation — CORRECT KEY: "evaluations" list ──────
         evaluations_list = agent_eval.get("evaluations", [])
@@ -985,9 +1032,11 @@ class InterviewService:
         comm_val = (
             rubric_pct.get("Communication")
             if "Communication" in rubric_pct
-            else rubric_pct.get("Clarity & Structure")
-            if "Clarity & Structure" in rubric_pct
-            else llm_eval.get("communication_score")
+            else (
+                rubric_pct.get("Clarity & Structure")
+                if "Clarity & Structure" in rubric_pct
+                else llm_eval.get("communication_score")
+            )
         )
         conf_val = (
             rubric_pct.get("Confidence")
@@ -1068,7 +1117,7 @@ class InterviewService:
             db_eval_record = Evaluation(
                 id=str(uuid.uuid4()),
                 answer_id=db_answer.id,
-                score=score_pct,                        # 0-100 persisted
+                score=score_pct,  # 0-100 persisted
                 rubric_breakdown=json.dumps(eval_result),  # full eval dict
                 feedback=feedback_text,
                 ideal_answer_summary=ideal_summary,
@@ -1081,11 +1130,13 @@ class InterviewService:
                 interview_id=interview_obj.id,
                 agent_name="EvaluationAgent",
                 node_status="COMPLETED",
-                input_snapshot=json.dumps({
-                    "answer": ans_str[:200],
-                    "question": q_text[:200],
-                    "competency": competency,
-                }),
+                input_snapshot=json.dumps(
+                    {
+                        "answer": ans_str[:200],
+                        "question": q_text[:200],
+                        "competency": competency,
+                    }
+                ),
                 output_snapshot=json.dumps(eval_result),
                 latency_ms=0,
                 retry_count=0,
@@ -1096,12 +1147,10 @@ class InterviewService:
 
             # ── Check completion ──────────────────────────────────────────────
             next_seq = current_seq + 1
-            next_db_q = self.question_repo.get_by_interview_and_sequence(
-                interview_id, next_seq
-            )
+            next_db_q = self.question_repo.get_by_interview_and_sequence(interview_id, next_seq)
             all_configured_questions = self.question_repo.list_by_interview(interview_id)
 
-            is_last = (current_seq >= total_questions)
+            is_last = current_seq >= total_questions
 
             if is_last:
                 is_completed = True
@@ -1115,9 +1164,7 @@ class InterviewService:
                     if isinstance(item.get("evaluation"), dict)
                 ]
                 all_scores.append(score_pct)
-                interview_obj.overall_score = int(round(
-                    sum(all_scores) / max(1, len(all_scores))
-                ))
+                interview_obj.overall_score = int(round(sum(all_scores) / max(1, len(all_scores))))
                 ACTIVE_INTERVIEWS_GAUGE.dec()
 
             else:
@@ -1131,11 +1178,13 @@ class InterviewService:
                     for q in all_configured_questions
                     if q.sequence_number < next_seq
                 ]
-                gen_evaluations = previous_evaluations + [{
-                    "score": llm_score_1_10,
-                    "competency_targeted": competency,
-                    "question_type": round_type.lower() if round_type else "fundamentals",
-                }]
+                gen_evaluations = previous_evaluations + [
+                    {
+                        "score": llm_score_1_10,
+                        "competency_targeted": competency,
+                        "question_type": round_type.lower() if round_type else "fundamentals",
+                    }
+                ]
 
                 if next_db_q:
                     # Regenerate pre-created question with real-time evaluation history & adaptive difficulty
@@ -1149,7 +1198,9 @@ class InterviewService:
                     )
                     if next_q and next_q.get("question_text"):
                         next_db_q.question_text = next_q["question_text"]
-                        next_db_q.competency_targeted = next_q.get("competency_targeted") or next_db_q.competency_targeted
+                        next_db_q.competency_targeted = (
+                            next_q.get("competency_targeted") or next_db_q.competency_targeted
+                        )
                         next_db_q.difficulty = next_q.get("difficulty") or next_difficulty_str
                         self.db.add(next_db_q)
                         self.db.flush()
@@ -1221,6 +1272,7 @@ class InterviewService:
         if is_completed:
             try:
                 from app.services.report_service import ReportService
+
                 report_service = ReportService(self.db)
                 report_service.generate_report(interview_id)
             except Exception as exc:
@@ -1262,11 +1314,14 @@ class InterviewService:
             if overall_score is not None:
                 interview.overall_score = int(overall_score)
             else:
-                existing_answers = self.answer_repo.list_answers_with_evaluations_by_interview(interview_id)
+                existing_answers = self.answer_repo.list_answers_with_evaluations_by_interview(
+                    interview_id
+                )
                 all_scores = [
                     item.get("evaluation", {}).get("score", 0)
                     for item in existing_answers
-                    if isinstance(item.get("evaluation"), dict) and item.get("evaluation", {}).get("score") is not None
+                    if isinstance(item.get("evaluation"), dict)
+                    and item.get("evaluation", {}).get("score") is not None
                 ]
                 if all_scores:
                     interview.overall_score = int(round(sum(all_scores) / len(all_scores)))
@@ -1278,10 +1333,13 @@ class InterviewService:
 
             try:
                 from app.services.report_service import ReportService
+
                 report_service = ReportService(self.db)
                 report_service.generate_report(interview_id)
             except Exception as exc:
-                logger.warning(f"Report generation warning during explicit completion for {interview_id}: {exc}")
+                logger.warning(
+                    f"Report generation warning during explicit completion for {interview_id}: {exc}"
+                )
 
         return interview
 

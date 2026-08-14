@@ -46,7 +46,9 @@ def test_review_service_recruiter_feedback(db_session: Session):
     assert fb.rating_action == "APPROVE"
 
 
-def test_admin_review_queue_route(client: TestClient, admin_token_headers: dict, db_session: Session):
+def test_admin_review_queue_route(
+    client: TestClient, admin_token_headers: dict, db_session: Session
+):
     """Verify GET /api/v1/admin/review/queue API endpoint."""
     service = ReviewService(db_session)
     service.flag_for_review(interview_id="int-api-test", confidence=0.3)

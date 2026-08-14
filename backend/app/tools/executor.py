@@ -22,6 +22,7 @@ logger = get_logger(__name__)
 
 class Observation(BaseModel):
     """Structured observation object returned to PolicyNode after tool execution."""
+
     tool_name: str
     success: bool
     output: Any = None
@@ -42,6 +43,7 @@ class ToolExecutor:
     def __init__(self, mcp_registry: Any | None = None) -> None:
         if mcp_registry is None:
             from app.mcp import mcp_server
+
             self._registry = mcp_server
         else:
             self._registry = mcp_registry
@@ -78,7 +80,9 @@ class ToolExecutor:
                     latency_ms=latency,
                 )
             else:
-                err_msg = getattr(res, "error", None) or "Tool execution returned unsuccessful status."
+                err_msg = (
+                    getattr(res, "error", None) or "Tool execution returned unsuccessful status."
+                )
                 logger.warning(
                     f"🔧 [TOOL EXECUTOR FAILED] Tool: '{tool_name}' | Status: FAILED | Latency: {latency}ms\n"
                     f"   Error: {err_msg}\n"
@@ -96,7 +100,7 @@ class ToolExecutor:
                 f"🔧 [TOOL EXECUTOR EXCEPTION] Tool: '{tool_name}' | Status: EXCEPTION | Latency: {latency}ms\n"
                 f"   Error: {exc}\n"
                 f"================================================================================",
-                exc_info=True
+                exc_info=True,
             )
             return Observation(
                 tool_name=tool_name,

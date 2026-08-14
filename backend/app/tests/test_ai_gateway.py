@@ -48,7 +48,13 @@ def test_ai_gateway_unsupported_provider():
         variables={"question_text": "Q", "target_concepts": "C", "candidate_answer": "A"},
     )
 
-    with patch.object(gateway.router, "get_fallback", side_effect=ValueError("LLM Provider 'unsupported_vendor_xyz' is unconfigured or unavailable")):
+    with patch.object(
+        gateway.router,
+        "get_fallback",
+        side_effect=ValueError(
+            "LLM Provider 'unsupported_vendor_xyz' is unconfigured or unavailable"
+        ),
+    ):
         response = gateway.execute(request)
 
     assert response.success is False
@@ -61,7 +67,12 @@ def test_ai_gateway_fake_double_injected():
     request = AIGatewayRequest(
         task_type="personalize_question",
         prompt_key="prompt:question_personalizer",
-        variables={"seniority_level": "Senior", "target_competency": "DB", "project_context": "Ctx", "baseline_question": "Q"},
+        variables={
+            "seniority_level": "Senior",
+            "target_competency": "DB",
+            "project_context": "Ctx",
+            "baseline_question": "Q",
+        },
     )
 
     response = fake_gateway.execute(request)
@@ -93,6 +104,8 @@ def test_ai_gateway_db_audit_logging(db_session: Session):
     assert response.total_tokens > 0
 
     # Verify DB persistence via test double
-    audit_req = db_session.query(LLMRequest).filter(LLMRequest.interview_id == "int-test-101").first()
+    audit_req = (
+        db_session.query(LLMRequest).filter(LLMRequest.interview_id == "int-test-101").first()
+    )
     assert audit_req is not None
     assert audit_req.task_type == "personalize_question"

@@ -55,15 +55,24 @@ def test_thread_config_state_resumption():
     assert state_snapshot.values.get("interview_id") == interview_id
 
     # Turn 2: Subsequent invocation using same thread_id config resumes existing checkpoint
-    out2 = workflow.invoke({"pending_answer": "I use connection pooling with pre-ping."}, config=config)
+    out2 = workflow.invoke(
+        {"pending_answer": "I use connection pooling with pre-ping."}, config=config
+    )
     assert out2.get("workflow_stage") is not None
 
 
 def test_checkpoint_recovery_after_simulated_restart(db_session: Session):
     """Verify interview state recovers cleanly after a simulated application restart."""
-    user = User(id=str(uuid.uuid4()), email="restart_test@test.com", password_hash="hash", full_name="Restart Test")
+    user = User(
+        id=str(uuid.uuid4()),
+        email="restart_test@test.com",
+        password_hash="hash",
+        full_name="Restart Test",
+    )
     resume = Resume(id=str(uuid.uuid4()), user_id=user.id, file_path="r.pdf", raw_text="Resume")
-    jd = JobDescription(id=str(uuid.uuid4()), user_id=user.id, raw_text="JD", target_role="Senior Python Dev")
+    jd = JobDescription(
+        id=str(uuid.uuid4()), user_id=user.id, raw_text="JD", target_role="Senior Python Dev"
+    )
     db_session.add_all([user, resume, jd])
     db_session.commit()
 

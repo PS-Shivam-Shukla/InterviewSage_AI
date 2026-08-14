@@ -40,7 +40,9 @@ def test_prompt_registry_custom_registration():
     versions = registry.list_versions("prompt:custom_task")
     assert "v3" in versions
 
-    rendered = registry.render("prompt:custom_task", version="v3", variables={"task": "benchmarking"})
+    rendered = registry.render(
+        "prompt:custom_task", version="v3", variables={"task": "benchmarking"}
+    )
     assert "benchmarking" in rendered["user"]
 
 
@@ -53,7 +55,7 @@ def test_json_validator_and_repair():
     assert repaired is False
 
     # 2. Markdown fenced JSON
-    fenced = "```json\n{\"status\": \"OK\"}\n```"
+    fenced = '```json\n{"status": "OK"}\n```'
     valid, data, repaired = JSONValidator.validate_and_repair(fenced)
     assert valid is True
     assert data == {"status": "OK"}

@@ -78,7 +78,12 @@ def test_difficulty_propagation_mid_candidate():
 
 
 def test_history_awareness_duplicate_avoidance():
-    previous = [{"question_text": "What is the difference between a list and a tuple in Python?", "competency_targeted": "Python"}]
+    previous = [
+        {
+            "question_text": "What is the difference between a list and a tuple in Python?",
+            "competency_targeted": "Python",
+        }
+    ]
     res: QuestionRelevanceResult = QuestionRelevanceService.validate_question(
         question_text="What is the difference between a list and a tuple in Python?",
         question_difficulty="INTERMEDIATE",
@@ -92,7 +97,11 @@ def test_history_awareness_duplicate_avoidance():
         competency_targeted="Python",
     )
     assert res.accepted is False
-    assert "Paraphrase Duplicate" in res.reason or "GATE 5 FAILED" in res.reason or "too similar" in res.reason.lower()
+    assert (
+        "Paraphrase Duplicate" in res.reason
+        or "GATE 5 FAILED" in res.reason
+        or "too similar" in res.reason.lower()
+    )
 
 
 def test_question_generator_agent_execution_cpp(mocker):
@@ -104,8 +113,8 @@ def test_question_generator_agent_execution_cpp(mocker):
             competency_targeted="C/C++",
             difficulty="INTERMEDIATE",
             question_type="fundamentals",
-            personalisation_note="Targeted based on low-latency C++ experience."
-        )
+            personalisation_note="Targeted based on low-latency C++ experience.",
+        ),
     )
     agent = QuestionGeneratorAgent(round_type="TECHNICAL")
     state = {
@@ -143,8 +152,8 @@ def test_question_generator_agent_execution_hr(mocker):
             competency_targeted="Conflict Resolution & Adaptability",
             difficulty="MEDIUM",
             question_type="behavioral",
-            personalisation_note="Evaluates soft skills and team collaboration."
-        )
+            personalisation_note="Evaluates soft skills and team collaboration.",
+        ),
     )
     agent = QuestionGeneratorAgent(round_type="HR")
     state = {
@@ -173,4 +182,3 @@ def test_question_generator_agent_execution_hr(mocker):
         "Work Ethic & Ownership",
         "Culture Fit & Career Growth",
     }
-

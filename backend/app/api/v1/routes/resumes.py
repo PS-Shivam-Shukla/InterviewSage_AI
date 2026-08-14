@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
@@ -28,8 +27,12 @@ async def upload_resume(
     content = await file.read()
     clean_filename = validate_upload_file(file, content)
     service = ResumeService(db)
-    resume, raw_text = await run_in_threadpool(service.upload_resume_fast, current_user.id, clean_filename, content)
-    background_tasks.add_task(service.process_resume_background, resume["id"], raw_text, clean_filename)
+    resume, raw_text = await run_in_threadpool(
+        service.upload_resume_fast, current_user.id, clean_filename, content
+    )
+    background_tasks.add_task(
+        service.process_resume_background, resume["id"], raw_text, clean_filename
+    )
     return resume
 
 
@@ -117,5 +120,7 @@ async def get_resume_analysis(
     service = ResumeService(db)
     analysis = service.get_resume_analysis(resume_id)
     if not analysis:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume analysis not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Resume analysis not found"
+        )
     return analysis

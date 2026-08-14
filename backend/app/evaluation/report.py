@@ -47,8 +47,16 @@ class EvaluationReportGenerator:
     @staticmethod
     def generate_regression_report(comparison: RegressionComparisonResult) -> str:
         """Generate a formatted Markdown regression report."""
-        status_badge = "✅ PASSED (NO REGRESSION)" if not comparison.is_regression else "❌ REGRESSION DETECTED"
-        reasons_text = "\n".join([f"- {r}" for r in comparison.failure_reasons]) if comparison.failure_reasons else "- None"
+        status_badge = (
+            "✅ PASSED (NO REGRESSION)"
+            if not comparison.is_regression
+            else "❌ REGRESSION DETECTED"
+        )
+        reasons_text = (
+            "\n".join([f"- {r}" for r in comparison.failure_reasons])
+            if comparison.failure_reasons
+            else "- None"
+        )
 
         md = f"""# AI Prompt Regression Test Report
 

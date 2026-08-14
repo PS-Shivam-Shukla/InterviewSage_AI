@@ -191,7 +191,9 @@ APTITUDE_20_BANK: list[dict[str, Any]] = [
 ]
 
 
-def select_aptitude_questions(count: int = 5, session_seed: str | None = None) -> list[dict[str, Any]]:
+def select_aptitude_questions(
+    count: int = 5, session_seed: str | None = None
+) -> list[dict[str, Any]]:
     """
     Select `count` (default 5) randomized aptitude questions from the fixed 20-question bank.
     If session_seed is provided, the selection is deterministic for that specific session.

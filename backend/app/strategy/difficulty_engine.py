@@ -19,8 +19,21 @@ class DifficultyEngine:
     """
 
     SUPPORTED_TECH_TRIGGERS = [
-        "redis", "kafka", "kubernetes", "k8s", "docker", "postgres", "mongodb",
-        "graphql", "grpc", "aws", "jwt", "oauth", "microservices", "rabbitmq", "asyncio"
+        "redis",
+        "kafka",
+        "kubernetes",
+        "k8s",
+        "docker",
+        "postgres",
+        "mongodb",
+        "graphql",
+        "grpc",
+        "aws",
+        "jwt",
+        "oauth",
+        "microservices",
+        "rabbitmq",
+        "asyncio",
     ]
 
     def adapt_difficulty(
@@ -39,13 +52,19 @@ class DifficultyEngine:
         # Adaptation rules
         if latest_score >= 80.0:
             next_diff = min(5, current_difficulty + 1)
-            reason = f"Excellent response ({latest_score}%). Increased difficulty to level {next_diff}."
+            reason = (
+                f"Excellent response ({latest_score}%). Increased difficulty to level {next_diff}."
+            )
         elif latest_score <= 45.0:
             next_diff = max(1, current_difficulty - 1)
-            reason = f"Candidate struggled ({latest_score}%). Reduced difficulty to level {next_diff}."
+            reason = (
+                f"Candidate struggled ({latest_score}%). Reduced difficulty to level {next_diff}."
+            )
         else:
             next_diff = current_difficulty
-            reason = f"Solid response ({latest_score}%). Maintained difficulty at level {next_diff}."
+            reason = (
+                f"Solid response ({latest_score}%). Maintained difficulty at level {next_diff}."
+            )
 
         return AdaptationDecision(
             next_difficulty=next_diff,

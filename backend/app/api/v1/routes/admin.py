@@ -37,7 +37,11 @@ def _verify_admin_access(current_user: User = Depends(get_current_user)) -> User
 
 
 # ── OP-1: AI Admin Dashboard Overview ──────────────────────────────
-@router.get("/dashboard", response_model=AdminDashboardSummaryResponse, summary="AI Admin Dashboard Overview")
+@router.get(
+    "/dashboard",
+    response_model=AdminDashboardSummaryResponse,
+    summary="AI Admin Dashboard Overview",
+)
 async def get_dashboard_summary(
     db: Session = Depends(get_db),
     admin: User = Depends(_verify_admin_access),
@@ -47,7 +51,9 @@ async def get_dashboard_summary(
 
 
 # ── OP-2: Live Interview Monitoring ──────────────────────────────
-@router.get("/interviews/live", response_model=list[LiveInterviewItem], summary="Live Interview Monitoring")
+@router.get(
+    "/interviews/live", response_model=list[LiveInterviewItem], summary="Live Interview Monitoring"
+)
 async def get_live_interviews(
     db: Session = Depends(get_db),
     admin: User = Depends(_verify_admin_access),
@@ -57,7 +63,11 @@ async def get_live_interviews(
 
 
 # ── OP-3: Conversation Replay Timeline ──────────────────────────────
-@router.get("/interview/{interview_id}/timeline", response_model=InterviewTimelineResponse, summary="Conversation Replay Timeline")
+@router.get(
+    "/interview/{interview_id}/timeline",
+    response_model=InterviewTimelineResponse,
+    summary="Conversation Replay Timeline",
+)
 async def get_interview_timeline(
     interview_id: str,
     db: Session = Depends(get_db),
@@ -68,7 +78,11 @@ async def get_interview_timeline(
 
 
 # ── OP-4: Prompt History Explorer ──────────────────────────────
-@router.get("/prompts/history", response_model=list[PromptHistoryItem], summary="Prompt Version History Explorer")
+@router.get(
+    "/prompts/history",
+    response_model=list[PromptHistoryItem],
+    summary="Prompt Version History Explorer",
+)
 async def get_prompt_history(
     db: Session = Depends(get_db),
     admin: User = Depends(_verify_admin_access),
@@ -133,7 +147,9 @@ async def get_agent_analytics(
 
 
 # ── OP-7: Human Review Queue ──────────────────────────────
-@router.get("/review/queue", response_model=list[ReviewQueueItemResponse], summary="Get Human Review Queue")
+@router.get(
+    "/review/queue", response_model=list[ReviewQueueItemResponse], summary="Get Human Review Queue"
+)
 async def get_review_queue(
     status_filter: str | None = Query(None, alias="status"),
     db: Session = Depends(get_db),

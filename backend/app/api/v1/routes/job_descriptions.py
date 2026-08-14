@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
@@ -70,7 +69,9 @@ async def get_job_description(
     service = JobDescriptionService(db)
     jd = service.get_job_description(jd_id)
     if not jd:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job description not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job description not found"
+        )
     return jd
 
 

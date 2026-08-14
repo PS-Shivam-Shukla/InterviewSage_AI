@@ -29,10 +29,11 @@ def _build_chat_model(
 ) -> BaseChatModel:
     """Instantiate a LangChain chat model from configuration."""
     provider = settings.llm_provider.lower()
-    
+
     if provider == "ollama":
         try:
             from langchain_community.chat_models import ChatOllama
+
             return ChatOllama(
                 model=model_name,
                 base_url=settings.ollama_base_url,
@@ -40,6 +41,7 @@ def _build_chat_model(
             )
         except ImportError:
             from langchain_openai import ChatOpenAI
+
             return ChatOpenAI(
                 model=model_name,
                 temperature=temperature,
@@ -49,6 +51,7 @@ def _build_chat_model(
             )
     elif provider == "openai":
         from langchain_openai import ChatOpenAI
+
         return ChatOpenAI(
             model=model_name,
             temperature=temperature,
@@ -57,6 +60,7 @@ def _build_chat_model(
         )
     elif provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
+
         return ChatAnthropic(
             model=model_name,
             temperature=temperature,
@@ -66,6 +70,7 @@ def _build_chat_model(
     else:
         # Fallback to OpenAI-compatible interface for local servers
         from langchain_openai import ChatOpenAI
+
         return ChatOpenAI(
             model=model_name,
             temperature=temperature,
@@ -117,7 +122,9 @@ class LLMClient:
             response = model.invoke(messages)
             self._consecutive_failures = 0
             latency = int((time.monotonic() - t0) * 1000)
-            logger.debug(f"LLM response in {latency}ms using {getattr(model, 'model_name', getattr(model, 'model', 'ollama'))}")
+            logger.debug(
+                f"LLM response in {latency}ms using {getattr(model, 'model_name', getattr(model, 'model', 'ollama'))}"
+            )
             return response.content
         except Exception as exc:
             self._consecutive_failures += 1
@@ -170,6 +177,7 @@ class LLMClient:
 # ─────────────────────────────────────────────────────────────
 # FakeLLMClient — deterministic test double
 # ─────────────────────────────────────────────────────────────
+
 
 class FakeLLMClient(LLMClient):
     """

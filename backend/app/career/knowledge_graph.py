@@ -19,7 +19,9 @@ class KnowledgeGraphEngine:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def add_node(self, node_type: str, label: str, properties: dict[str, Any] | None = None) -> KnowledgeGraphNode:
+    def add_node(
+        self, node_type: str, label: str, properties: dict[str, Any] | None = None
+    ) -> KnowledgeGraphNode:
         node = KnowledgeGraphNode(
             node_type=node_type,
             label=label,
@@ -49,5 +51,13 @@ class KnowledgeGraphEngine:
             "nodes_count": len(nodes),
             "edges_count": len(edges),
             "nodes": [{"id": n.id, "type": n.node_type, "label": n.label} for n in nodes],
-            "edges": [{"id": e.id, "source": e.source_id, "target": e.target_id, "relation": e.relation_type} for e in edges],
+            "edges": [
+                {
+                    "id": e.id,
+                    "source": e.source_id,
+                    "target": e.target_id,
+                    "relation": e.relation_type,
+                }
+                for e in edges
+            ],
         }

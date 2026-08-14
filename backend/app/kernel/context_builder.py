@@ -68,12 +68,12 @@ class ContextBuilder:
         # Rough character cut: max_tokens * 4 chars
         max_chars = max_tokens * 4
         pruned = text[:max_chars]
-        
+
         # Trim to last complete word boundary
         last_space = pruned.rfind(" ")
         if last_space > 0:
             pruned = pruned[:last_space]
-            
+
         return pruned + " ... [trimmed to fit context budget]"
 
     def prepare_context_payload(
@@ -90,15 +90,19 @@ class ContextBuilder:
         budgets = self.allocate_budget(task_type)
 
         trimmed_system = self.prune_text_to_budget(system_text, budgets["system_budget"])
-        trimmed_candidate = self.prune_text_to_budget(candidate_context, budgets["candidate_context_budget"])
-        
+        trimmed_candidate = self.prune_text_to_budget(
+            candidate_context, budgets["candidate_context_budget"]
+        )
+
         # Combine memory history
         combined_memory = "\n".join(memory_history) if memory_history else ""
         trimmed_memory = self.prune_text_to_budget(combined_memory, budgets["memory_budget"])
 
         # Combine knowledge snippets
         combined_knowledge = "\n".join(knowledge_snippets) if knowledge_snippets else ""
-        trimmed_knowledge = self.prune_text_to_budget(combined_knowledge, budgets["knowledge_budget"])
+        trimmed_knowledge = self.prune_text_to_budget(
+            combined_knowledge, budgets["knowledge_budget"]
+        )
 
         total_input_tokens = (
             self.estimate_tokens(trimmed_system)

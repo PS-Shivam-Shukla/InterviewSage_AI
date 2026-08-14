@@ -18,7 +18,9 @@ async def update_user(
     current_user: User = Depends(get_current_user),
 ):
     if user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot update another user")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Cannot update another user"
+        )
     service = UserService(db)
     return service.update_user(user_id, request.full_name)
 
@@ -30,6 +32,8 @@ async def export_user_data(
     current_user: User = Depends(get_current_user),
 ):
     if user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot export another user's data")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Cannot export another user's data"
+        )
     service = UserService(db)
     return service.export_user_data(user_id)

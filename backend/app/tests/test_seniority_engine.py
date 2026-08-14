@@ -90,7 +90,9 @@ def test_5_eighty_four_months_with_architecture_and_leadership_returns_staff():
                 "end_date": "2025-12",
                 "description": "Led multi-system event-driven architecture across engineering teams. Tech lead for engineering team.",
                 "ownership_bullets": ["Owned major core service"],
-                "architecture_bullets": ["Multi-system event-driven microservices architecture owner"],
+                "architecture_bullets": [
+                    "Multi-system event-driven microservices architecture owner"
+                ],
                 "leadership_bullets": ["Tech lead for engineering team"],
                 "complexity_bullets": ["High traffic high scale production system"],
                 "technologies": ["Python", "Go", "Docker", "Kubernetes", "PostgreSQL", "Kafka"],
@@ -187,8 +189,20 @@ def test_10_present_date_calculated_up_to_ref_date():
 def test_11_duplicate_experience_entries_deduplicated():
     resume = {
         "experience": [
-            {"title": "Dev", "company": "Acme", "period": "2024 - 2025", "start_date": "2024-01", "end_date": "2024-12"},
-            {"title": "Dev", "company": "Acme", "period": "2024 - 2025", "start_date": "2024-01", "end_date": "2024-12"},
+            {
+                "title": "Dev",
+                "company": "Acme",
+                "period": "2024 - 2025",
+                "start_date": "2024-01",
+                "end_date": "2024-12",
+            },
+            {
+                "title": "Dev",
+                "company": "Acme",
+                "period": "2024 - 2025",
+                "start_date": "2024-01",
+                "end_date": "2024-12",
+            },
         ],
         "technical_skills": ["Python"],
     }
@@ -284,7 +298,9 @@ def test_16_senior_guardrail_less_than_36_months_capped_at_mid():
                 "end_date": "2025-12",
                 "description": "Owned major core service end-to-end. Multi-system microservices architecture owner. Tech lead for engineering team.",
                 "ownership_bullets": ["Owned major core service"],
-                "architecture_bullets": ["Multi-system event-driven microservices architecture owner"],
+                "architecture_bullets": [
+                    "Multi-system event-driven microservices architecture owner"
+                ],
                 "leadership_bullets": ["Tech lead for engineering team"],
                 "technologies": ["Python", "FastAPI"],
             }

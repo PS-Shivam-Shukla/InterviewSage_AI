@@ -3,7 +3,6 @@ FastAPI dependency providers for authentication.
 Supports authenticated JWT users and seamless fallback for demo/guest candidates.
 """
 
-
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session

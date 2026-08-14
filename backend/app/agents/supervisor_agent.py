@@ -44,9 +44,21 @@ ALLOWED_TRANSITIONS: dict[WorkflowState, set[WorkflowState]] = {
     WorkflowState.READY: {WorkflowState.QUESTION_GENERATION, WorkflowState.FAILED},
     WorkflowState.QUESTION_GENERATION: {WorkflowState.WAITING_FOR_ANSWER, WorkflowState.FAILED},
     WorkflowState.WAITING_FOR_ANSWER: {WorkflowState.ANSWER_EVALUATION, WorkflowState.FAILED},
-    WorkflowState.ANSWER_EVALUATION: {WorkflowState.NEXT_QUESTION, WorkflowState.ROUND_COMPLETE, WorkflowState.FAILED},
-    WorkflowState.NEXT_QUESTION: {WorkflowState.QUESTION_GENERATION, WorkflowState.ROUND_COMPLETE, WorkflowState.FAILED},
-    WorkflowState.ROUND_COMPLETE: {WorkflowState.NEXT_ROUND, WorkflowState.INTERVIEW_COMPLETED, WorkflowState.FAILED},
+    WorkflowState.ANSWER_EVALUATION: {
+        WorkflowState.NEXT_QUESTION,
+        WorkflowState.ROUND_COMPLETE,
+        WorkflowState.FAILED,
+    },
+    WorkflowState.NEXT_QUESTION: {
+        WorkflowState.QUESTION_GENERATION,
+        WorkflowState.ROUND_COMPLETE,
+        WorkflowState.FAILED,
+    },
+    WorkflowState.ROUND_COMPLETE: {
+        WorkflowState.NEXT_ROUND,
+        WorkflowState.INTERVIEW_COMPLETED,
+        WorkflowState.FAILED,
+    },
     WorkflowState.NEXT_ROUND: {WorkflowState.QUESTION_GENERATION, WorkflowState.FAILED},
     WorkflowState.INTERVIEW_COMPLETED: {WorkflowState.REPORT_GENERATION, WorkflowState.FAILED},
     WorkflowState.REPORT_GENERATION: {WorkflowState.COMPLETED, WorkflowState.FAILED},
@@ -80,10 +92,14 @@ class SupervisorAgent:
             nxt = WorkflowState(next_state)
             return nxt in ALLOWED_TRANSITIONS.get(curr, set())
         except ValueError:
-            logger.warning(f"[Supervisor] Unknown workflow state transition: {current_state} -> {next_state}")
+            logger.warning(
+                f"[Supervisor] Unknown workflow state transition: {current_state} -> {next_state}"
+            )
             return False
 
-    def validate_prerequisites(self, target_state: str, state: InterviewState) -> tuple[bool, str | None]:
+    def validate_prerequisites(
+        self, target_state: str, state: InterviewState
+    ) -> tuple[bool, str | None]:
         """Validate whether state contains all required data before transitioning to target_state."""
         try:
             target = WorkflowState(target_state)
@@ -153,7 +169,9 @@ class SupervisorAgent:
         if current_stage == WorkflowState.INTERVIEW_PLANNING:
             if state.get("interview_plan"):
                 current_round = state.get("current_round", "TECHNICAL")
-                return "question_generator_hr" if current_round == "HR" else "question_generator_tech"
+                return (
+                    "question_generator_hr" if current_round == "HR" else "question_generator_tech"
+                )
             return "interview_planner_agent"
 
         # 5. QUESTION_GENERATION / READY -> WAITING_FOR_ANSWER / EVALUATION
@@ -170,16 +188,18 @@ class SupervisorAgent:
         if current_stage == WorkflowState.ANSWER_EVALUATION:
             plan = state.get("interview_plan") or {}
             current_round = state.get("current_round", "TECHNICAL")
-            
+
             target_count = (
                 plan.get("hr_question_count", 1)
                 if current_round == "HR"
                 else plan.get("technical_question_count", plan.get("total_questions", 5))
             )
-            
+
             asked_count = len(state.get("questions_asked") or [])
             if asked_count < target_count:
-                return "question_generator_hr" if current_round == "HR" else "question_generator_tech"
+                return (
+                    "question_generator_hr" if current_round == "HR" else "question_generator_tech"
+                )
             return "report_generator_agent"
 
         # 8. INTERVIEW_COMPLETED / REPORT_GENERATION -> END
@@ -200,22 +220,28 @@ class SupervisorAgent:
         """
         retries = state.get("retry_count_this_node", 0) + 1
         error_log = list(state.get("error_log") or [])
-        error_log.append({
-            "agent": error.agent_name,
-            "code": error.code.value if hasattr(error.code, "value") else str(error.code),
-            "message": error.message,
-            "retry_count": retries,
-        })
+        error_log.append(
+            {
+                "agent": error.agent_name,
+                "code": error.code.value if hasattr(error.code, "value") else str(error.code),
+                "message": error.message,
+                "retry_count": retries,
+            }
+        )
 
         if retries > self.max_retries or not error.retryable:
-            logger.error(f"[Supervisor] Agent {error.agent_name} failed permanently: {error.message}")
+            logger.error(
+                f"[Supervisor] Agent {error.agent_name} failed permanently: {error.message}"
+            )
             return {
                 "workflow_stage": WorkflowState.FAILED.value,
                 "error_log": error_log,
                 "retry_count_this_node": retries,
             }
 
-        logger.warning(f"[Supervisor] Agent {error.agent_name} retry {retries}/{self.max_retries}: {error.message}")
+        logger.warning(
+            f"[Supervisor] Agent {error.agent_name} retry {retries}/{self.max_retries}: {error.message}"
+        )
         return {
             "error_log": error_log,
             "retry_count_this_node": retries,

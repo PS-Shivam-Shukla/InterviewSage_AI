@@ -16,7 +16,9 @@ def _auth_headers(user: User, db_session: Session) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_voice_analytics_deterministic_metrics(db_session: Session, sample_user: User, sample_interview: Interview):
+def test_voice_analytics_deterministic_metrics(
+    db_session: Session, sample_user: User, sample_interview: Interview
+):
     """Verify deterministic VoiceAnalyticsService WPM, silence, answer latency, and scores calculation."""
     transcript_service = TranscriptService(db_session)
     session_id = "sess-analytics-101"
@@ -26,10 +28,16 @@ def test_voice_analytics_deterministic_metrics(db_session: Session, sample_user:
     )
 
     transcript_service.record_turn(
-        session_id, "AI_AGENT", "What is your experience with Kubernetes operators?", agent_name="TechnicalInterviewAgent"
+        session_id,
+        "AI_AGENT",
+        "What is your experience with Kubernetes operators?",
+        agent_name="TechnicalInterviewAgent",
     )
     transcript_service.record_turn(
-        session_id, "CANDIDATE", "I have deployed custom Kubernetes operators using Python and Kopf framework.", duration_seconds=5.0
+        session_id,
+        "CANDIDATE",
+        "I have deployed custom Kubernetes operators using Python and Kopf framework.",
+        duration_seconds=5.0,
     )
 
     analytics = VoiceAnalyticsService(db_session)
@@ -43,7 +51,9 @@ def test_voice_analytics_deterministic_metrics(db_session: Session, sample_user:
     assert metrics.confidence_estimate >= 40.0
 
 
-def test_get_voice_metrics_route(client: TestClient, db_session: Session, sample_user: User, sample_interview: Interview):
+def test_get_voice_metrics_route(
+    client: TestClient, db_session: Session, sample_user: User, sample_interview: Interview
+):
     """Verify GET /api/v1/voice/{session_id} API endpoint."""
     transcript_service = TranscriptService(db_session)
     session_id = "sess-route-voice-202"

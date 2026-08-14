@@ -22,7 +22,9 @@ class HiringPredictionEngine:
         self.db = db
 
     def predict_hiring_outcome(self, candidate_id: str) -> CandidatePrediction:
-        skills = self.db.query(SkillProgress).filter(SkillProgress.candidate_id == candidate_id).all()
+        skills = (
+            self.db.query(SkillProgress).filter(SkillProgress.candidate_id == candidate_id).all()
+        )
         interviews = self.db.query(Interview).filter(Interview.user_id == candidate_id).all()
 
         if skills:

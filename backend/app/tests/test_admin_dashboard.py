@@ -82,7 +82,12 @@ def test_admin_live_interviews_route(client: TestClient, admin_token_headers: di
 
 
 def test_admin_timeline_route(
-    client: TestClient, admin_token_headers: dict, db_session: Session, sample_user: User, sample_resume: Resume, sample_jd: JobDescription
+    client: TestClient,
+    admin_token_headers: dict,
+    db_session: Session,
+    sample_user: User,
+    sample_resume: Resume,
+    sample_jd: JobDescription,
 ):
     """Verify GET /api/v1/admin/interview/{id}/timeline API endpoint."""
     iv = Interview(

@@ -32,9 +32,7 @@ class Resume(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     # Relationships
     user: Mapped[User] = relationship("User", back_populates="resumes")
-    interviews: Mapped[list[Interview]] = relationship(
-        "Interview", back_populates="resume"
-    )
+    interviews: Mapped[list[Interview]] = relationship("Interview", back_populates="resume")
 
     def __repr__(self) -> str:
         return f"<Resume id={self.id!r} user_id={self.user_id!r}>"

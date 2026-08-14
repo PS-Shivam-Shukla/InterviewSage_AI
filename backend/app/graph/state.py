@@ -35,60 +35,60 @@ class InterviewState(TypedDict, total=False):
     """
 
     # ── Identity ──────────────────────────────────────────────
-    interview_id: str                   # Primary key; thread_id for LangGraph checkpointer
-    user_id: str                        # Owning user
+    interview_id: str  # Primary key; thread_id for LangGraph checkpointer
+    user_id: str  # Owning user
 
     # ── Raw inputs (written at graph start, read by extraction agents) ─
-    raw_resume_file_path: str           # Path to resume file
-    raw_jd_file_path: str               # Path to job description file
-    resume_raw_text: str                # Raw text extracted from resume file
-    jd_raw_text: str                    # Raw job description text
-    pending_answer: str                 # Candidate's answer for the current turn
-    document_confidence_score: float    # Ingestion confidence score
+    raw_resume_file_path: str  # Path to resume file
+    raw_jd_file_path: str  # Path to job description file
+    resume_raw_text: str  # Raw text extracted from resume file
+    jd_raw_text: str  # Raw job description text
+    pending_answer: str  # Candidate's answer for the current turn
+    document_confidence_score: float  # Ingestion confidence score
 
     # ── Agent & Engine outputs (set once, read by downstream nodes) ───
-    resume_data: dict[str, Any]         # Written by: ResumeAgent
-    jd_data: dict[str, Any]             # Written by: JDAgent
-    resume_json: dict[str, Any]         # Standardized Resume JSON
-    jd_json: dict[str, Any]             # Standardized JD JSON
-    ats_analysis: dict[str, Any]        # Written by: ATSAgent
-    ats_result: dict[str, Any]          # ATS Evaluation Result
-    profile_summary: dict[str, Any]     # Written by: ProfileIntelligenceAgent
-    competency_matrix: list[dict]       # Written by: CompetencyMappingAgent
-    skill_graph: dict[str, Any]         # Normalized Skill Graph
-    capability_graph: dict[str, Any]    # Candidate Capability Graph
+    resume_data: dict[str, Any]  # Written by: ResumeAgent
+    jd_data: dict[str, Any]  # Written by: JDAgent
+    resume_json: dict[str, Any]  # Standardized Resume JSON
+    jd_json: dict[str, Any]  # Standardized JD JSON
+    ats_analysis: dict[str, Any]  # Written by: ATSAgent
+    ats_result: dict[str, Any]  # ATS Evaluation Result
+    profile_summary: dict[str, Any]  # Written by: ProfileIntelligenceAgent
+    competency_matrix: list[dict]  # Written by: CompetencyMappingAgent
+    skill_graph: dict[str, Any]  # Normalized Skill Graph
+    capability_graph: dict[str, Any]  # Candidate Capability Graph
 
     # ── DISE Strategy & Blueprint Engine ────────────────────────
-    classification: dict[str, Any]      # Written by: CandidateClassifier Node
+    classification: dict[str, Any]  # Written by: CandidateClassifier Node
     interview_strategy: dict[str, Any]  # Written by: Strategy Agent
-    interview_blueprint: dict[str, Any] # Written by: Blueprint Generator Node
-    interview_plan: dict[str, Any]      # Written by: InterviewPlannerAgent
+    interview_blueprint: dict[str, Any]  # Written by: Blueprint Generator Node
+    interview_plan: dict[str, Any]  # Written by: InterviewPlannerAgent
 
     # ── Runtime interview progress ────────────────────────────
-    current_round: str                  # "HR" | "TECHNICAL" | "COMPLETE"
-    current_question: dict | None    # Written by: Question Personalization Node; None between turns
+    current_round: str  # "HR" | "TECHNICAL" | "COMPLETE"
+    current_question: dict | None  # Written by: Question Personalization Node; None between turns
     questions_asked: Annotated[list[dict], _append]  # Accumulates across all turns
-    answers: Annotated[list[dict], _append]          # Accumulates candidate answers
-    evaluations: Annotated[list[dict], _append]      # Accumulates per-answer evaluations
+    answers: Annotated[list[dict], _append]  # Accumulates candidate answers
+    evaluations: Annotated[list[dict], _append]  # Accumulates per-answer evaluations
 
     # ── Post-interview ────────────────────────────────────────
-    coaching_plan: dict[str, Any]       # Written by: CareerCoachAgent
-    learning_plan: dict[str, Any]       # Generated learning recommendations
-    final_report: dict | None        # Written by: ReportGeneratorAgent
+    coaching_plan: dict[str, Any]  # Written by: CareerCoachAgent
+    learning_plan: dict[str, Any]  # Generated learning recommendations
+    final_report: dict | None  # Written by: ReportGeneratorAgent
 
     # ── Orchestration / transient / HITL ──────────────────────
-    workflow_stage: str                 # Current execution stage
-    human_review_required: bool         # HITL Interrupt Gate Flag
-    retry_count_this_node: int          # Reset on each node entry by LangGraph runtime
+    workflow_stage: str  # Current execution stage
+    human_review_required: bool  # HITL Interrupt Gate Flag
+    retry_count_this_node: int  # Reset on each node entry by LangGraph runtime
     error_log: Annotated[list[dict], _append]  # Any agent can append errors here
-    next_node: str | None            # Supervisor routing decision
+    next_node: str | None  # Supervisor routing decision
 
     # ── Model-Mediated Policy & Verification ───────────────────
-    policy_iteration_count: int         # Tracks bounded PolicyNode loop iterations (max 5)
+    policy_iteration_count: int  # Tracks bounded PolicyNode loop iterations (max 5)
     policy_decisions: Annotated[list[dict], _append]  # Log of tool_call and finish decisions
-    observations: Annotated[list[dict], _append]      # Log of tool execution observations
-    available_tools: list[dict]         # Machine-readable MCP tool schemas exposed to LLM
-    verification_report: dict[str, Any] # Written by: ReportVerificationNode
+    observations: Annotated[list[dict], _append]  # Log of tool execution observations
+    available_tools: list[dict]  # Machine-readable MCP tool schemas exposed to LLM
+    verification_report: dict[str, Any]  # Written by: ReportVerificationNode
 
 
 # V4 Architecture Alias

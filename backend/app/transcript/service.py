@@ -52,11 +52,15 @@ class TranscriptService:
             created_at=turn.created_at.isoformat(),
         )
 
-    def compile_full_transcript(self, session_id: str, interview_id: str) -> TranscriptExportResponse:
+    def compile_full_transcript(
+        self, session_id: str, interview_id: str
+    ) -> TranscriptExportResponse:
         turns = self.repo.list_turns(session_id)
         lines = []
         for t in turns:
-            prefix = f"[{t.speaker}] ({t.agent_name})" if t.speaker == "AI_AGENT" else f"[{t.speaker}]"
+            prefix = (
+                f"[{t.speaker}] ({t.agent_name})" if t.speaker == "AI_AGENT" else f"[{t.speaker}]"
+            )
             lines.append(f"{prefix}: {t.transcript}")
 
         full_text = "\n".join(lines) if lines else "No conversation turns recorded for session."
@@ -86,7 +90,9 @@ class TranscriptService:
             # Reconstruct from turns
             turns = self.repo.list_turns(identifier)
             lines = [f"[{t.speaker}]: {t.transcript}" for t in turns]
-            full_text = "\n".join(lines) if lines else f"Interview Transcript Log for {identifier}\n---\n"
+            full_text = (
+                "\n".join(lines) if lines else f"Interview Transcript Log for {identifier}\n---\n"
+            )
             return {
                 "interview_id": identifier,
                 "full_text": full_text,

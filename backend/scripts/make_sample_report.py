@@ -2,12 +2,11 @@
 
 Run from the workspace root with Python: `python backend/scripts/make_sample_report.py`
 """
-import json
-from pathlib import Path
-
-from datetime import datetime, timezone
 
 import sys
+from datetime import UTC, datetime
+from pathlib import Path
+
 # Ensure backend is on sys.path so `import app` works
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -17,7 +16,7 @@ from app.utils.pdf_renderer import render_report_pdf
 def main():
     sample = {
         "interview_id": "sample-123",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "competency_scorecard": [{"skill": "Python", "score": 9}, {"skill": "Design", "score": 8}],
         "improvement_plan": [{"area": "Testing", "recommendation": "Add more unit tests"}],
         "transcript_snapshot": [

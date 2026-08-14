@@ -117,5 +117,7 @@ class JSONValidator:
         except Exception:
             pass
 
-        logger.warning(f"JSONValidator failed to parse or repair structured output: {raw_output[:100]}...")
+        logger.warning(
+            f"JSONValidator failed to parse or repair structured output: {raw_output[:100]}..."
+        )
         return False, None, False

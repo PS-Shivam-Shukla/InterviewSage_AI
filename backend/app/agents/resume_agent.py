@@ -16,6 +16,7 @@ from app.prompts.loader import get_developer_prompt, get_system_prompt
 
 # ── Output schema ─────────────────────────────────────────────
 
+
 class ExperienceEntry(BaseModel):
     id: str | None = None
     title: str = ""
@@ -28,10 +29,22 @@ class ExperienceEntry(BaseModel):
     description: str = ""
     highlights: list[str] = Field(default_factory=list)
     technologies: list[str] = Field(default_factory=list)
-    ownership_bullets: list[str] = Field(default_factory=list, description="Factual evidence of independent feature or service ownership")
-    architecture_bullets: list[str] = Field(default_factory=list, description="Factual evidence of system design, database architecture, or microservice design")
-    leadership_bullets: list[str] = Field(default_factory=list, description="Factual evidence of mentoring, code reviews, or team leadership")
-    complexity_bullets: list[str] = Field(default_factory=list, description="Factual evidence of high scale, performance optimization, or complex technical delivery")
+    ownership_bullets: list[str] = Field(
+        default_factory=list,
+        description="Factual evidence of independent feature or service ownership",
+    )
+    architecture_bullets: list[str] = Field(
+        default_factory=list,
+        description="Factual evidence of system design, database architecture, or microservice design",
+    )
+    leadership_bullets: list[str] = Field(
+        default_factory=list,
+        description="Factual evidence of mentoring, code reviews, or team leadership",
+    )
+    complexity_bullets: list[str] = Field(
+        default_factory=list,
+        description="Factual evidence of high scale, performance optimization, or complex technical delivery",
+    )
 
 
 class EducationEntry(BaseModel):
@@ -60,28 +73,54 @@ class CertificationEntry(BaseModel):
 
 
 class ResumeAnalysis(BaseModel):
-    summary: str = Field(default="", description="Executive candidate summary extracted from resume")
-    technical_skills: list[str] = Field(default_factory=list, description="All technical skills and technologies")
-    soft_skills: list[str] = Field(default_factory=list, description="Soft skills, domain competencies, and leadership qualities")
-    experience: list[ExperienceEntry] = Field(default_factory=list, description="List of work experience entries")
-    education: list[EducationEntry] = Field(default_factory=list, description="List of education and academic credentials")
+    summary: str = Field(
+        default="", description="Executive candidate summary extracted from resume"
+    )
+    technical_skills: list[str] = Field(
+        default_factory=list, description="All technical skills and technologies"
+    )
+    soft_skills: list[str] = Field(
+        default_factory=list,
+        description="Soft skills, domain competencies, and leadership qualities",
+    )
+    experience: list[ExperienceEntry] = Field(
+        default_factory=list, description="List of work experience entries"
+    )
+    education: list[EducationEntry] = Field(
+        default_factory=list, description="List of education and academic credentials"
+    )
     projects: list[ProjectEntry] = Field(default_factory=list, description="List of key projects")
-    certifications: list[CertificationEntry] = Field(default_factory=list, description="List of certifications")
+    certifications: list[CertificationEntry] = Field(
+        default_factory=list, description="List of certifications"
+    )
     languages: list[str] = Field(default_factory=list, description="Spoken/written human languages")
-    strengths: list[str] = Field(default_factory=list, description="Key candidate strengths identified")
-    weaknesses: list[str] = Field(default_factory=list, description="Areas for candidate improvement")
-    career_level: str | None = Field(default="UNKNOWN", description="Deprecated. Final seniority is computed deterministically by SeniorityEngine in Python.")
-    resume_quality_score: int = Field(default=85, ge=0, le=100, description="Calculated resume formatting, clarity, section completeness, and technical depth score (0 to 100)")
+    strengths: list[str] = Field(
+        default_factory=list, description="Key candidate strengths identified"
+    )
+    weaknesses: list[str] = Field(
+        default_factory=list, description="Areas for candidate improvement"
+    )
+    career_level: str | None = Field(
+        default="UNKNOWN",
+        description="Deprecated. Final seniority is computed deterministically by SeniorityEngine in Python.",
+    )
+    resume_quality_score: int = Field(
+        default=85,
+        ge=0,
+        le=100,
+        description="Calculated resume formatting, clarity, section completeness, and technical depth score (0 to 100)",
+    )
 
 
 # ── Agent ─────────────────────────────────────────────────────
+
 
 class ResumeAgent(BaseAgent):
     agent_name = "ResumeAgent"
     prompt_version = "v1"
 
     def _temperature(self) -> float:
-        return 0.1   # deterministic extraction
+        return 0.1  # deterministic extraction
 
     def _run(self, state: InterviewState, retry_feedback: str | None = None) -> dict:
         raw_text = state.get("resume_raw_text", "")

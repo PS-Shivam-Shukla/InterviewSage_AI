@@ -70,9 +70,7 @@ def setup_logging() -> None:
     console_handler.setLevel(logging.DEBUG if settings.debug else logging.INFO)
 
     if settings.debug:
-        console_format = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        console_format = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         console_handler.setFormatter(console_format)
     else:
         console_handler.setFormatter(StructuredFormatter())

@@ -38,14 +38,23 @@ def mock_mcp_tool():
         "communication_score": 90,
         "confidence_score": 92,
     }
-    dummy_wav = b"RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x80\x3e\x00\x00\x00\x7d\x00\x00\x02\x00\x10\x00data\x00\x00\x00\x00" + b"\x00" * 1024
+    dummy_wav = (
+        b"RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x80\x3e\x00\x00\x00\x7d\x00\x00\x02\x00\x10\x00data\x00\x00\x00\x00"
+        + b"\x00" * 1024
+    )
 
-    with patch("app.mcp.server.mcp_server.call_tool", return_value=mock_res), \
-         patch.object(FasterWhisperSTTService, "_init_model", return_value=None), \
-         patch.object(FasterWhisperSTTService, "transcribe_bytes", return_value="I have five years of experience building backend microservices with FastAPI and PostgreSQL."), \
-         patch.object(KokoroTTSService, "_init_kokoro", return_value=None), \
-         patch.object(KokoroTTSService, "speak", return_value=dummy_wav), \
-         patch.object(KokoroTTSService, "synthesize", return_value=dummy_wav):
+    with (
+        patch("app.mcp.server.mcp_server.call_tool", return_value=mock_res),
+        patch.object(FasterWhisperSTTService, "_init_model", return_value=None),
+        patch.object(
+            FasterWhisperSTTService,
+            "transcribe_bytes",
+            return_value="I have five years of experience building backend microservices with FastAPI and PostgreSQL.",
+        ),
+        patch.object(KokoroTTSService, "_init_kokoro", return_value=None),
+        patch.object(KokoroTTSService, "speak", return_value=dummy_wav),
+        patch.object(KokoroTTSService, "synthesize", return_value=dummy_wav),
+    ):
         yield
 
 
@@ -118,7 +127,9 @@ def _create_test_interview(user: User, db: Session) -> Interview:
     return interview
 
 
-def test_voice_websocket_connect_and_ping(client: TestClient, db_session: Session, sample_user: User):
+def test_voice_websocket_connect_and_ping(
+    client: TestClient, db_session: Session, sample_user: User
+):
     """Verify WebSocket connection and PING/PONG message exchange."""
     token = _auth_token(sample_user, db_session)
     session_id = "sess-ws-ping-101"
@@ -141,7 +152,9 @@ def test_voice_websocket_heartbeat(client: TestClient, db_session: Session, samp
         assert hb_msg["status"] == "ACTIVE"
 
 
-def test_authenticated_websocket_audio_buffering(client: TestClient, db_session: Session, sample_user: User):
+def test_authenticated_websocket_audio_buffering(
+    client: TestClient, db_session: Session, sample_user: User
+):
     """Test 1: Verify binary audio buffering emits AUDIO_CHUNK_ACK."""
     interview = _create_test_interview(sample_user, db_session)
     token = _auth_token(sample_user, db_session)
@@ -153,7 +166,9 @@ def test_authenticated_websocket_audio_buffering(client: TestClient, db_session:
         assert ack["size_bytes"] == 100
 
 
-def test_authenticated_websocket_voice_turn_persistence(client: TestClient, db_session: Session, sample_user: User):
+def test_authenticated_websocket_voice_turn_persistence(
+    client: TestClient, db_session: Session, sample_user: User
+):
     """Test 2-7: Verify END_CANDIDATE_SPEECH triggers STT, Evaluation, Persistence, and Question Index increment."""
     interview = _create_test_interview(sample_user, db_session)
     token = _auth_token(sample_user, db_session)
@@ -186,7 +201,12 @@ def test_authenticated_websocket_voice_turn_persistence(client: TestClient, db_s
 
     # 3. Verify Database Persistence State
     db_session.expire_all()
-    answers = db_session.query(InterviewAnswer).join(InterviewQuestion).filter(InterviewQuestion.interview_id == interview.id).all()
+    answers = (
+        db_session.query(InterviewAnswer)
+        .join(InterviewQuestion)
+        .filter(InterviewQuestion.interview_id == interview.id)
+        .all()
+    )
     assert len(answers) == 1
     assert answers[0].answer_text is not None
 
@@ -194,7 +214,9 @@ def test_authenticated_websocket_voice_turn_persistence(client: TestClient, db_s
     assert len(evals) == 1
     assert evals[0].score > 0
 
-    turns = db_session.query(ConversationTurn).filter(ConversationTurn.session_id == interview.id).all()
+    turns = (
+        db_session.query(ConversationTurn).filter(ConversationTurn.session_id == interview.id).all()
+    )
     assert len(turns) >= 2
 
     metrics = db_session.query(VoiceMetrics).filter(VoiceMetrics.session_id == interview.id).first()
@@ -214,7 +236,9 @@ def test_empty_audio_returns_error(client: TestClient, db_session: Session, samp
         assert "No candidate audio received" in err_msg["message"]
 
 
-def test_unauthorized_websocket_rejected(client: TestClient, db_session: Session, sample_user: User):
+def test_unauthorized_websocket_rejected(
+    client: TestClient, db_session: Session, sample_user: User
+):
     """Verify unauthorized WebSocket connection is rejected with policy violation code."""
     session_id = "unauth-session-999"
     with pytest.raises(Exception):
@@ -222,7 +246,9 @@ def test_unauthorized_websocket_rejected(client: TestClient, db_session: Session
             ws.send_json({"type": "PING"})
 
 
-def test_duplicate_end_candidate_speech_handling(client: TestClient, db_session: Session, sample_user: User):
+def test_duplicate_end_candidate_speech_handling(
+    client: TestClient, db_session: Session, sample_user: User
+):
     """Workstream D & F: Verify duplicate/concurrent END_CANDIDATE_SPEECH returns PROCESSING_IN_PROGRESS and avoids duplicate DB records."""
     from app.api.v1.routes.websocket import _processing_sessions
 
@@ -242,7 +268,9 @@ def test_duplicate_end_candidate_speech_handling(client: TestClient, db_session:
         _processing_sessions.discard(interview.id)
 
 
-def test_text_mode_vs_voice_mode_state_parity(client: TestClient, db_session: Session, sample_user: User):
+def test_text_mode_vs_voice_mode_state_parity(
+    client: TestClient, db_session: Session, sample_user: User
+):
     """Workstream J: Verify REST Text Turn and WebSocket Voice Turn produce consistent database entities."""
     from app.services.interview_service import InterviewService
     from app.speech.streaming import AudioStreamingService
@@ -261,7 +289,12 @@ def test_text_mode_vs_voice_mode_state_parity(client: TestClient, db_session: Se
 
     # Verify Text Turn persisted records
     db_session.expire_all()
-    text_answers = db_session.query(InterviewAnswer).join(InterviewQuestion).filter(InterviewQuestion.interview_id == interview.id).all()
+    text_answers = (
+        db_session.query(InterviewAnswer)
+        .join(InterviewQuestion)
+        .filter(InterviewQuestion.interview_id == interview.id)
+        .all()
+    )
     assert len(text_answers) == 1
     assert text_answers[0].answer_text == "I use connection pools like asyncpg with FastAPI."
 
@@ -276,9 +309,13 @@ def test_text_mode_vs_voice_mode_state_parity(client: TestClient, db_session: Se
 
     # Verify Voice Turn persisted records (2 total answers in interview sequence)
     db_session.expire_all()
-    all_answers = db_session.query(InterviewAnswer).join(InterviewQuestion).filter(InterviewQuestion.interview_id == interview.id).all()
+    all_answers = (
+        db_session.query(InterviewAnswer)
+        .join(InterviewQuestion)
+        .filter(InterviewQuestion.interview_id == interview.id)
+        .all()
+    )
     assert len(all_answers) == 2
 
     evals = db_session.query(Evaluation).all()
     assert len(evals) == 2
-

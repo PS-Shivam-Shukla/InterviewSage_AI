@@ -65,6 +65,8 @@ def check_job_description_ownership(jd_id: str, user_id: str, db: Session) -> Jo
     repo = JobDescriptionRepository(db)
     jd = repo.get_by_id(jd_id)
     if not jd:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job description not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Job description not found"
+        )
     verify_ownership(jd.user_id, user_id, "job description")
     return jd

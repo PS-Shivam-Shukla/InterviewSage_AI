@@ -21,12 +21,10 @@ class LiveSession(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "live_sessions"
 
     interview_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("interviews.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        String(36), ForeignKey("interviews.id", ondelete="CASCADE"), nullable=False, index=True
     )
     candidate_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     # ACTIVE | PAUSED | COMPLETED | DISCONNECTED
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="ACTIVE", index=True)
@@ -53,20 +51,27 @@ class LiveSession(UUIDPrimaryKeyMixin, Base):
         nullable=False,
     )
 
-    turns: Mapped[list["ConversationTurn"]] = relationship("ConversationTurn", back_populates="session", cascade="all, delete-orphan")
-    metrics: Mapped[Optional["VoiceMetrics"]] = relationship("VoiceMetrics", back_populates="session", uselist=False, cascade="all, delete-orphan")
-    events: Mapped[list["SpeechEvent"]] = relationship("SpeechEvent", back_populates="session", cascade="all, delete-orphan")
+    turns: Mapped[list["ConversationTurn"]] = relationship(
+        "ConversationTurn", back_populates="session", cascade="all, delete-orphan"
+    )
+    metrics: Mapped[Optional["VoiceMetrics"]] = relationship(
+        "VoiceMetrics", back_populates="session", uselist=False, cascade="all, delete-orphan"
+    )
+    events: Mapped[list["SpeechEvent"]] = relationship(
+        "SpeechEvent", back_populates="session", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
-        return f"<LiveSession id={self.id!r} interview_id={self.interview_id!r} status={self.status}>"
+        return (
+            f"<LiveSession id={self.id!r} interview_id={self.interview_id!r} status={self.status}>"
+        )
 
 
 class ConversationTurn(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "conversation_turns"
 
     session_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("live_sessions.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        String(36), ForeignKey("live_sessions.id", ondelete="CASCADE"), nullable=False, index=True
     )
     turn_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     # CANDIDATE | AI_AGENT | SYSTEM
@@ -74,7 +79,9 @@ class ConversationTurn(UUIDPrimaryKeyMixin, Base):
     transcript: Mapped[str] = mapped_column(Text, nullable=False)
     duration_seconds: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     tokens_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    agent_name: Mapped[str] = mapped_column(String(100), nullable=False, default="TechnicalInterviewAgent")
+    agent_name: Mapped[str] = mapped_column(
+        String(100), nullable=False, default="TechnicalInterviewAgent"
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -99,16 +106,20 @@ class VoiceMetrics(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "voice_metrics"
 
     session_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("live_sessions.id", ondelete="CASCADE"),
-        nullable=False, unique=True, index=True
+        String(36),
+        ForeignKey("live_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
     )
     candidate_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     avg_speaking_speed_wpm: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     total_speaking_time_seconds: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    total_silence_duration_seconds: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    total_silence_duration_seconds: Mapped[float] = mapped_column(
+        Float, nullable=False, default=0.0
+    )
     answer_latency_avg_seconds: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     total_words_spoken: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     technical_score: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
@@ -135,8 +146,7 @@ class SpeechEvent(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "speech_events"
 
     session_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("live_sessions.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        String(36), ForeignKey("live_sessions.id", ondelete="CASCADE"), nullable=False, index=True
     )
     # CHUNK_RECEIVED | TRANSCRIPTION_COMPLETE | TTS_SYNTHESIZED | WEBSOCKET_DISCONNECT
     event_type: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -157,12 +167,10 @@ class TranscriptExport(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "transcripts"
 
     interview_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("interviews.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        String(36), ForeignKey("interviews.id", ondelete="CASCADE"), nullable=False, index=True
     )
     session_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("live_sessions.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        String(36), ForeignKey("live_sessions.id", ondelete="CASCADE"), nullable=False, index=True
     )
     full_text: Mapped[str] = mapped_column(Text, nullable=False)
     turn_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

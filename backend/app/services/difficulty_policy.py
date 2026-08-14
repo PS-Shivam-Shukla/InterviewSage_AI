@@ -123,7 +123,9 @@ class QuestionDifficultyPolicy:
 
         if avg_score >= 8.0:
             target_rank = curr_rank + 1
-            reason = f"Strong performance (avg {avg_score:.1f}/10) recommends difficulty escalation."
+            reason = (
+                f"Strong performance (avg {avg_score:.1f}/10) recommends difficulty escalation."
+            )
         elif avg_score < 4.0:
             target_rank = max(1, curr_rank - 1)
             reason = f"Weak performance (avg {avg_score:.1f}/10) de-escalates difficulty."
@@ -161,5 +163,11 @@ class QuestionDifficultyPolicy:
         c_rank = DIFFICULTY_RANK.get(ceiling, 1)
 
         if q_rank > c_rank:
-            return False, f"Question difficulty '{question_difficulty}' exceeds candidate ceiling '{ceiling}' for {seniority_level} ({relevant_experience_months} mos exp)."
-        return True, f"Question difficulty '{question_difficulty}' is within allowed ceiling '{ceiling}'."
+            return (
+                False,
+                f"Question difficulty '{question_difficulty}' exceeds candidate ceiling '{ceiling}' for {seniority_level} ({relevant_experience_months} mos exp).",
+            )
+        return (
+            True,
+            f"Question difficulty '{question_difficulty}' is within allowed ceiling '{ceiling}'.",
+        )

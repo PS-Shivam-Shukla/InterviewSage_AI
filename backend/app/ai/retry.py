@@ -18,9 +18,9 @@ logger = get_logger(__name__)
 
 
 class CircuitState(str, Enum):
-    CLOSED = "CLOSED"      # Normal operation
-    OPEN = "OPEN"          # Circuit tripped, requests rejected or routed immediately to fallback
-    HALF_OPEN = "HALF_OPEN"# Testing recovery
+    CLOSED = "CLOSED"  # Normal operation
+    OPEN = "OPEN"  # Circuit tripped, requests rejected or routed immediately to fallback
+    HALF_OPEN = "HALF_OPEN"  # Testing recovery
 
 
 class CircuitBreaker:
@@ -64,7 +64,9 @@ class CircuitBreaker:
         self.failure_count += 1
         self.last_failure_time = time.time()
         if self.failure_count >= self.failure_threshold:
-            logger.warning(f"CircuitBreaker [{self.name}] tripped! State -> OPEN (failures={self.failure_count})")
+            logger.warning(
+                f"CircuitBreaker [{self.name}] tripped! State -> OPEN (failures={self.failure_count})"
+            )
             self.state = CircuitState.OPEN
 
 
@@ -106,10 +108,14 @@ class RetryEngine:
         circuit = self.get_circuit_breaker(provider)
 
         if not circuit.allow_request():
-            logger.warning(f"CircuitBreaker for [{provider}] is OPEN. Executing fallback immediately.")
+            logger.warning(
+                f"CircuitBreaker for [{provider}] is OPEN. Executing fallback immediately."
+            )
             if fallback_func:
                 return fallback_func(*args, **kwargs)
-            raise RuntimeError(f"CircuitBreaker for provider [{provider}] is OPEN and no fallback function supplied.")
+            raise RuntimeError(
+                f"CircuitBreaker for provider [{provider}] is OPEN and no fallback function supplied."
+            )
 
         attempt = 0
         delay_ms = self.initial_delay_ms
@@ -123,18 +129,25 @@ class RetryEngine:
             except Exception as exc:
                 if attempt > 1:
                     LLM_RETRY_TOTAL.labels(provider=provider).inc()
-                logger.warning(f"RetryEngine attempt {attempt}/{self.max_retries + 1} for [{provider}] failed: {exc}")
+                logger.warning(
+                    f"RetryEngine attempt {attempt}/{self.max_retries + 1} for [{provider}] failed: {exc}"
+                )
 
                 if attempt > self.max_retries:
                     circuit.record_failure()
                     LLM_FAILURES_TOTAL.labels(provider=provider).inc()
 
                     if fallback_func:
-                        logger.info(f"Retries exhausted for [{provider}]. Executing fallback implementation.")
+                        logger.info(
+                            f"Retries exhausted for [{provider}]. Executing fallback implementation."
+                        )
                         try:
                             return fallback_func(*args, **kwargs)
                         except Exception as fallback_exc:
-                            logger.error(f"Fallback implementation also failed: {fallback_exc}", exc_info=True)
+                            logger.error(
+                                f"Fallback implementation also failed: {fallback_exc}",
+                                exc_info=True,
+                            )
                             raise fallback_exc
                     raise exc
 

@@ -23,7 +23,14 @@ class AdminReviewManager:
     def update_status(self, review_id: str, status: str, admin_id: str | None = None) -> Any:
         return self.service.process_review(review_id=review_id, status=status, admin_id=admin_id)
 
-    def submit_feedback(self, interview_id: str, recruiter_id: str, rating_action: str, question_id: str | None = None, comment: str | None = None) -> Any:
+    def submit_feedback(
+        self,
+        interview_id: str,
+        recruiter_id: str,
+        rating_action: str,
+        question_id: str | None = None,
+        comment: str | None = None,
+    ) -> Any:
         return self.service.record_feedback(
             interview_id=interview_id,
             recruiter_id=recruiter_id,

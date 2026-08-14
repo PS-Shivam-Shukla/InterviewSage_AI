@@ -38,30 +38,36 @@ class AdminDashboardManager:
 
         items = []
         for idx, iv in enumerate(active_interviews):
-            items.append({
-                "interview_id": iv.id,
-                "candidate_name": f"Candidate {iv.user_id[:6]}" if iv.user_id else "Anonymous Candidate",
-                "current_round": iv.current_round or "TECHNICAL",
-                "question_number": 1,
-                "workflow_stage": iv.status,
-                "current_agent": "TechnicalInterviewAgent",
-                "elapsed_seconds": 340 + idx * 45,
-                "thread_id": f"thread-{iv.id[:8]}",
-                "worker_id": f"worker-0{(idx % 3) + 1}",
-            })
+            items.append(
+                {
+                    "interview_id": iv.id,
+                    "candidate_name": (
+                        f"Candidate {iv.user_id[:6]}" if iv.user_id else "Anonymous Candidate"
+                    ),
+                    "current_round": iv.current_round or "TECHNICAL",
+                    "question_number": 1,
+                    "workflow_stage": iv.status,
+                    "current_agent": "TechnicalInterviewAgent",
+                    "elapsed_seconds": 340 + idx * 45,
+                    "thread_id": f"thread-{iv.id[:8]}",
+                    "worker_id": f"worker-0{(idx % 3) + 1}",
+                }
+            )
 
         if not items:
-            items.append({
-                "interview_id": "int-demo-live-1",
-                "candidate_name": "Senior Software Engineer Candidate",
-                "current_round": "TECHNICAL",
-                "question_number": 2,
-                "workflow_stage": "IN_PROGRESS",
-                "current_agent": "TechnicalInterviewAgent",
-                "elapsed_seconds": 480,
-                "thread_id": "thread-int-demo-live-1",
-                "worker_id": "worker-01",
-            })
+            items.append(
+                {
+                    "interview_id": "int-demo-live-1",
+                    "candidate_name": "Senior Software Engineer Candidate",
+                    "current_round": "TECHNICAL",
+                    "question_number": 2,
+                    "workflow_stage": "IN_PROGRESS",
+                    "current_agent": "TechnicalInterviewAgent",
+                    "elapsed_seconds": 480,
+                    "thread_id": "thread-int-demo-live-1",
+                    "worker_id": "worker-01",
+                }
+            )
 
         return items
 
@@ -78,15 +84,15 @@ class AdminDashboardManager:
         )
         q_ids = [q.id for q in questions]
         answers = (
-            self.db.query(InterviewAnswer)
-            .filter(InterviewAnswer.question_id.in_(q_ids))
-            .all() if q_ids else []
+            self.db.query(InterviewAnswer).filter(InterviewAnswer.question_id.in_(q_ids)).all()
+            if q_ids
+            else []
         )
         ans_ids = [a.id for a in answers]
         evals = (
-            self.db.query(Evaluation)
-            .filter(Evaluation.answer_id.in_(ans_ids))
-            .all() if ans_ids else []
+            self.db.query(Evaluation).filter(Evaluation.answer_id.in_(ans_ids)).all()
+            if ans_ids
+            else []
         )
         logs = (
             self.db.query(AgentLog)
@@ -105,46 +111,55 @@ class AdminDashboardManager:
             a = ans_map.get(q.id)
             ev = eval_map.get(a.id) if a else None
 
-            timeline_steps.append({
-                "step_number": step_counter,
-                "event_type": "QUESTION",
-                "timestamp": str(q.created_at) if hasattr(q, "created_at") else None,
-                "question_text": q.question_text,
-                "next_agent": "QuestionGeneratorAgent",
-            })
+            timeline_steps.append(
+                {
+                    "step_number": step_counter,
+                    "event_type": "QUESTION",
+                    "timestamp": str(q.created_at) if hasattr(q, "created_at") else None,
+                    "question_text": q.question_text,
+                    "next_agent": "QuestionGeneratorAgent",
+                }
+            )
             step_counter += 1
 
             if a:
-                timeline_steps.append({
-                    "step_number": step_counter,
-                    "event_type": "ANSWER",
-                    "timestamp": str(a.created_at) if hasattr(a, "created_at") else None,
-                    "candidate_answer": a.answer_text,
-                    "next_agent": "EvaluationAgent",
-                })
+                timeline_steps.append(
+                    {
+                        "step_number": step_counter,
+                        "event_type": "ANSWER",
+                        "timestamp": str(a.created_at) if hasattr(a, "created_at") else None,
+                        "candidate_answer": a.answer_text,
+                        "next_agent": "EvaluationAgent",
+                    }
+                )
                 step_counter += 1
 
             if ev:
-                timeline_steps.append({
-                    "step_number": step_counter,
-                    "event_type": "EVALUATION",
-                    "timestamp": str(ev.created_at) if hasattr(ev, "created_at") else None,
-                    "score": float(ev.score) if ev.score is not None else None,
-                    "reasoning": ev.feedback or getattr(ev, "reasoning", "Evaluation completed"),
-                    "next_agent": "Supervisor",
-                    "checkpoint_id": f"chk-{interview_id[:6]}-{step_counter}",
-                })
+                timeline_steps.append(
+                    {
+                        "step_number": step_counter,
+                        "event_type": "EVALUATION",
+                        "timestamp": str(ev.created_at) if hasattr(ev, "created_at") else None,
+                        "score": float(ev.score) if ev.score is not None else None,
+                        "reasoning": ev.feedback
+                        or getattr(ev, "reasoning", "Evaluation completed"),
+                        "next_agent": "Supervisor",
+                        "checkpoint_id": f"chk-{interview_id[:6]}-{step_counter}",
+                    }
+                )
                 step_counter += 1
 
         for log in logs:
-            timeline_steps.append({
-                "step_number": step_counter,
-                "event_type": "AGENT_LOG",
-                "timestamp": str(log.created_at) if hasattr(log, "created_at") else None,
-                "reasoning": f"Agent [{log.agent_name}] execution",
-                "next_agent": log.agent_name,
-                "checkpoint_id": f"chk-{interview_id[:6]}-{step_counter}",
-            })
+            timeline_steps.append(
+                {
+                    "step_number": step_counter,
+                    "event_type": "AGENT_LOG",
+                    "timestamp": str(log.created_at) if hasattr(log, "created_at") else None,
+                    "reasoning": f"Agent [{log.agent_name}] execution",
+                    "next_agent": log.agent_name,
+                    "checkpoint_id": f"chk-{interview_id[:6]}-{step_counter}",
+                }
+            )
             step_counter += 1
 
         return {
@@ -160,13 +175,20 @@ class AdminDashboardManager:
         items = []
         for prompt_key, version_map in DEFAULT_REGISTRY_TEMPLATES.items():
             for version_str, spec in version_map.items():
-                items.append({
-                    "prompt_key": prompt_key,
-                    "version": version_str,
-                    "created_at": "2026-08-05T12:00:00Z",
-                    "description": spec.description,
-                    "is_active": spec.is_active,
-                    "variables": ["seniority_level", "target_competency", "project_context", "baseline_question"],
-                })
+                items.append(
+                    {
+                        "prompt_key": prompt_key,
+                        "version": version_str,
+                        "created_at": "2026-08-05T12:00:00Z",
+                        "description": spec.description,
+                        "is_active": spec.is_active,
+                        "variables": [
+                            "seniority_level",
+                            "target_competency",
+                            "project_context",
+                            "baseline_question",
+                        ],
+                    }
+                )
 
         return items

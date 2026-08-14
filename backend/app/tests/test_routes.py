@@ -117,9 +117,12 @@ def test_report_routes(client: TestClient, db_session: Session, sample_user, sam
     response = client.get(f"/api/v1/reports/{sample_interview.id}/pdf", headers=headers)
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/pdf"
-    assert response.headers["content-disposition"] == f"attachment; filename=report_{sample_interview.id}.pdf"
+    assert (
+        response.headers["content-disposition"]
+        == f"attachment; filename=report_{sample_interview.id}.pdf"
+    )
     assert response.content.startswith(b"%PDF")
-    
+
     # Verify JSON report endpoint returns the stored report
     response = client.get(f"/api/v1/reports/{sample_interview.id}", headers=headers)
     assert response.status_code == 200

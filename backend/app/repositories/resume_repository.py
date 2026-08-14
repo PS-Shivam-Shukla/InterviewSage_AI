@@ -2,7 +2,6 @@
 Resume repository.
 """
 
-
 from sqlalchemy.orm import Session
 
 from app.models import Resume
@@ -18,9 +17,5 @@ class ResumeRepository(Repository[Resume]):
     def list_by_user(self, user_id: str, skip: int = 0, limit: int = 100) -> list[Resume]:
         """Get all resumes for a user."""
         return (
-            self.db.query(Resume)
-            .filter(Resume.user_id == user_id)
-            .offset(skip)
-            .limit(limit)
-            .all()
+            self.db.query(Resume).filter(Resume.user_id == user_id).offset(skip).limit(limit).all()
         )

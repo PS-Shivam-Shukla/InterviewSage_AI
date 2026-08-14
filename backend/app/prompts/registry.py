@@ -17,8 +17,8 @@ logger = get_logger(__name__)
 
 @dataclass
 class PromptTemplateSpec:
-    prompt_key: str                           # e.g. "prompt:question_personalizer"
-    version: str                              # e.g. "v1", "v2"
+    prompt_key: str  # e.g. "prompt:question_personalizer"
+    version: str  # e.g. "v1", "v2"
     system_template: str
     user_template: str
     description: str = ""
@@ -147,7 +147,9 @@ class PromptRegistry:
         spec = versions.get(version) or versions.get("v1") or list(versions.values())[0]
         return spec
 
-    def render(self, prompt_key: str, version: str = "v1", variables: dict[str, Any] | None = None) -> dict[str, str]:
+    def render(
+        self, prompt_key: str, version: str = "v1", variables: dict[str, Any] | None = None
+    ) -> dict[str, str]:
         """
         Render system and user prompt templates with variable substitution.
         """

@@ -40,6 +40,7 @@ async def lifespan(app: FastAPI):
     # Run PostgreSQL schema migrations
     try:
         from app.migrate_interview_role import migrate as migrate_roles
+
         migrate_roles()
     except Exception as exc:
         logger.warning(f"Database startup migration warning: {exc}")
@@ -67,6 +68,7 @@ app = FastAPI(
 # Request Correlation ID & Context Middleware
 app.add_middleware(RequestContextMiddleware)
 
+
 # Security Headers Middleware
 @app.middleware("http")
 async def add_security_headers(request, call_next):
@@ -76,6 +78,7 @@ async def add_security_headers(request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     return response
+
 
 # Configure CORS
 app.add_middleware(
@@ -96,6 +99,7 @@ async def health_check():
     db_healthy = False
     try:
         from app.core.database import SessionLocal
+
         with SessionLocal() as db:
             db.execute(text("SELECT 1"))
             db_healthy = True
@@ -107,7 +111,9 @@ async def health_check():
     except Exception:
         mcp_server = None
 
-    mcp_healthy = bool(mcp_server and (hasattr(mcp_server, "_tools") or hasattr(mcp_server, "list_tools")))
+    mcp_healthy = bool(
+        mcp_server and (hasattr(mcp_server, "_tools") or hasattr(mcp_server, "list_tools"))
+    )
 
     status_code = 200 if db_healthy else 503
     return JSONResponse(

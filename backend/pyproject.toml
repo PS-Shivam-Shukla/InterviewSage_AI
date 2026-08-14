@@ -60,6 +60,9 @@ ignore = [
     "RUF015", # Prefer next(iter()) over list()[0]
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"alembic/*" = ["UP035", "UP007", "I001", "RUF100", "F401", "RUF003"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
 
@@ -81,6 +84,7 @@ module = [
     "passlib.*",
     "langchain.*",
     "langgraph.*",
+    "numpy.*",
 ]
 ignore_missing_imports = true
 

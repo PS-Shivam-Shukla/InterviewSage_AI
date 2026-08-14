@@ -26,23 +26,33 @@ MAX_POLICY_ITERATIONS = 5
 
 # ── Structured Decision Schemas ───────────────────────────────────────────────
 
+
 class ToolCallDecision(BaseModel):
     """LLM decision to invoke a specific registered MCP tool."""
+
     action: Literal["tool_call"] = "tool_call"
     tool: str = Field(description="Name of the registered MCP tool to invoke.")
-    arguments: dict[str, Any] = Field(default_factory=dict, description="Tool arguments matching tool parameters schema.")
-    reasoning: str = Field(default="", description="Chain-of-thought rationale for selecting this tool.")
+    arguments: dict[str, Any] = Field(
+        default_factory=dict, description="Tool arguments matching tool parameters schema."
+    )
+    reasoning: str = Field(
+        default="", description="Chain-of-thought rationale for selecting this tool."
+    )
 
 
 class FinishDecision(BaseModel):
     """LLM decision that tool execution loop is complete."""
+
     action: Literal["finish"] = "finish"
-    result: dict[str, Any] = Field(default_factory=dict, description="Final decision result or summary.")
+    result: dict[str, Any] = Field(
+        default_factory=dict, description="Final decision result or summary."
+    )
     reasoning: str = Field(default="", description="Rationale for finishing policy execution.")
 
 
 class PolicyDecision(BaseModel):
     """Discriminated union container for PolicyNode decision."""
+
     action: Literal["tool_call", "finish"]
     tool_call: ToolCallDecision | None = None
     finish: FinishDecision | None = None
@@ -59,6 +69,7 @@ class PolicyDecision(BaseModel):
 
 
 # ── Policy Node Implementation ────────────────────────────────────────────────
+
 
 class PolicyNode:
     """
@@ -85,7 +96,9 @@ class PolicyNode:
             )
             return {
                 "policy_iteration_count": iteration,
-                "policy_decisions": [{"action": "finish", "tool": None, "reasoning": finish_dec.reasoning}],
+                "policy_decisions": [
+                    {"action": "finish", "tool": None, "reasoning": finish_dec.reasoning}
+                ],
                 "next_node": "report_generator_agent",
             }
 
@@ -93,22 +106,31 @@ class PolicyNode:
         tools_list = state.get("available_tools") or []
         if not tools_list:
             from app.mcp import mcp_server
+
             tools_list = mcp_server.list_tools()
 
         # ── 3. Render Tool Schemas & Previous Observations ────────────────────
-        tool_schemas_str = "\n".join([
-            f"- Tool Name: '{t.get('name')}'\n"
-            f"  Description: {t.get('description')}\n"
-            f"  Parameters: {t.get('parameters')}\n"
-            f"  Required Arguments: {t.get('required')}"
-            for t in tools_list
-        ])
+        tool_schemas_str = "\n".join(
+            [
+                f"- Tool Name: '{t.get('name')}'\n"
+                f"  Description: {t.get('description')}\n"
+                f"  Parameters: {t.get('parameters')}\n"
+                f"  Required Arguments: {t.get('required')}"
+                for t in tools_list
+            ]
+        )
 
         observations = state.get("observations") or []
-        obs_str = "\n".join([
-            f"Turn {i+1}: Tool '{o.get('tool_name')}' -> Success: {o.get('success')} | Output: {str(o.get('output'))[:200]} | Error: {o.get('error')}"
-            for i, o in enumerate(observations[-5:])   # last 5 observations
-        ]) if observations else "None"
+        obs_str = (
+            "\n".join(
+                [
+                    f"Turn {i+1}: Tool '{o.get('tool_name')}' -> Success: {o.get('success')} | Output: {str(o.get('output'))[:200]} | Error: {o.get('error')}"
+                    for i, o in enumerate(observations[-5:])  # last 5 observations
+                ]
+            )
+            if observations
+            else "None"
+        )
 
         current_q = state.get("current_question") or {}
         answers = state.get("answers") or []
@@ -151,7 +173,9 @@ class PolicyNode:
         try:
             decision: PolicyDecision = self.llm.invoke_structured(messages, PolicyDecision)
         except Exception as exc:
-            logger.warning(f"PolicyNode structured invocation failed: {exc}. Falling back to default turn finish.")
+            logger.warning(
+                f"PolicyNode structured invocation failed: {exc}. Falling back to default turn finish."
+            )
             decision = PolicyDecision(
                 action="finish",
                 finish=FinishDecision(reasoning="Fallback decision on LLM error"),
@@ -172,13 +196,15 @@ class PolicyNode:
 
             return {
                 "policy_iteration_count": iteration,
-                "policy_decisions": [{
-                    "action": "tool_call",
-                    "tool": chosen_tool,
-                    "arguments": tool_args,
-                    "reasoning": reasoning,
-                    "iteration": iteration,
-                }],
+                "policy_decisions": [
+                    {
+                        "action": "tool_call",
+                        "tool": chosen_tool,
+                        "arguments": tool_args,
+                        "reasoning": reasoning,
+                        "iteration": iteration,
+                    }
+                ],
                 "available_tools": tools_list,
                 "next_node": "tool_executor_node",
             }
@@ -192,12 +218,14 @@ class PolicyNode:
 
             return {
                 "policy_iteration_count": iteration,
-                "policy_decisions": [{
-                    "action": "finish",
-                    "tool": None,
-                    "reasoning": reasoning,
-                    "iteration": iteration,
-                }],
+                "policy_decisions": [
+                    {
+                        "action": "finish",
+                        "tool": None,
+                        "reasoning": reasoning,
+                        "iteration": iteration,
+                    }
+                ],
                 "available_tools": tools_list,
                 "next_node": "report_generator_agent",
             }

@@ -15,7 +15,11 @@ from app.transcript.schemas import VoiceMetricsResponse
 router = APIRouter(prefix="/voice", tags=["Voice Analytics"])
 
 
-@router.get("/{session_id}", response_model=VoiceMetricsResponse, summary="Retrieve voice metrics for a live session")
+@router.get(
+    "/{session_id}",
+    response_model=VoiceMetricsResponse,
+    summary="Retrieve voice metrics for a live session",
+)
 async def get_voice_metrics_by_session(
     session_id: str,
     db: Session = Depends(get_db),

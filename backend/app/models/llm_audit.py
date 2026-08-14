@@ -18,8 +18,10 @@ class PromptVersion(Base):
     __tablename__ = "prompt_versions"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    prompt_key = Column(String(100), nullable=False, index=True)  # e.g. "prompt:question_personalizer"
-    version = Column(String(20), nullable=False, default="v1")     # e.g. "v1", "v2"
+    prompt_key = Column(
+        String(100), nullable=False, index=True
+    )  # e.g. "prompt:question_personalizer"
+    version = Column(String(20), nullable=False, default="v1")  # e.g. "v1", "v2"
     system_template = Column(Text, nullable=False)
     user_template = Column(Text, nullable=False)
     description = Column(String(255), nullable=True)
@@ -48,7 +50,9 @@ class LLMRequest(Base):
     error_message = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
-    responses = relationship("LLMResponse", back_populates="llm_request", cascade="all, delete-orphan")
+    responses = relationship(
+        "LLMResponse", back_populates="llm_request", cascade="all, delete-orphan"
+    )
 
 
 class LLMResponse(Base):

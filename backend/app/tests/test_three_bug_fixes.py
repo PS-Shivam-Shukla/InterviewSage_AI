@@ -87,6 +87,7 @@ def _create_test_senior_interview(db: Session) -> tuple[User, Resume, JobDescrip
 
 # ── BUG #1 TESTS ─────────────────────────────────────────────────────────────
 
+
 def test_fresher_question_distribution_and_authoritative_routing(db_session: Session):
     """Verify Fresher plan produces 4 Aptitude, 3 Technical, 2 HR (Total = 9 questions)."""
     user, resume, jd, interview = _create_test_fresher_interview(db_session)
@@ -138,14 +139,33 @@ def test_senior_question_distribution(db_session: Session):
 
 # ── BUG #3 TESTS ─────────────────────────────────────────────────────────────
 
+
 def test_aptitude_numeric_and_boolean_answers_not_gibberish():
     """Verify short aptitude responses (420, 150, 297 $, true) pass sanity guard as valid answers."""
-    aptitude_answers = ["420", "150", "297 $", "$420", "42", "true", "false", "yes", "no", "4% decrease", "25%", "150 km", "4 days", "8:15", "Option B"]
+    aptitude_answers = [
+        "420",
+        "150",
+        "297 $",
+        "$420",
+        "42",
+        "true",
+        "false",
+        "yes",
+        "no",
+        "4% decrease",
+        "25%",
+        "150 km",
+        "4 days",
+        "8:15",
+        "Option B",
+    ]
 
     for ans in aptitude_answers:
         res = AnswerSanityGuard.evaluate(ans, round_type="APTITUDE")
         assert res.is_valid_answer is True, f"Answer '{ans}' was incorrectly flagged as invalid!"
-        assert res.answer_quality == "VALID_ANSWER", f"Answer '{ans}' quality was '{res.answer_quality}', expected VALID_ANSWER"
+        assert (
+            res.answer_quality == "VALID_ANSWER"
+        ), f"Answer '{ans}' quality was '{res.answer_quality}', expected VALID_ANSWER"
 
 
 def test_aptitude_deterministic_correctness_and_incorrectness():

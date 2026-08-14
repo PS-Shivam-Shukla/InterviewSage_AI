@@ -36,7 +36,9 @@ class ReviewService:
         """Get items in review queue."""
         return self.repo.list_review_queue(status=status)
 
-    def process_review(self, review_id: str, status: str, admin_id: str | None = None) -> ReviewQueue | None:
+    def process_review(
+        self, review_id: str, status: str, admin_id: str | None = None
+    ) -> ReviewQueue | None:
         """Update review item status (APPROVED | REJECTED | IN_REVIEW)."""
         return self.repo.update_review_status(review_id=review_id, status=status, admin_id=admin_id)
 

@@ -2,7 +2,6 @@
 Authentication service — user registration, login, token validation.
 """
 
-
 from sqlalchemy.orm import Session
 
 from app.core.security import (
@@ -23,17 +22,15 @@ class AuthService:
         self.db = db
         self.user_repo = UserRepository(db)
 
-    def register_user(
-        self, email: str, password: str, full_name: str
-    ) -> User | None:
+    def register_user(self, email: str, password: str, full_name: str) -> User | None:
         """
         Register a new user.
-        
+
         Args:
             email: User email
             password: Plain text password
             full_name: User's full name
-        
+
         Returns:
             Created User object or None if email already exists
         """
@@ -52,16 +49,14 @@ class AuthService:
 
         return self.user_repo.create(user)
 
-    def authenticate_user(
-        self, email: str, password: str
-    ) -> User | None:
+    def authenticate_user(self, email: str, password: str) -> User | None:
         """
         Authenticate a user by email and password.
-        
+
         Args:
             email: User email
             password: Plain text password
-        
+
         Returns:
             User object if credentials valid, None otherwise
         """
@@ -77,10 +72,10 @@ class AuthService:
     def create_user_token(self, user: User) -> str:
         """
         Create a JWT access token for a user.
-        
+
         Args:
             user: User object
-        
+
         Returns:
             JWT token string
         """
@@ -94,10 +89,10 @@ class AuthService:
     def verify_token(self, token: str) -> str | None:
         """
         Verify a JWT token and extract user ID.
-        
+
         Args:
             token: JWT token string
-        
+
         Returns:
             User ID if token valid, None otherwise
         """
@@ -111,10 +106,10 @@ class AuthService:
     def get_current_user(self, token: str) -> User | None:
         """
         Get the current user from a token.
-        
+
         Args:
             token: JWT token string
-        
+
         Returns:
             User object if token valid, None otherwise
         """

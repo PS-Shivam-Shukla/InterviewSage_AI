@@ -52,10 +52,15 @@ class KokoroTTSService(TTSProvider):
     def _init_kokoro(self) -> None:
         try:
             from kokoro import KPipeline
-            logger.info(f"Initializing Kokoro TTS provider='{self.provider}' voice='{self.voice}' speed={self.speed}")
+
+            logger.info(
+                f"Initializing Kokoro TTS provider='{self.provider}' voice='{self.voice}' speed={self.speed}"
+            )
             self._kokoro = KPipeline(lang_code="a")
         except Exception as e:
-            logger.warning(f"Kokoro native engine fallback mode ({e}). Using local audio synthesizer handler.")
+            logger.warning(
+                f"Kokoro native engine fallback mode ({e}). Using local audio synthesizer handler."
+            )
             self._kokoro = None
 
     def speak(self, text: str) -> bytes:
@@ -69,17 +74,21 @@ class KokoroTTSService(TTSProvider):
         if self._kokoro and text:
             try:
                 import soundfile as sf
+
                 generator = self._kokoro(text, voice=v, speed=sp)
                 audio_bufs = []
                 for _, _, audio in generator:
                     audio_bufs.append(audio)
                 if audio_bufs:
                     import numpy as np
+
                     full_audio = np.concatenate(audio_bufs)
                     out_io = io.BytesIO()
                     sf.write(out_io, full_audio, 24000, format="WAV")
                     out_bytes = out_io.getvalue()
-                    logger.info(f"Kokoro TTS synthesized {len(text)} chars in {(time.perf_counter()-start)*1000:.1f}ms")
+                    logger.info(
+                        f"Kokoro TTS synthesized {len(text)} chars in {(time.perf_counter()-start)*1000:.1f}ms"
+                    )
                     return out_bytes
             except Exception as e:
                 logger.error(f"Kokoro synthesis error: {e}")

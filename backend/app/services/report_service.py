@@ -30,7 +30,11 @@ class ReportService:
         report = self.report_repo.get_by_interview(interview_id)
         if not report:
             db_answers = self.answer_repo.list_answers_with_evaluations_by_interview(interview_id)
-            db_questions = self.db.query(InterviewQuestion).filter(InterviewQuestion.interview_id == interview_id).all()
+            db_questions = (
+                self.db.query(InterviewQuestion)
+                .filter(InterviewQuestion.interview_id == interview_id)
+                .all()
+            )
             if not db_answers and not db_questions:
                 return None
             return self.generate_report(interview_id)
@@ -41,7 +45,11 @@ class ReportService:
         return {
             "interview_id": report.interview_id,
             "status": interview_obj.status if interview_obj else "COMPLETED",
-            "overall_score": float(interview_obj.overall_score) if interview_obj and interview_obj.overall_score is not None else 0.0,
+            "overall_score": (
+                float(interview_obj.overall_score)
+                if interview_obj and interview_obj.overall_score is not None
+                else 0.0
+            ),
             "role": role_title,
             "competency_scorecard": json.loads(report.competency_scorecard),
             "improvement_plan": json.loads(report.improvement_plan),
@@ -55,6 +63,7 @@ class ReportService:
         ordered newest first.
         """
         from app.models import Interview
+
         interviews = (
             self.db.query(Interview)
             .filter(Interview.user_id == user_id, Interview.status == "COMPLETED")
@@ -67,18 +76,26 @@ class ReportService:
             rep = self.report_repo.get_by_interview(iv.id)
             role_title = self._resolve_role(iv.id)
 
-            total_q = self.db.query(InterviewQuestion).filter(InterviewQuestion.interview_id == iv.id).count()
+            total_q = (
+                self.db.query(InterviewQuestion)
+                .filter(InterviewQuestion.interview_id == iv.id)
+                .count()
+            )
 
             gen_time = rep.generated_at if rep else (iv.completed_at or iv.created_at)
-            history.append({
-                "interview_id": iv.id,
-                "role": role_title,
-                "status": iv.status,
-                "overall_score": float(iv.overall_score) if iv.overall_score is not None else 0.0,
-                "generated_at": gen_time,
-                "completed_at": iv.completed_at,
-                "total_questions": total_q or 0,
-            })
+            history.append(
+                {
+                    "interview_id": iv.id,
+                    "role": role_title,
+                    "status": iv.status,
+                    "overall_score": (
+                        float(iv.overall_score) if iv.overall_score is not None else 0.0
+                    ),
+                    "generated_at": gen_time,
+                    "completed_at": iv.completed_at,
+                    "total_questions": total_q or 0,
+                }
+            )
 
         return history
 
@@ -92,10 +109,13 @@ class ReportService:
         """Create a formatted PDF document from report content using ReportLab."""
         try:
             from app.utils.pdf_renderer import render_report_pdf
+
             pdf_bytes = render_report_pdf(report_data)
             return pdf_bytes
         except Exception as exc:
-            logger.warning(f"ReportLab PDF rendering fallback triggered for report {report_data.get('interview_id')}: {exc}")
+            logger.warning(
+                f"ReportLab PDF rendering fallback triggered for report {report_data.get('interview_id')}: {exc}"
+            )
             lines = [
                 f"Interview Report: {report_data.get('interview_id')}",
                 f"Generated At: {report_data.get('generated_at')}",
@@ -103,7 +123,9 @@ class ReportService:
                 "Transcript Snapshot:",
             ]
             for item in report_data.get("transcript_snapshot", []):
-                lines.append(f"- Q: {item.get('question')} | A: {item.get('answer')} | Score: {item.get('score')}")
+                lines.append(
+                    f"- Q: {item.get('question')} | A: {item.get('answer')} | Score: {item.get('score')}"
+                )
 
             escaped_lines = [self._escape_pdf_text(str(line)) for line in lines]
             stream_lines = [
@@ -140,7 +162,9 @@ class ReportService:
                 pdf.extend(f"{offset:010d} 00000 n \n".encode("latin-1"))
 
             pdf.extend(
-                f"trailer << /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n".encode("latin-1")
+                f"trailer << /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n".encode(
+                    "latin-1"
+                )
             )
             return bytes(pdf)
 
@@ -151,9 +175,11 @@ class ReportService:
             if interview_obj.target_role:
                 return interview_obj.target_role
             if interview_obj.jd_id:
-                jd_obj = self.db.query(JobDescription).filter(
-                    JobDescription.id == interview_obj.jd_id
-                ).first()
+                jd_obj = (
+                    self.db.query(JobDescription)
+                    .filter(JobDescription.id == interview_obj.jd_id)
+                    .first()
+                )
                 if jd_obj and jd_obj.target_role:
                     return jd_obj.target_role
         return "Interview"
@@ -173,7 +199,11 @@ class ReportService:
                 "competency_scorecard": json.loads(existing.competency_scorecard),
                 "improvement_plan": json.loads(existing.improvement_plan),
                 "transcript_snapshot": json.loads(existing.transcript_snapshot),
-                "generated_at": existing.generated_at.isoformat() if hasattr(existing.generated_at, "isoformat") else str(existing.generated_at),
+                "generated_at": (
+                    existing.generated_at.isoformat()
+                    if hasattr(existing.generated_at, "isoformat")
+                    else str(existing.generated_at)
+                ),
             }
 
         # ── Role title from JD ─────────────────────────────────────────────
@@ -223,19 +253,29 @@ class ReportService:
             if competency and competency != "General":
                 competency_scores.setdefault(competency, []).append(score)
 
-            raw_10 = eval_d.get("score_1_10") if isinstance(eval_d, dict) and "score_1_10" in eval_d else int(score / 10)
+            raw_10 = (
+                eval_d.get("score_1_10")
+                if isinstance(eval_d, dict) and "score_1_10" in eval_d
+                else int(score / 10)
+            )
             disp_str = f"{raw_10}/10 ({int(score)}%)"
 
-            transcript.append({
-                "question": q_text or "Technical Question",
-                "answer": item.get("candidate_answer", ""),
-                "score": score,
-                "score_1_10": raw_10,
-                "display_score": disp_str,
-                "competency": competency,
-                "reasoning": eval_d.get("reasoning") or eval_d.get("feedback") or "Evaluated via EvaluationAgent",
-                "feedback": eval_d.get("feedback") or eval_d.get("reasoning") or "Evaluated via EvaluationAgent",
-            })
+            transcript.append(
+                {
+                    "question": q_text or "Technical Question",
+                    "answer": item.get("candidate_answer", ""),
+                    "score": score,
+                    "score_1_10": raw_10,
+                    "display_score": disp_str,
+                    "competency": competency,
+                    "reasoning": eval_d.get("reasoning")
+                    or eval_d.get("feedback")
+                    or "Evaluated via EvaluationAgent",
+                    "feedback": eval_d.get("feedback")
+                    or eval_d.get("reasoning")
+                    or "Evaluated via EvaluationAgent",
+                }
+            )
 
         # ── Overall score from persisted evaluations ───────────────────────
         overall = round(sum(all_scores) / max(1, len(all_scores)), 1) if all_scores else 0.0
@@ -244,13 +284,15 @@ class ReportService:
         competency_scorecard = []
         for comp, scores in competency_scores.items():
             avg = round(sum(scores) / len(scores), 1)
-            competency_scorecard.append({
-                "competency": comp,
-                "skill": comp,
-                "name": comp,
-                "score": avg,
-                "fullMark": 100,
-            })
+            competency_scorecard.append(
+                {
+                    "competency": comp,
+                    "skill": comp,
+                    "name": comp,
+                    "score": avg,
+                    "fullMark": 100,
+                }
+            )
 
         # Sort: highest-scoring competencies first
         competency_scorecard.sort(key=lambda x: x["score"], reverse=True)
@@ -263,48 +305,54 @@ class ReportService:
                 comp_name = q.competency_targeted
                 if comp_name and comp_name not in seen_comps:
                     seen_comps.add(comp_name)
-                    competency_scorecard.append({
-                        "competency": comp_name,
-                        "skill": comp_name,
-                        "name": comp_name,
-                        "score": overall,
-                        "fullMark": 100,
-                    })
+                    competency_scorecard.append(
+                        {
+                            "competency": comp_name,
+                            "skill": comp_name,
+                            "name": comp_name,
+                            "score": overall,
+                            "fullMark": 100,
+                        }
+                    )
 
         # ── Build improvement plan from weak competencies ───────────────────
         improvement_plan = []
-        weak_comps = [
-            entry for entry in competency_scorecard if entry["score"] < 65
-        ]
+        weak_comps = [entry for entry in competency_scorecard if entry["score"] < 65]
         if not weak_comps:
             # No weak areas: suggest advancement in top competency
             top_comp = competency_scorecard[0]["competency"] if competency_scorecard else role_title
-            improvement_plan.append({
-                "id": "imp-1",
-                "topic": f"Advanced {top_comp} Mastery",
-                "description": f"Deepen expertise in {top_comp} to reach senior-level proficiency for {role_title}.",
-                "targetSkill": top_comp,
-                "priority": "Medium",
-            })
+            improvement_plan.append(
+                {
+                    "id": "imp-1",
+                    "topic": f"Advanced {top_comp} Mastery",
+                    "description": f"Deepen expertise in {top_comp} to reach senior-level proficiency for {role_title}.",
+                    "targetSkill": top_comp,
+                    "priority": "Medium",
+                }
+            )
         else:
             for i, entry in enumerate(weak_comps[:3], start=1):
                 comp = entry["competency"]
-                improvement_plan.append({
-                    "id": f"imp-{i}",
-                    "topic": f"Strengthen {comp}",
-                    "description": f"Score {entry['score']:.0f}% in {comp}. Focus on practical application and depth for {role_title} interviews.",
-                    "targetSkill": comp,
-                    "priority": "High" if entry["score"] < 50 else "Medium",
-                })
+                improvement_plan.append(
+                    {
+                        "id": f"imp-{i}",
+                        "topic": f"Strengthen {comp}",
+                        "description": f"Score {entry['score']:.0f}% in {comp}. Focus on practical application and depth for {role_title} interviews.",
+                        "targetSkill": comp,
+                        "priority": "High" if entry["score"] < 50 else "Medium",
+                    }
+                )
 
         if not improvement_plan:
-            improvement_plan.append({
-                "id": "imp-1",
-                "topic": f"{role_title} Best Practices",
-                "description": f"Continue practising {role_title} interview scenarios and system design.",
-                "targetSkill": role_title,
-                "priority": "Low",
-            })
+            improvement_plan.append(
+                {
+                    "id": "imp-1",
+                    "topic": f"{role_title} Best Practices",
+                    "description": f"Continue practising {role_title} interview scenarios and system design.",
+                    "targetSkill": role_title,
+                    "priority": "Low",
+                }
+            )
 
         # ── Persist report ─────────────────────────────────────────────────
         report_obj = InterviewReport(
@@ -325,6 +373,7 @@ class ReportService:
         if interview_obj and interview_obj.overall_score is None and all_scores:
             try:
                 from app.repositories import InterviewRepository as IR
+
                 IR(self.db).update(interview_id, {"overall_score": int(round(overall))})
                 self.db.commit()
             except Exception:

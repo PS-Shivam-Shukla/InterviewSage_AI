@@ -45,15 +45,27 @@ class TokenTracker:
         """
         Compute tokens, calculate cost, update metrics, and optionally persist TokenUsage.
         """
-        p_tokens = prompt_tokens_override if prompt_tokens_override is not None else cls.estimate_tokens(prompt_text)
-        c_tokens = completion_tokens_override if completion_tokens_override is not None else cls.estimate_tokens(completion_text)
+        p_tokens = (
+            prompt_tokens_override
+            if prompt_tokens_override is not None
+            else cls.estimate_tokens(prompt_text)
+        )
+        c_tokens = (
+            completion_tokens_override
+            if completion_tokens_override is not None
+            else cls.estimate_tokens(completion_text)
+        )
         total_tokens = p_tokens + c_tokens
 
         cost_usd = CostTracker.calculate_cost(provider, model_name, p_tokens, c_tokens)
 
         # Prometheus metrics
-        LLM_TOKENS_TOTAL.labels(token_type="prompt", provider=provider, model_name=model_name).inc(p_tokens)
-        LLM_TOKENS_TOTAL.labels(token_type="completion", provider=provider, model_name=model_name).inc(c_tokens)
+        LLM_TOKENS_TOTAL.labels(token_type="prompt", provider=provider, model_name=model_name).inc(
+            p_tokens
+        )
+        LLM_TOKENS_TOTAL.labels(
+            token_type="completion", provider=provider, model_name=model_name
+        ).inc(c_tokens)
         if cost_usd > 0:
             LLM_COST_TOTAL.labels(provider=provider, model_name=model_name).inc(cost_usd)
 

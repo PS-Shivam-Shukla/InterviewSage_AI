@@ -26,11 +26,19 @@ class JobDescriptionService:
         t_start = time.monotonic()
         raw_text = (jd_data.get("jd_text") or "").replace("\x00", "")
         target_role = (jd_data.get("target_role") or "").replace("\x00", "")
-        company_name = (jd_data.get("company_name") or "").replace("\x00", "") if jd_data.get("company_name") else None
-        industry = (jd_data.get("industry") or "").replace("\x00", "") if jd_data.get("industry") else None
+        company_name = (
+            (jd_data.get("company_name") or "").replace("\x00", "")
+            if jd_data.get("company_name")
+            else None
+        )
+        industry = (
+            (jd_data.get("industry") or "").replace("\x00", "") if jd_data.get("industry") else None
+        )
         user_id = jd_data["user_id"]
 
-        logger.info(f"INFO JobDescription creation started for role '{target_role}' by user {user_id}")
+        logger.info(
+            f"INFO JobDescription creation started for role '{target_role}' by user {user_id}"
+        )
 
         # 1. Execute JDAgent LLM analysis if text is present
         required_skills = []
@@ -52,7 +60,9 @@ class JobDescriptionService:
                 if not industry and jd_analysis_dict.get("industry") != "NOT_SPECIFIED":
                     industry = jd_analysis_dict.get("industry")
                 jd_status = "COMPLETED"
-                logger.info(f"INFO JDAgent analysis complete: {len(required_skills)} skills extracted, seniority={seniority_level}")
+                logger.info(
+                    f"INFO JDAgent analysis complete: {len(required_skills)} skills extracted, seniority={seniority_level}"
+                )
             except Exception as exc:
                 jd_status = "FAILED"
                 logger.warning(f"JDAgent LLM analysis fallback due to error: {exc}")
@@ -87,7 +97,9 @@ class JobDescriptionService:
         """Compute ATS keyword/skill overlap score between a resume and job description."""
         jd = self.jd_repo.get_by_id(jd_id)
         if not jd:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job description not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Job description not found"
+            )
 
         resume = self.resume_repo.get_by_id(resume_id)
         if not resume:

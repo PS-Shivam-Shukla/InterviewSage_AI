@@ -15,6 +15,7 @@ from app.prompts.loader import get_developer_prompt, get_system_prompt
 
 # ── Output schema ─────────────────────────────────────────────
 
+
 class HRTurn(BaseModel):
     question_text: str
     candidate_answer: str
@@ -24,15 +25,16 @@ class HRTurn(BaseModel):
 
 # ── Agent ─────────────────────────────────────────────────────
 
+
 class HRInterviewAgent(BaseAgent):
     agent_name = "HRInterviewAgent"
     prompt_version = "v1"
 
     def _temperature(self) -> float:
-        return 0.5   # warm, natural tone
+        return 0.5  # warm, natural tone
 
     def _run(self, state: InterviewState, retry_feedback: str | None = None) -> dict:
-        current_q   = state.get("current_question") or {}
+        current_q = state.get("current_question") or {}
         candidate_answer = state.get("pending_answer", "")
 
         # Empty / timed-out answer → gentle re-prompt, not a zero score
@@ -44,21 +46,17 @@ class HRInterviewAgent(BaseAgent):
                 },
             }
 
-        resume_data   = state.get("resume_data") or {}
+        resume_data = state.get("resume_data") or {}
         asked_in_round = [
-            q for q in (state.get("questions_asked") or [])
-            if q.get("round_type") == "HR"
+            q for q in (state.get("questions_asked") or []) if q.get("round_type") == "HR"
         ]
         follow_up_count = sum(1 for q in asked_in_round if q.get("is_follow_up"))
 
-        developer = (
-            get_developer_prompt("hr_interview_agent", self.prompt_version)
-            or (
-                "You are a warm, professional HR interviewer. "
-                "Decide whether ONE follow-up question would deepen understanding. "
-                "Return JSON: {\"question_text\": \"...\", \"candidate_answer\": \"...\", "
-                "\"follow_up_question\": \"...\" or null, \"follow_up_rationale\": \"...\" or null}"
-            )
+        developer = get_developer_prompt("hr_interview_agent", self.prompt_version) or (
+            "You are a warm, professional HR interviewer. "
+            "Decide whether ONE follow-up question would deepen understanding. "
+            'Return JSON: {"question_text": "...", "candidate_answer": "...", '
+            '"follow_up_question": "..." or null, "follow_up_rationale": "..." or null}'
         )
 
         can_follow_up = follow_up_count < 1  # max 1 follow-up per question

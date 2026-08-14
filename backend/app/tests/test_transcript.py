@@ -15,21 +15,37 @@ def _auth_headers(user: User, db_session: Session) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_transcript_service_record_and_compile(db_session: Session, sample_user: User, sample_interview: Interview):
+def test_transcript_service_record_and_compile(
+    db_session: Session, sample_user: User, sample_interview: Interview
+):
     """Verify TranscriptService records turns and compiles full transcript export."""
     service = TranscriptService(db_session)
     session_id = "sess-trans-101"
 
-    service.record_turn(session_id, "CANDIDATE", "I built an event-driven architecture using Kafka.", duration_seconds=4.5)
-    service.record_turn(session_id, "AI_AGENT", "How did you ensure message ordering across partitions?", duration_seconds=3.0)
+    service.record_turn(
+        session_id,
+        "CANDIDATE",
+        "I built an event-driven architecture using Kafka.",
+        duration_seconds=4.5,
+    )
+    service.record_turn(
+        session_id,
+        "AI_AGENT",
+        "How did you ensure message ordering across partitions?",
+        duration_seconds=3.0,
+    )
 
-    export = service.compile_full_transcript(session_id=session_id, interview_id=sample_interview.id)
+    export = service.compile_full_transcript(
+        session_id=session_id, interview_id=sample_interview.id
+    )
     assert export.interview_id == sample_interview.id
     assert export.turn_count == 2
     assert "Kafka" in export.full_text
 
 
-def test_get_transcript_route(client: TestClient, db_session: Session, sample_user: User, sample_interview: Interview):
+def test_get_transcript_route(
+    client: TestClient, db_session: Session, sample_user: User, sample_interview: Interview
+):
     """Verify GET /api/v1/transcripts/{interview_id} route."""
     service = TranscriptService(db_session)
     session_id = "sess-route-202"
@@ -44,7 +60,9 @@ def test_get_transcript_route(client: TestClient, db_session: Session, sample_us
     assert "PostgreSQL" in data["full_text"]
 
 
-def test_download_transcript_route(client: TestClient, db_session: Session, sample_user: User, sample_interview: Interview):
+def test_download_transcript_route(
+    client: TestClient, db_session: Session, sample_user: User, sample_interview: Interview
+):
     """Verify GET /api/v1/transcripts/{interview_id}/download text download route."""
     service = TranscriptService(db_session)
     session_id = "sess-dl-303"

@@ -58,7 +58,11 @@ def test_prometheus_metrics_endpoint():
     assert response.status_code == 200
     assert "text/plain" in response.headers["content-type"]
     body = response.text
-    assert "interview_requests_total" in body or "graph_execution_seconds" in body or "python_gc_" in body
+    assert (
+        "interview_requests_total" in body
+        or "graph_execution_seconds" in body
+        or "python_gc_" in body
+    )
 
 
 def test_structured_json_logging_format():

@@ -19,7 +19,9 @@ class AdaptiveDifficultyEngine:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def start_session(self, interview_id: str, candidate_id: str, initial_difficulty: float = 5.0) -> AdaptiveSession:
+    def start_session(
+        self, interview_id: str, candidate_id: str, initial_difficulty: float = 5.0
+    ) -> AdaptiveSession:
         session = AdaptiveSession(
             interview_id=interview_id,
             candidate_id=candidate_id,
@@ -84,7 +86,11 @@ class AdaptiveDifficultyEngine:
         suggested_focus = (
             "Advanced System Architecture & Optimization"
             if new_diff >= 7.5
-            else ("Core Algorithmic Implementation" if new_diff >= 5.0 else "Fundamental Data Structures")
+            else (
+                "Core Algorithmic Implementation"
+                if new_diff >= 5.0
+                else "Fundamental Data Structures"
+            )
         )
 
         return {

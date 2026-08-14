@@ -15,7 +15,9 @@ from app.services.question_relevance_service import (
 def test_1_fastapi_experience_classified_as_strong_match():
     classified = QuestionRelevanceService.classify_skills(
         candidate_skills=["Python", "FastAPI"],
-        work_experience_bullets=["Built production REST APIs using FastAPI and Python for 2 months."],
+        work_experience_bullets=[
+            "Built production REST APIs using FastAPI and Python for 2 months."
+        ],
         jd_required_skills=["Python", "FastAPI"],
     )
     assert classified["FastAPI"].tier == "STRONG_MATCH"
@@ -91,9 +93,7 @@ def test_9_exact_duplicate_detection():
 def test_10_different_questions_are_not_duplicates():
     q1 = "What is dependency injection in FastAPI?"
     q2 = "How do indexes optimize query performance in PostgreSQL?"
-    score, _ = LexicalSimilarityEngine.compute_hybrid_duplicate_score(
-        q1, [{"question_text": q2}]
-    )
+    score, _ = LexicalSimilarityEngine.compute_hybrid_duplicate_score(q1, [{"question_text": q2}])
     assert score < 0.40
 
 

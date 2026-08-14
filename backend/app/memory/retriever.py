@@ -70,7 +70,9 @@ class MemoryRetriever:
             latest_summary=latest_summ.compressed_summary if latest_summ else profile.summary,
         )
 
-    def search_semantic_memory(self, candidate_id: str, query_topic: str) -> list[CandidateMemoryResponse]:
+    def search_semantic_memory(
+        self, candidate_id: str, query_topic: str
+    ) -> list[CandidateMemoryResponse]:
         """
         Search candidate memories for a given query topic.
         """
@@ -100,7 +102,12 @@ class MemoryRetriever:
         Format memory retrieval into a human-readable prompt string for LLM agents.
         """
         ctx = self.retrieve_context(candidate_id)
-        if ctx.total_past_interviews == 0 and not ctx.skill_progression and not ctx.strengths and not ctx.weaknesses:
+        if (
+            ctx.total_past_interviews == 0
+            and not ctx.skill_progression
+            and not ctx.strengths
+            and not ctx.weaknesses
+        ):
             return "No previous interview memory recorded for candidate."
 
         lines = [

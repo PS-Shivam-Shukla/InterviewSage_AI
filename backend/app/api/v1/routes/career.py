@@ -28,7 +28,11 @@ from app.models import User
 router = APIRouter(prefix="/career", tags=["AI Career Intelligence"])
 
 
-@router.get("/hiring-prediction/{candidate_id}", response_model=HiringPredictionResponse, summary="Predict candidate hire probability")
+@router.get(
+    "/hiring-prediction/{candidate_id}",
+    response_model=HiringPredictionResponse,
+    summary="Predict candidate hire probability",
+)
 async def get_hiring_prediction(
     candidate_id: str,
     db: Session = Depends(get_db),
@@ -38,7 +42,11 @@ async def get_hiring_prediction(
     return service.get_hiring_prediction(candidate_id)
 
 
-@router.get("/benchmark/{candidate_id}", response_model=IndustryBenchmarkResponse, summary="Compare candidate with industry benchmarks")
+@router.get(
+    "/benchmark/{candidate_id}",
+    response_model=IndustryBenchmarkResponse,
+    summary="Compare candidate with industry benchmarks",
+)
 async def get_benchmark(
     candidate_id: str,
     db: Session = Depends(get_db),
@@ -48,7 +56,11 @@ async def get_benchmark(
     return service.get_benchmark(candidate_id)
 
 
-@router.get("/company/{company}", response_model=CompanyProfileResponse, summary="Retrieve company interview profile & weightings")
+@router.get(
+    "/company/{company}",
+    response_model=CompanyProfileResponse,
+    summary="Retrieve company interview profile & weightings",
+)
 async def get_company_profile(
     company: str,
     db: Session = Depends(get_db),
@@ -58,7 +70,11 @@ async def get_company_profile(
     return service.get_company(company)
 
 
-@router.post("/adaptive/start", response_model=AdaptiveStartResponse, summary="Start adaptive difficulty interview session")
+@router.post(
+    "/adaptive/start",
+    response_model=AdaptiveStartResponse,
+    summary="Start adaptive difficulty interview session",
+)
 async def start_adaptive_session(
     payload: AdaptiveStartRequest,
     db: Session = Depends(get_db),
@@ -68,7 +84,11 @@ async def start_adaptive_session(
     return service.start_adaptive_session(payload)
 
 
-@router.post("/adaptive/next-question", response_model=AdaptiveNextQuestionResponse, summary="Calculate next adaptive question difficulty")
+@router.post(
+    "/adaptive/next-question",
+    response_model=AdaptiveNextQuestionResponse,
+    summary="Calculate next adaptive question difficulty",
+)
 async def get_adaptive_next_question(
     payload: AdaptiveNextQuestionRequest,
     db: Session = Depends(get_db),
@@ -78,7 +98,11 @@ async def get_adaptive_next_question(
     return service.get_adaptive_next_question(payload)
 
 
-@router.get("/roadmap/{candidate_id}", response_model=CareerRoadmapResponse, summary="Retrieve candidate learning roadmap")
+@router.get(
+    "/roadmap/{candidate_id}",
+    response_model=CareerRoadmapResponse,
+    summary="Retrieve candidate learning roadmap",
+)
 async def get_career_roadmap(
     candidate_id: str,
     db: Session = Depends(get_db),
@@ -88,7 +112,11 @@ async def get_career_roadmap(
     return service.get_roadmap(candidate_id)
 
 
-@router.get("/replay/{interview_id}", response_model=InterviewReplayResponse, summary="Retrieve interview replay AI annotations")
+@router.get(
+    "/replay/{interview_id}",
+    response_model=InterviewReplayResponse,
+    summary="Retrieve interview replay AI annotations",
+)
 async def get_interview_replay(
     interview_id: str,
     db: Session = Depends(get_db),
@@ -98,7 +126,11 @@ async def get_interview_replay(
     return service.get_replay(interview_id)
 
 
-@router.get("/skill-gap/{candidate_id}", response_model=SkillGapResponse, summary="Analyze candidate missing skill concepts")
+@router.get(
+    "/skill-gap/{candidate_id}",
+    response_model=SkillGapResponse,
+    summary="Analyze candidate missing skill concepts",
+)
 async def get_skill_gap(
     candidate_id: str,
     db: Session = Depends(get_db),
@@ -108,7 +140,11 @@ async def get_skill_gap(
     return service.get_skill_gap(candidate_id)
 
 
-@router.get("/recruiter-insights/{interview_id}", response_model=RecruiterInsightsResponse, summary="Retrieve recruiter decision insights")
+@router.get(
+    "/recruiter-insights/{interview_id}",
+    response_model=RecruiterInsightsResponse,
+    summary="Retrieve recruiter decision insights",
+)
 async def get_recruiter_insights(
     interview_id: str,
     db: Session = Depends(get_db),

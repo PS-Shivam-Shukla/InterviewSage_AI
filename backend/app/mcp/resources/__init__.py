@@ -1,4 +1,5 @@
 ﻿"""MCP resource handlers."""
+
 from app.mcp.tools.fetch_industry_standards import fetch_industry_standards
 
 

@@ -76,7 +76,7 @@ class TechEntityNormalizer:
         """Extracts technology entities from text and normalizes them."""
         if not text:
             return set()
-        
+
         entities = set()
         # Check against known aliases
         lower_text = text.lower()
@@ -122,8 +122,27 @@ class LexicalSimilarityEngine:
         if not text:
             return ""
         stop_words = {
-            "what", "is", "a", "an", "the", "how", "do", "does", "you", "explain", "in",
-            "and", "why", "it", "used", "to", "for", "with", "can", "work", "works"
+            "what",
+            "is",
+            "a",
+            "an",
+            "the",
+            "how",
+            "do",
+            "does",
+            "you",
+            "explain",
+            "in",
+            "and",
+            "why",
+            "it",
+            "used",
+            "to",
+            "for",
+            "with",
+            "can",
+            "work",
+            "works",
         }
         words = re.findall(r"\w+", text.lower())
         meaningful = [w for w in words if w not in stop_words and len(w) > 1]
@@ -172,8 +191,8 @@ class LexicalSimilarityEngine:
 
         all_words = set(freq1.keys()) | set(freq2.keys())
         dot_product = sum(freq1.get(w, 0) * freq2.get(w, 0) for w in all_words)
-        mag1 = math.sqrt(sum(v ** 2 for v in freq1.values()))
-        mag2 = math.sqrt(sum(v ** 2 for v in freq2.values()))
+        mag1 = math.sqrt(sum(v**2 for v in freq1.values()))
+        mag2 = math.sqrt(sum(v**2 for v in freq2.values()))
 
         if mag1 == 0 or mag2 == 0:
             return 0.0
@@ -205,7 +224,9 @@ class LexicalSimilarityEngine:
         return intersection / float(union) if union > 0 else 0.0
 
     @classmethod
-    def compute_hybrid_duplicate_score(cls, new_question: str, existing_questions: list[dict[str, Any]]) -> tuple[float, str | None]:
+    def compute_hybrid_duplicate_score(
+        cls, new_question: str, existing_questions: list[dict[str, Any]]
+    ) -> tuple[float, str | None]:
         """
         Computes maximum lexical duplicate score across past questions.
         Returns (max_score, matching_question_text).
@@ -254,7 +275,9 @@ class QuestionRelevanceService:
             if not skill:
                 continue
             lower_s = skill.lower()
-            if lower_s in exp_text_combined or re.search(r"\b" + re.escape(lower_s) + r"\b", exp_text_combined):
+            if lower_s in exp_text_combined or re.search(
+                r"\b" + re.escape(lower_s) + r"\b", exp_text_combined
+            ):
                 classified[skill] = SkillClassification(
                     skill_name=skill, tier="STRONG_MATCH", weight=1.0, evidence_found=True
                 )
@@ -299,7 +322,9 @@ class QuestionRelevanceService:
         6. Competency Isolation & Placeholder Protection Check
         """
         # --- GATE 0: Placeholder Protection Check ---
-        if re.search(r"\[[A-Za-z0-9_\-\s]+\]|\{[A-Za-z0-9_\-\s]+\}|<[A-Za-z0-9_\-\s]+>", question_text):
+        if re.search(
+            r"\[[A-Za-z0-9_\-\s]+\]|\{[A-Za-z0-9_\-\s]+\}|<[A-Za-z0-9_\-\s]+>", question_text
+        ):
             return QuestionRelevanceResult(
                 accepted=False,
                 reason=f"GATE 0 FAILED (Unresolved Placeholder): Question contains bracketed placeholders in '{question_text[:60]}'.",
@@ -308,6 +333,7 @@ class QuestionRelevanceService:
 
         # --- GATE 1: Difficulty Ceiling Check ---
         from app.services.difficulty_policy import QuestionDifficultyPolicy
+
         is_valid_diff, diff_reason = QuestionDifficultyPolicy.validate_question_difficulty(
             question_difficulty=question_difficulty,
             relevant_experience_months=relevant_experience_months,
@@ -322,7 +348,9 @@ class QuestionRelevanceService:
             )
 
         # --- GATE 2: Technology Entity Safety & Skill Classification ---
-        classifications = cls.classify_skills(candidate_skills, work_experience_bullets, jd_required_skills)
+        classifications = cls.classify_skills(
+            candidate_skills, work_experience_bullets, jd_required_skills
+        )
         extracted_entities = TechEntityNormalizer.extract_and_normalize_entities(question_text)
 
         matched_entities = []
@@ -347,7 +375,11 @@ class QuestionRelevanceService:
         # Reject UNRELATED technology if question introduces completely un-demonstrated/un-requested tech
         # (Allow general questions with 0 tech entities in HR/behavioral/culture rounds)
         r_type_clean = (round_type or "").strip().lower()
-        if unmatched_entities and not matched_entities and r_type_clean not in ("hr", "behavioral", "company", "culture"):
+        if (
+            unmatched_entities
+            and not matched_entities
+            and r_type_clean not in ("hr", "behavioral", "company", "culture")
+        ):
             return QuestionRelevanceResult(
                 accepted=False,
                 reason=f"GATE 2 FAILED (Unrelated Tech): Question references un-demonstrated technology {unmatched_entities}.",
@@ -364,7 +396,10 @@ class QuestionRelevanceService:
         # --- GATE 3 & 4: Experience Evidence & JD Gap Policy Check ---
         if highest_tier == "JD_GAP":
             # JD Gap questions allowed only if difficulty stays strictly <= BASIC for intern/junior
-            if relevant_experience_months <= 3 and question_difficulty.upper() not in ("BASIC", "EASY"):
+            if relevant_experience_months <= 3 and question_difficulty.upper() not in (
+                "BASIC",
+                "EASY",
+            ):
                 return QuestionRelevanceResult(
                     accepted=False,
                     reason=f"GATE 4 FAILED (JD Gap Ceiling): JD Gap skill question '{question_text[:50]}' exceeds BASIC ceiling for 2-month candidate.",
@@ -373,7 +408,9 @@ class QuestionRelevanceService:
                 )
 
         # --- GATE 5: Lexical & Paraphrase Duplicate Check ---
-        dup_score, matched_q = LexicalSimilarityEngine.compute_hybrid_duplicate_score(question_text, questions_asked)
+        dup_score, matched_q = LexicalSimilarityEngine.compute_hybrid_duplicate_score(
+            question_text, questions_asked
+        )
         if dup_score > 0.45:
             return QuestionRelevanceResult(
                 accepted=False,
@@ -387,7 +424,14 @@ class QuestionRelevanceService:
         if competency_targeted:
             comp_clean = competency_targeted.strip().upper()
             q_lower = question_text.lower()
-            sql_keywords = {"primary key", "foreign key", "relational database", "table normalization", "sql query", "join query"}
+            sql_keywords = {
+                "primary key",
+                "foreign key",
+                "relational database",
+                "table normalization",
+                "sql query",
+                "join query",
+            }
             cpp_competencies = {"C/C++", "C++", "C"}
             if comp_clean in cpp_competencies and any(k in q_lower for k in sql_keywords):
                 return QuestionRelevanceResult(

@@ -106,7 +106,11 @@ def test_non_final_question_continues_interview(db_session: Session):
     reloaded = service.get_interview(interview.id)
     assert reloaded.status == "IN_PROGRESS"
 
-    report = db_session.query(InterviewReport).filter(InterviewReport.interview_id == interview.id).first()
+    report = (
+        db_session.query(InterviewReport)
+        .filter(InterviewReport.interview_id == interview.id)
+        .first()
+    )
     assert report is None
 
 
@@ -142,12 +146,20 @@ def test_final_question_completes_interview_and_creates_report(db_session: Sessi
     assert reloaded.completed_at is not None
     assert reloaded.overall_score is not None
 
-    report = db_session.query(InterviewReport).filter(InterviewReport.interview_id == interview.id).first()
+    report = (
+        db_session.query(InterviewReport)
+        .filter(InterviewReport.interview_id == interview.id)
+        .first()
+    )
     assert report is not None
     assert report.interview_id == interview.id
 
     # Verify 5 questions were created
-    questions = db_session.query(InterviewQuestion).filter(InterviewQuestion.interview_id == interview.id).all()
+    questions = (
+        db_session.query(InterviewQuestion)
+        .filter(InterviewQuestion.interview_id == interview.id)
+        .all()
+    )
     assert len(questions) == 5
 
 
@@ -181,7 +193,9 @@ def test_duplicate_completion_is_idempotent(db_session: Session):
     assert res2["report_id"] == interview.id
 
     # Verify exactly 1 report exists
-    reports = db_session.query(InterviewReport).filter(InterviewReport.interview_id == interview.id).all()
+    reports = (
+        db_session.query(InterviewReport).filter(InterviewReport.interview_id == interview.id).all()
+    )
     assert len(reports) == 1
 
 
@@ -212,5 +226,9 @@ def test_voice_turn_final_question_completion(db_session: Session):
     reloaded_interview = db_session.query(Interview).filter(Interview.id == interview.id).first()
     assert reloaded_interview.status == "COMPLETED"
 
-    report = db_session.query(InterviewReport).filter(InterviewReport.interview_id == interview.id).first()
+    report = (
+        db_session.query(InterviewReport)
+        .filter(InterviewReport.interview_id == interview.id)
+        .first()
+    )
     assert report is not None

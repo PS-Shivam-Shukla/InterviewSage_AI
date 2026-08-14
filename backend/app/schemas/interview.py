@@ -8,7 +8,9 @@ class InterviewCreateRequest(BaseModel):
     resume_id: str | None = Field(None, description="Resume identifier")
     jd_id: str | None = Field(None, description="Job description identifier")
     role: str | None = Field(None, description="Target role title")
-    experience_level: str | None = Field(None, description="Candidate experience level (e.g. Fresher, Mid, Senior)")
+    experience_level: str | None = Field(
+        None, description="Candidate experience level (e.g. Fresher, Mid, Senior)"
+    )
     skills: list[str] | None = Field(default_factory=list, description="Target technical skills")
     rounds: list[str] | None = Field(default_factory=list, description="Selected interview rounds")
     difficulty: str | None = Field("Standard", description="Rigor difficulty")
@@ -22,7 +24,9 @@ class InterviewAnswerRequest(BaseModel):
 
 class BlueprintApprovalRequest(BaseModel):
     approved: bool = Field(True, description="Recruiter approval decision")
-    overrides: dict[str, Any] | None = Field(default_factory=dict, description="Custom blueprint overrides")
+    overrides: dict[str, Any] | None = Field(
+        default_factory=dict, description="Custom blueprint overrides"
+    )
 
 
 class BlueprintApprovalResponse(BaseModel):

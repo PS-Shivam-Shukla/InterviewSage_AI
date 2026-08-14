@@ -5,7 +5,9 @@ from app.models.interview import Evaluation, InterviewAnswer, InterviewQuestion
 from app.services.interview_service import InterviewService
 
 
-def test_e2e_question_and_evaluation_loop(client: TestClient, db_session: Session, sample_user, sample_resume, sample_jd):
+def test_e2e_question_and_evaluation_loop(
+    client: TestClient, db_session: Session, sample_user, sample_resume, sample_jd
+):
     svc = InterviewService(db_session)
     user_id = sample_user.id
     resume_id = sample_resume.id
@@ -16,7 +18,10 @@ def test_e2e_question_and_evaluation_loop(client: TestClient, db_session: Sessio
         user_id=user_id,
         resume_id=resume_id,
         jd_id=jd_id,
-        payload={"role": "Senior Backend Engineer", "skills": ["Python", "FastAPI", "PostgreSQL", "LangGraph"]},
+        payload={
+            "role": "Senior Backend Engineer",
+            "skills": ["Python", "FastAPI", "PostgreSQL", "LangGraph"],
+        },
     )
     assert interview is not None
     interview_id = interview.id
@@ -58,9 +63,22 @@ def test_e2e_question_and_evaluation_loop(client: TestClient, db_session: Sessio
     assert next_q2.get("sequence_number") == 3
 
     # 5. Verify PostgreSQL Persistence & No Duplicate Questions
-    db_questions = db_session.query(InterviewQuestion).filter(InterviewQuestion.interview_id == interview_id).order_by(InterviewQuestion.sequence_number).all()
-    db_answers = db_session.query(InterviewAnswer).filter(InterviewAnswer.question_id.in_([q.id for q in db_questions])).all()
-    db_evals = db_session.query(Evaluation).filter(Evaluation.answer_id.in_([a.id for a in db_answers])).all()
+    db_questions = (
+        db_session.query(InterviewQuestion)
+        .filter(InterviewQuestion.interview_id == interview_id)
+        .order_by(InterviewQuestion.sequence_number)
+        .all()
+    )
+    db_answers = (
+        db_session.query(InterviewAnswer)
+        .filter(InterviewAnswer.question_id.in_([q.id for q in db_questions]))
+        .all()
+    )
+    db_evals = (
+        db_session.query(Evaluation)
+        .filter(Evaluation.answer_id.in_([a.id for a in db_answers]))
+        .all()
+    )
 
     assert len(db_answers) == 2
     assert len(db_evals) == 2

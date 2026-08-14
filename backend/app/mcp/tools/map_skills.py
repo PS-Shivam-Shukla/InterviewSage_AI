@@ -81,25 +81,16 @@ def map_skills(
 
     # ── ATS score — ratio of mandatory skills matched ─────────
     total_required = len(normalized_required)
-    ats_score = (
-        int(len(matched_norm) / total_required * 100) if total_required > 0 else 0
-    )
+    ats_score = int(len(matched_norm) / total_required * 100) if total_required > 0 else 0
 
     # ── Keyword coverage from raw texts ───────────────────────
     keyword_score = _keyword_coverage_score(resume_text, jd_text)
 
     # ── Strengths — top matched skills as highlights ──────────
-    matched_original = [
-        s for s in jd_required_skills
-        if _normalize(s) in matched_norm
-    ]
-    missing_original = [
-        s for s in jd_required_skills
-        if _normalize(s) in missing_norm
-    ]
+    matched_original = [s for s in jd_required_skills if _normalize(s) in matched_norm]
+    missing_original = [s for s in jd_required_skills if _normalize(s) in missing_norm]
     preferred_matched_original = [
-        s for s in jd_preferred
-        if _normalize(s) in preferred_matched_norm
+        s for s in jd_preferred if _normalize(s) in preferred_matched_norm
     ]
 
     strengths = matched_original[:8]  # Top 8 matched mandatory skills
@@ -108,9 +99,10 @@ def map_skills(
     weaknesses = missing_original[:8]
 
     # Interview focus = missing skills the candidate will be tested on
-    interview_focus = missing_original[:5] + [
-        s for s in jd_preferred if _normalize(s) not in preferred_matched_norm
-    ][:3]
+    interview_focus = (
+        missing_original[:5]
+        + [s for s in jd_preferred if _normalize(s) not in preferred_matched_norm][:3]
+    )
 
     # ── Confidence — based on data completeness ───────────────
     confidence = _compute_confidence(resume_skills, jd_required_skills)
@@ -131,6 +123,7 @@ def map_skills(
 # ─────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────
+
 
 def _normalize(skill: str) -> str:
     """Lowercase, strip punctuation, replace spaces with underscores."""
@@ -161,8 +154,7 @@ def _keyword_coverage_score(resume_text: str, jd_text: str) -> int:
     # Extract meaningful tokens (3+ chars, alpha only, deduplicated)
     def _tokens(text: str) -> set[str]:
         return {
-            w.lower() for w in re.findall(r"\b[a-z]{3,}\b", text.lower())
-            if w not in _STOP_WORDS
+            w.lower() for w in re.findall(r"\b[a-z]{3,}\b", text.lower()) if w not in _STOP_WORDS
         }
 
     jd_tokens = _tokens(jd_text)
@@ -186,9 +178,44 @@ def _compute_confidence(resume_skills: list[str], jd_skills: list[str]) -> float
 
 # Common English stop words to exclude from keyword coverage scoring
 _STOP_WORDS = {
-    "the", "and", "for", "with", "that", "this", "from", "have", "will",
-    "you", "are", "our", "all", "your", "can", "not", "but", "has", "its",
-    "been", "work", "team", "role", "able", "also", "new", "use", "help",
-    "build", "experience", "strong", "knowledge", "ability", "skills",
-    "excellent", "including", "years", "company", "required", "preferred",
+    "the",
+    "and",
+    "for",
+    "with",
+    "that",
+    "this",
+    "from",
+    "have",
+    "will",
+    "you",
+    "are",
+    "our",
+    "all",
+    "your",
+    "can",
+    "not",
+    "but",
+    "has",
+    "its",
+    "been",
+    "work",
+    "team",
+    "role",
+    "able",
+    "also",
+    "new",
+    "use",
+    "help",
+    "build",
+    "experience",
+    "strong",
+    "knowledge",
+    "ability",
+    "skills",
+    "excellent",
+    "including",
+    "years",
+    "company",
+    "required",
+    "preferred",
 }

@@ -22,9 +22,16 @@ class ReviewQueue(Base):
     confidence = Column(Float, default=0.5)
     reason = Column(String(255), nullable=False, default="Low confidence evaluation score")
     assigned_admin = Column(String(100), nullable=True, index=True)
-    status = Column(String(50), nullable=False, default="PENDING", index=True)  # PENDING | IN_REVIEW | APPROVED | REJECTED
+    status = Column(
+        String(50), nullable=False, default="PENDING", index=True
+    )  # PENDING | IN_REVIEW | APPROVED | REJECTED
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
-    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
+    )
 
 
 class RecruiterFeedback(Base):

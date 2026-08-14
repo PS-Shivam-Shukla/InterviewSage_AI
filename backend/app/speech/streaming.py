@@ -126,7 +126,9 @@ class AudioStreamingService:
         stt_latency_ms = (time.perf_counter() - stt_start) * 1000.0
 
         if not candidate_text or not candidate_text.strip():
-            candidate_text = "I recommend using database connection pooling and asynchronous message queues."
+            candidate_text = (
+                "I recommend using database connection pooling and asynchronous message queues."
+            )
 
         # 2. Evaluation & Persistence via InterviewService
         from app.services.interview_service import InterviewService
@@ -136,10 +138,18 @@ class AudioStreamingService:
         interview_service = InterviewService(db)
         interview_obj = interview_service.get_interview(session_id)
 
-        existing_answers = interview_service.answer_repo.list_answers_with_evaluations_by_interview(session_id)
+        existing_answers = interview_service.answer_repo.list_answers_with_evaluations_by_interview(
+            session_id
+        )
         current_seq = len(existing_answers) + 1
-        current_q = interview_service.question_repo.get_by_interview_and_sequence(session_id, current_seq)
-        q_text = current_q.question_text if current_q else "Explain backend architecture and concurrency."
+        current_q = interview_service.question_repo.get_by_interview_and_sequence(
+            session_id, current_seq
+        )
+        q_text = (
+            current_q.question_text
+            if current_q
+            else "Explain backend architecture and concurrency."
+        )
 
         submit_result = interview_service.submit_answer(
             interview_id=session_id,
@@ -208,9 +218,7 @@ class AudioStreamingService:
             "total_latency_ms": total_latency_ms,
         }
 
-    async def stream_agent_voice_chunks(
-        self, agent_text: str
-    ) -> AsyncGenerator[bytes, None]:
+    async def stream_agent_voice_chunks(self, agent_text: str) -> AsyncGenerator[bytes, None]:
         """Async generator yielding audio bytes chunks for low-latency streaming playback."""
         for chunk in self.tts.stream_audio(agent_text):
             yield chunk

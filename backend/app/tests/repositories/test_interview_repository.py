@@ -83,11 +83,10 @@ class TestInterviewRepository:
 class TestCompetencyMatrixRepository:
     """Tests for CompetencyMatrixRepository."""
 
-    def test_get_by_interview(
-        self, competency_matrix_repo, db_session, sample_interview
-    ):
+    def test_get_by_interview(self, competency_matrix_repo, db_session, sample_interview):
         """Test retrieving competency matrix by interview."""
         from app.models import CompetencyMatrix
+
         matrix = CompetencyMatrix(
             interview_id=sample_interview.id,
             competencies="[]",
@@ -118,9 +117,7 @@ class TestInterviewQuestionRepository:
         assert created.id is not None
         assert created.sequence_number == 1
 
-    def test_list_questions_by_interview(
-        self, question_repo, db_session, sample_interview
-    ):
+    def test_list_questions_by_interview(self, question_repo, db_session, sample_interview):
         """Test listing questions for an interview."""
         # Create 3 questions
         for i in range(3):
@@ -166,6 +163,7 @@ class TestEvaluationRepository:
     def test_create_evaluation(self, evaluation_repo, db_session, sample_interview):
         """Test creating an evaluation."""
         from app.models import InterviewQuestion
+
         # Setup: create question, answer
         question = InterviewQuestion(
             interview_id=sample_interview.id,
@@ -198,11 +196,10 @@ class TestEvaluationRepository:
         assert created.id is not None
         assert created.score == 8
 
-    def test_get_evaluation_by_answer(
-        self, evaluation_repo, db_session, sample_interview
-    ):
+    def test_get_evaluation_by_answer(self, evaluation_repo, db_session, sample_interview):
         """Test retrieving evaluation by answer."""
         from app.models import Evaluation, InterviewQuestion
+
         # Setup
         question = InterviewQuestion(
             interview_id=sample_interview.id,
@@ -281,8 +278,6 @@ class TestAgentLogRepository:
         db_session.add(log2)
         db_session.commit()
 
-        resume_logs = agent_log_repo.list_by_interview_and_agent(
-            sample_interview.id, "ResumeAgent"
-        )
+        resume_logs = agent_log_repo.list_by_interview_and_agent(sample_interview.id, "ResumeAgent")
         assert len(resume_logs) == 1
         assert resume_logs[0].agent_name == "ResumeAgent"

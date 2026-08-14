@@ -6,7 +6,6 @@ Verifies official MCP protocol client and server capabilities:
 3. Schema integrity and parameter validation.
 """
 
-
 import pytest
 
 from app.mcp.client import mcp_protocol_client
@@ -36,7 +35,7 @@ async def test_mcp_protocol_tools_call_success():
         {
             "question_type": "technical",
             "seniority_level": "MID",
-        }
+        },
     )
     assert call_res["success"] is True
     assert "output" in call_res
@@ -48,8 +47,7 @@ async def test_mcp_protocol_tools_call_success():
 async def test_mcp_protocol_tools_call_unknown_tool():
     """Verify official MCP tools/call protocol returns error result on unknown tool name."""
     call_res = await mcp_protocol_client.call_tool_protocol(
-        "unknown_nonexistent_tool",
-        {"arg": "val"}
+        "unknown_nonexistent_tool", {"arg": "val"}
     )
     assert call_res["success"] is False
     assert call_res["error"] is not None

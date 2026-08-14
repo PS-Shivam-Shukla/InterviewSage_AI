@@ -45,18 +45,24 @@ def mock_llm_agents(monkeypatch):
             if getattr(self, "llm", None) is not None:
                 return orig_eval_call(self, state)
             current_q = state.get("current_question") or {}
-            round_type = (current_q.get("round_type") or (answers[-1].get("round_type") if answers else "") or "").upper()
+            round_type = (
+                current_q.get("round_type")
+                or (answers[-1].get("round_type") if answers else "")
+                or ""
+            ).upper()
             if round_type == "APTITUDE":
                 return orig_eval_call(self, state)
             return {
-                "evaluations": [{
-                    "score": 90,
-                    "rubric_breakdown": {"Technical Depth": 5, "Problem Solving": 4},
-                    "feedback": "Evaluated via EvaluationAgent test double.",
-                    "reasoning": "Evaluated via EvaluationAgent test double.",
-                    "ideal_answer_summary": "Comprehensive architectural solution.",
-                    "answer_quality": "VALID_ANSWER",
-                }]
+                "evaluations": [
+                    {
+                        "score": 90,
+                        "rubric_breakdown": {"Technical Depth": 5, "Problem Solving": 4},
+                        "feedback": "Evaluated via EvaluationAgent test double.",
+                        "reasoning": "Evaluated via EvaluationAgent test double.",
+                        "ideal_answer_summary": "Comprehensive architectural solution.",
+                        "answer_quality": "VALID_ANSWER",
+                    }
+                ]
             }
 
         def mock_gen_call(self, state):
@@ -66,7 +72,9 @@ def mock_llm_agents(monkeypatch):
             return {
                 "current_question": {
                     "question_text": f"Mock {r_type} Question Text?",
-                    "competency_targeted": "System Architecture" if r_type == "TECHNICAL" else "Leadership & Culture",
+                    "competency_targeted": (
+                        "System Architecture" if r_type == "TECHNICAL" else "Leadership & Culture"
+                    ),
                     "difficulty": "MEDIUM",
                     "question_type": r_type.lower(),
                 }
@@ -185,6 +193,7 @@ def agent_log_repo(db_session):
 def sample_user(db_session):
     """Create a sample user."""
     from app.models import User
+
     user = User(
         email="test@example.com",
         password_hash="hashed_password_123",
@@ -199,6 +208,7 @@ def sample_user(db_session):
 def admin_user(db_session):
     """Create an admin user."""
     from app.models import User
+
     user = User(
         email="admin@example.com",
         password_hash="hashed_password_admin_123",
@@ -213,6 +223,7 @@ def admin_user(db_session):
 def admin_token_headers(db_session, admin_user):
     """Auth token headers for admin user."""
     from app.services import AuthService
+
     token = AuthService(db_session).create_user_token(admin_user)
     return {"Authorization": f"Bearer {token}"}
 
@@ -221,12 +232,13 @@ def admin_token_headers(db_session, admin_user):
 def sample_resume(db_session, sample_user):
     """Create a sample resume."""
     from app.models import Resume
+
     resume = Resume(
         user_id=sample_user.id,
         file_path="/uploads/test_resume.pdf",
         raw_text="Backend engineer with 5 years experience",
-        parsed_skills="[\"Python\", \"FastAPI\", \"PostgreSQL\"]",
-        parsed_experience="[{\"company\": \"TechCorp\", \"role\": \"Senior Backend Engineer\"}]",
+        parsed_skills='["Python", "FastAPI", "PostgreSQL"]',
+        parsed_experience='[{"company": "TechCorp", "role": "Senior Backend Engineer"}]',
         seniority_signal="SENIOR",
     )
     db_session.add(resume)
@@ -238,13 +250,14 @@ def sample_resume(db_session, sample_user):
 def sample_jd(db_session, sample_user):
     """Create a sample job description."""
     from app.models import JobDescription
+
     jd = JobDescription(
         user_id=sample_user.id,
         raw_text="We are looking for a Python backend engineer",
         target_role="Senior Backend Engineer",
         company_name="StartupXYZ",
         industry="FinTech",
-        required_skills="[\"Python\", \"FastAPI\", \"PostgreSQL\", \"Redis\"]",
+        required_skills='["Python", "FastAPI", "PostgreSQL", "Redis"]',
         seniority_level="SENIOR",
     )
     db_session.add(jd)
@@ -258,6 +271,7 @@ def sample_interview(db_session, sample_user, sample_resume, sample_jd):
     from datetime import datetime
 
     from app.models import Interview
+
     interview = Interview(
         user_id=sample_user.id,
         resume_id=sample_resume.id,

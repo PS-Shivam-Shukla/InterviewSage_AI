@@ -9,9 +9,7 @@ from app.memory.retriever import MemoryRetriever
 from app.models import Interview, User
 
 
-def test_personalization_question_recommendation(
-    db_session: Session, sample_user: User
-):
+def test_personalization_question_recommendation(db_session: Session, sample_user: User):
     """Verify PersonalizationEngine generates personalized question recommendations based on weak areas."""
     engine = PersonalizationEngine(db_session)
 
@@ -47,9 +45,7 @@ def test_personalization_generate_learning_roadmap(
         },
     )
 
-    roadmap = engine.generate_learning_roadmap(
-        sample_user.id, interview_id=sample_interview.id
-    )
+    roadmap = engine.generate_learning_roadmap(sample_user.id, interview_id=sample_interview.id)
 
     assert len(roadmap) == 4
     week_numbers = [r.week_number for r in roadmap]
@@ -65,9 +61,7 @@ def test_retriever_format_agent_prompt_context(
     retriever = MemoryRetriever(db_session)
     engine = PersonalizationEngine(db_session)
 
-    engine.record_interview_skills_eval(
-        sample_user.id, {"Python": 88.0, "PostgreSQL": 55.0}
-    )
+    engine.record_interview_skills_eval(sample_user.id, {"Python": 88.0, "PostgreSQL": 55.0})
 
     prompt_ctx = retriever.format_agent_prompt_context(sample_user.id)
     assert "Candidate Memory Profile" in prompt_ctx

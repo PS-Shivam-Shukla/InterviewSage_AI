@@ -40,9 +40,11 @@ def trace_span(span_name: str) -> Any:
     """
     try:
         from opentelemetry import trace
+
         tracer = trace.get_tracer("interviewsage_ai")
         return tracer.start_as_current_span(span_name)
     except Exception:
         # Fallback dummy context manager
         from contextlib import nullcontext
+
         return nullcontext()

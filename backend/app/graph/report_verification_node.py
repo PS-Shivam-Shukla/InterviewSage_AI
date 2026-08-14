@@ -27,27 +27,36 @@ logger = get_logger(__name__)
 
 # ── Reflection Schemas ────────────────────────────────────────────────────────
 
+
 class ClaimVerification(BaseModel):
     """Factual verification result for a single claim in the report."""
+
     claim: str = Field(description="The substantive claim extracted from the draft report.")
     status: Literal["supported", "unsupported", "uncertain"] = Field(
         description="Supported: explicit transcript evidence exists. Unsupported: no evidence in transcript. Uncertain: ambiguous."
     )
     evidence_ids: list[str] = Field(
-        default_factory=list, description="IDs or turn numbers of transcript evidence supporting this claim."
+        default_factory=list,
+        description="IDs or turn numbers of transcript evidence supporting this claim.",
     )
     reasoning: str = Field(description="Explanation of factual verification finding.")
 
 
 class VerifiedReportOutput(BaseModel):
     """Final verified report output schema."""
-    verified: bool = Field(description="True if all claims are supported or successfully corrected.")
+
+    verified: bool = Field(
+        description="True if all claims are supported or successfully corrected."
+    )
     claims: list[ClaimVerification] = Field(default_factory=list)
-    corrected_executive_summary: str = Field(description="Executive summary with unsupported claims removed or corrected.")
+    corrected_executive_summary: str = Field(
+        description="Executive summary with unsupported claims removed or corrected."
+    )
     unsupported_claims_count: int = Field(default=0)
 
 
 # ── Report Verification Node Implementation ───────────────────────────────────
+
 
 class ReportVerificationNode:
     """
@@ -73,7 +82,9 @@ class ReportVerificationNode:
             a_text = a.get("answer_text", "")
             evidence_lines.append(f"Turn {i} (Q): {q_text}\nTurn {i} (A): {a_text[:400]}")
 
-        transcript_evidence = "\n\n".join(evidence_lines) if evidence_lines else "No transcript evidence recorded."
+        transcript_evidence = (
+            "\n\n".join(evidence_lines) if evidence_lines else "No transcript evidence recorded."
+        )
 
         if not draft_summary:
             logger.info("ReportVerificationNode: No draft summary present to verify.")
@@ -120,7 +131,9 @@ class ReportVerificationNode:
         )
 
         try:
-            verified_out: VerifiedReportOutput = self.llm.invoke_structured(messages, VerifiedReportOutput)
+            verified_out: VerifiedReportOutput = self.llm.invoke_structured(
+                messages, VerifiedReportOutput
+            )
             unsupported = [c for c in verified_out.claims if c.status == "unsupported"]
             verified_out.unsupported_claims_count = len(unsupported)
 
@@ -141,7 +154,9 @@ class ReportVerificationNode:
             }
 
         except Exception as exc:
-            logger.warning(f"ReportVerificationNode verification failed: {exc}. Retaining baseline summary safely.")
+            logger.warning(
+                f"ReportVerificationNode verification failed: {exc}. Retaining baseline summary safely."
+            )
             return {
                 "verification_report": {
                     "verified": False,

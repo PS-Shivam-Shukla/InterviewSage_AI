@@ -31,7 +31,7 @@ async def register(
 ):
     """
     Register a new user account.
-    
+
     Returns JWT token and user information on success.
     """
     auth_service = AuthService(db)
@@ -71,7 +71,7 @@ async def login(
 ):
     """
     Login with email and password.
-    
+
     Returns JWT token and user information on success.
     """
     auth_service = AuthService(db)
@@ -109,7 +109,7 @@ async def get_me(
 ):
     """
     Get information about the currently authenticated user.
-    
+
     Requires valid JWT token in Authorization header.
     """
     return UserResponse.model_validate(current_user)

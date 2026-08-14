@@ -94,8 +94,20 @@ def test_25_concurrent_websockets(client: TestClient, sample_interview, auth_hea
 def test_session_isolation(db_session: Session, auth_header_and_user):
     """Verify separate interview sessions maintain isolated audio buffers and event scope."""
     user, resume_id, jd_id, _ = auth_header_and_user
-    int_1 = Interview(id=f"int-{uuid.uuid4()}", user_id=user.id, resume_id=resume_id, jd_id=jd_id, status="IN_PROGRESS")
-    int_2 = Interview(id=f"int-{uuid.uuid4()}", user_id=user.id, resume_id=resume_id, jd_id=jd_id, status="IN_PROGRESS")
+    int_1 = Interview(
+        id=f"int-{uuid.uuid4()}",
+        user_id=user.id,
+        resume_id=resume_id,
+        jd_id=jd_id,
+        status="IN_PROGRESS",
+    )
+    int_2 = Interview(
+        id=f"int-{uuid.uuid4()}",
+        user_id=user.id,
+        resume_id=resume_id,
+        jd_id=jd_id,
+        status="IN_PROGRESS",
+    )
     db_session.add(int_1)
     db_session.add(int_2)
     db_session.commit()
@@ -115,7 +127,9 @@ def test_session_isolation(db_session: Session, auth_header_and_user):
     assert len(streaming_service.get_buffered_bytes(int_2.id)) == 15
 
 
-def test_duplicate_turn_processing_protection(client: TestClient, sample_interview, auth_header_and_user):
+def test_duplicate_turn_processing_protection(
+    client: TestClient, sample_interview, auth_header_and_user
+):
     """Verify sending duplicate END_CANDIDATE_SPEECH while processing returns PROCESSING_IN_PROGRESS."""
     from app.api.v1.routes.websocket import _processing_sessions
 
@@ -148,7 +162,9 @@ def test_disconnect_buffer_cleanup(client: TestClient, sample_interview, auth_he
     assert len(buf) == 0
 
 
-def test_reconnect_preserves_interview_state(client: TestClient, db_session: Session, sample_interview, auth_header_and_user):
+def test_reconnect_preserves_interview_state(
+    client: TestClient, db_session: Session, sample_interview, auth_header_and_user
+):
     """Verify disconnecting and reconnecting to an active interview session preserves state without corruption."""
     _, _, _, token = auth_header_and_user
     interview_id = sample_interview.id

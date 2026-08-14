@@ -4,7 +4,6 @@ Loads and validates environment variables using Pydantic BaseSettings.
 Strict enterprise security validation enforced at startup.
 """
 
-
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -38,29 +37,21 @@ class Settings(BaseSettings):
     port: int = Field(default=8000, alias="PORT")
 
     # Database
-    database_url: str = Field(
-        default="sqlite:///./interviewsage.db", alias="DATABASE_URL"
-    )
+    database_url: str = Field(default="sqlite:///./interviewsage.db", alias="DATABASE_URL")
 
     # Security — REQUIRED (No insecure default fallback!)
     secret_key: str = Field(alias="SECRET_KEY")
     algorithm: str = Field(default="HS256", alias="ALGORITHM")
-    access_token_expire_minutes: int = Field(
-        default=10080, alias="ACCESS_TOKEN_EXPIRE_MINUTES"
-    )
+    access_token_expire_minutes: int = Field(default=10080, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
 
     # Local LLM & Ollama Configuration
     llm_provider: str = Field(default="ollama", alias="LLM_PROVIDER")
     llm_model_name: str = Field(default="qwen3:instruct", alias="LLM_MODEL_NAME")
-    ollama_base_url: str = Field(
-        default="http://localhost:11434", alias="OLLAMA_BASE_URL"
-    )
+    ollama_base_url: str = Field(default="http://localhost:11434", alias="OLLAMA_BASE_URL")
     llm_api_key: str | None = Field(default="local-ollama-key", alias="LLM_API_KEY")
     llm_temperature: float = Field(default=0.4, alias="LLM_TEMPERATURE")
     llm_max_tokens: int = Field(default=2000, alias="LLM_MAX_TOKENS")
-    llm_fallback_model: str = Field(
-        default="qwen2.5:latest", alias="LLM_FALLBACK_MODEL"
-    )
+    llm_fallback_model: str = Field(default="qwen2.5:latest", alias="LLM_FALLBACK_MODEL")
 
     # Voice & Speech Engine Configuration (Sprint 13)
     whisper_model: str = Field(default="base", alias="WHISPER_MODEL")
@@ -127,9 +118,7 @@ class Settings(BaseSettings):
         """Validate environment name."""
         allowed = {"development", "dev", "test", "testing", "staging", "production", "prod"}
         if not v or v.lower() not in allowed:
-            raise ValueError(
-                f"ENVIRONMENT must be one of {sorted(allowed)}. Got '{v}'."
-            )
+            raise ValueError(f"ENVIRONMENT must be one of {sorted(allowed)}. Got '{v}'.")
         return v.lower()
 
     @field_validator("database_url")
@@ -139,7 +128,12 @@ class Settings(BaseSettings):
         if not v or not v.strip():
             raise ValueError("DATABASE_URL cannot be empty.")
         val = v.strip()
-        valid_schemes = ("sqlite://", "postgresql://", "postgresql+psycopg2://", "postgresql+asyncpg://")
+        valid_schemes = (
+            "sqlite://",
+            "postgresql://",
+            "postgresql+psycopg2://",
+            "postgresql+asyncpg://",
+        )
         if not any(val.startswith(scheme) for scheme in valid_schemes):
             raise ValueError(
                 f"DATABASE_URL scheme unsupported. Must start with one of {valid_schemes}."

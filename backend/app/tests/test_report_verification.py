@@ -23,7 +23,7 @@ def test_report_verification_supported_claims():
                 claim="Candidate explained Python asyncio and event loops.",
                 status="supported",
                 evidence_ids=["turn_1"],
-                reasoning="Candidate provided accurate asyncio code snippet in Turn 1."
+                reasoning="Candidate provided accurate asyncio code snippet in Turn 1.",
             )
         ],
         corrected_executive_summary="Candidate demonstrated solid understanding of Python asyncio concurrency.",
@@ -58,14 +58,14 @@ def test_report_verification_unsupported_claims_corrected():
                 claim="Candidate demonstrated expert Kubernetes cluster administration.",
                 status="unsupported",
                 evidence_ids=[],
-                reasoning="Transcript contains no mention or questions related to Kubernetes."
+                reasoning="Transcript contains no mention or questions related to Kubernetes.",
             ),
             ClaimVerification(
                 claim="Candidate demonstrated basic Python syntax skills.",
                 status="supported",
                 evidence_ids=["turn_1"],
-                reasoning="Turn 1 answer covers Python functions."
-            )
+                reasoning="Turn 1 answer covers Python functions.",
+            ),
         ],
         corrected_executive_summary="Candidate demonstrated basic Python syntax skills.",
         unsupported_claims_count=1,
@@ -84,4 +84,7 @@ def test_report_verification_unsupported_claims_corrected():
     result = verifier(state)
     assert result["verification_report"]["unsupported_claims_count"] == 1
     assert "Kubernetes" not in result["final_report"]["executive_summary"]
-    assert result["final_report"]["executive_summary"] == "Candidate demonstrated basic Python syntax skills."
+    assert (
+        result["final_report"]["executive_summary"]
+        == "Candidate demonstrated basic Python syntax skills."
+    )

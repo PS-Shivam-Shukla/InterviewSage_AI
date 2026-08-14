@@ -34,6 +34,7 @@ def compute_ats_score(
           "jd_skill_count": int,
         }
     """
+
     def normalise(skills: list[str]) -> set:
         return {s.lower().strip() for s in skills if s.strip()}
 

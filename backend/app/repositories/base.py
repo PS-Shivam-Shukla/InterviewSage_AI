@@ -44,7 +44,9 @@ class AbstractRepository(ABC, Generic[T]):
         pass
 
     @abstractmethod
-    def list_by_filter(self, filters: dict[str, Any], skip: int = 0, limit: int = 100) -> builtins.list[T]:
+    def list_by_filter(
+        self, filters: dict[str, Any], skip: int = 0, limit: int = 100
+    ) -> builtins.list[T]:
         """List entities matching filter criteria."""
         pass
 
@@ -88,7 +90,9 @@ class Repository(AbstractRepository[T]):
         """List all entities with pagination."""
         return self.db.query(self.model).offset(skip).limit(limit).all()
 
-    def list_by_filter(self, filters: dict[str, Any], skip: int = 0, limit: int = 100) -> builtins.list[T]:
+    def list_by_filter(
+        self, filters: dict[str, Any], skip: int = 0, limit: int = 100
+    ) -> builtins.list[T]:
         """List entities matching filter criteria."""
         query = self.db.query(self.model)
         for key, value in filters.items():

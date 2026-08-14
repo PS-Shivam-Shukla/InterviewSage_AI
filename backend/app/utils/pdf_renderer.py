@@ -1,4 +1,5 @@
 """PDF rendering utilities using ReportLab."""
+
 from io import BytesIO
 from typing import Any
 
@@ -91,15 +92,27 @@ def render_report_pdf(report_data: dict[str, Any]) -> bytes:
 
     story.append(Paragraph("AI Interview Evaluation Report", title_style))
     story.append(Spacer(1, 4))
-    story.append(Paragraph(f"<b>Target Role:</b> {role} | <b>Session ID:</b> {interview_id}", subtitle_style))
+    story.append(
+        Paragraph(f"<b>Target Role:</b> {role} | <b>Session ID:</b> {interview_id}", subtitle_style)
+    )
     if gen_at:
         story.append(Paragraph(f"<b>Generated At:</b> {gen_at}", small))
     if overall_score is not None:
         score_num = float(overall_score)
         story.append(Spacer(1, 6))
-        story.append(Paragraph(f"<b>Overall Scorecard Rating:</b> {score_num:.1f}%", ParagraphStyle(
-            "OverallBadge", parent=normal, fontSize=12, leading=16, textColor=colors.HexColor("#4338ca"), fontName="Helvetica-Bold"
-        )))
+        story.append(
+            Paragraph(
+                f"<b>Overall Scorecard Rating:</b> {score_num:.1f}%",
+                ParagraphStyle(
+                    "OverallBadge",
+                    parent=normal,
+                    fontSize=12,
+                    leading=16,
+                    textColor=colors.HexColor("#4338ca"),
+                    fontName="Helvetica-Bold",
+                ),
+            )
+        )
     story.append(Spacer(1, 12))
 
     # ── 2. Competency & Skill Scorecard ──────────────────────────────────────
@@ -110,7 +123,9 @@ def render_report_pdf(report_data: dict[str, Any]) -> bytes:
         rows = [["Skill / Competency Target", "Score (%)", "Proficiency Level"]]
         for item in scorecard:
             if isinstance(item, dict):
-                skill_name = item.get("competency") or item.get("skill") or item.get("name") or "Skill"
+                skill_name = (
+                    item.get("competency") or item.get("skill") or item.get("name") or "Skill"
+                )
                 raw_score = item.get("score")
                 if raw_score is not None:
                     sc_val = float(raw_score)
@@ -129,17 +144,21 @@ def render_report_pdf(report_data: dict[str, Any]) -> bytes:
                 rows.append([str(item), "N/A", "Unevaluated"])
 
         tbl = Table(rows, colWidths=[240, 100, 160])
-        tbl.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f1f5f9")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, -1), 9),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-            ("ALIGN", (1, 0), (1, -1), "CENTER"),
-            ("ALIGN", (2, 0), (2, -1), "CENTER"),
-        ]))
+        tbl.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f1f5f9")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                    ("TOPPADDING", (0, 0), (-1, -1), 6),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+                    ("ALIGN", (1, 0), (1, -1), "CENTER"),
+                    ("ALIGN", (2, 0), (2, -1), "CENTER"),
+                ]
+            )
+        )
         story.append(tbl)
     else:
         story.append(Paragraph("No competency data recorded.", normal))
@@ -151,7 +170,12 @@ def render_report_pdf(report_data: dict[str, Any]) -> bytes:
     if plan:
         for item in plan:
             if isinstance(item, dict):
-                topic = item.get("topic") or item.get("area") or item.get("targetSkill") or "Improvement Area"
+                topic = (
+                    item.get("topic")
+                    or item.get("area")
+                    or item.get("targetSkill")
+                    or "Improvement Area"
+                )
                 desc = item.get("description") or item.get("recommendation") or ""
                 priority = item.get("priority") or "Medium"
                 story.append(Paragraph(f"• <b>{topic}</b> [{priority} Priority]: {desc}", normal))
@@ -173,8 +197,12 @@ def render_report_pdf(report_data: dict[str, Any]) -> bytes:
                 a = qa.get("answer") or "No answer provided."
                 score = qa.get("score")
                 comp = qa.get("competency") or "General"
-                reasoning = qa.get("reasoning") or qa.get("feedback") or "Evaluated via EvaluationAgent."
-                disp_score = qa.get("display_score") or (f"{score:.1f}%" if score is not None else "N/A")
+                reasoning = (
+                    qa.get("reasoning") or qa.get("feedback") or "Evaluated via EvaluationAgent."
+                )
+                disp_score = qa.get("display_score") or (
+                    f"{score:.1f}%" if score is not None else "N/A"
+                )
             else:
                 q = str(qa)
                 a = ""
@@ -188,7 +216,9 @@ def render_report_pdf(report_data: dict[str, Any]) -> bytes:
             story.append(Spacer(1, 2))
             story.append(Paragraph(f"<b>Score:</b> {disp_score}", small))
             story.append(Spacer(1, 2))
-            story.append(Paragraph(f"<b>AI Feedback & Diagnostic Reasoning:</b> {reasoning}", feedback_style))
+            story.append(
+                Paragraph(f"<b>AI Feedback & Diagnostic Reasoning:</b> {reasoning}", feedback_style)
+            )
             story.append(Spacer(1, 10))
     else:
         story.append(Paragraph("No interview transcript available.", normal))

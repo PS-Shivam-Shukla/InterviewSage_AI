@@ -26,6 +26,7 @@ class NegativeConstraintContract:
     @staticmethod
     def validate(text: str, negative_skills: list[str]) -> ContractValidationResult:
         from app.kernel.guardrails import Guardrails
+
         gr = Guardrails()
         is_valid, violations = gr.validate_negative_constraints(text, negative_skills)
         return ContractValidationResult(
@@ -52,7 +53,9 @@ class BlueprintConstraintContract:
             violations.append("total_questions must be greater than 0")
 
         if len(items) != total_q and total_q > 0:
-            violations.append(f"blueprint_items count ({len(items)}) does not match total_questions ({total_q})")
+            violations.append(
+                f"blueprint_items count ({len(items)}) does not match total_questions ({total_q})"
+            )
 
         return ContractValidationResult(
             is_valid=len(violations) == 0,
@@ -69,7 +72,9 @@ class EvaluationConfidenceContract:
     """
 
     @staticmethod
-    def validate(evaluation: dict[str, Any], min_confidence: float = 0.75) -> ContractValidationResult:
+    def validate(
+        evaluation: dict[str, Any], min_confidence: float = 0.75
+    ) -> ContractValidationResult:
         violations: list[str] = []
         conf = float(evaluation.get("confidence_score", 1.0))
         score = float(evaluation.get("score", 0.0))

@@ -19,6 +19,7 @@ from app.mcp import mcp_server
 
 # ── Output schema ─────────────────────────────────────────────
 
+
 class ATSAnalysis(BaseModel):
     ats_overlap_score: int = Field(0, ge=0, le=100)
     keyword_coverage_score: int = Field(0, ge=0, le=100)
@@ -33,6 +34,7 @@ class ATSAnalysis(BaseModel):
 
 
 # ── Agent ─────────────────────────────────────────────────────
+
 
 class ATSAgent(BaseAgent):
     agent_name = "ATSAgent"

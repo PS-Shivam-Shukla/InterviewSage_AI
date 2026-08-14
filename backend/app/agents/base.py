@@ -93,7 +93,7 @@ class BaseAgent(ABC):
                     self._log(state, "FAILED", {}, latency, attempt, last_error)
                     return self._on_failure(state, last_error)
 
-        return {}   # unreachable but satisfies type checker
+        return {}  # unreachable but satisfies type checker
 
     # ── Subclass contract ─────────────────────────────────────
 
@@ -134,6 +134,7 @@ class BaseAgent(ABC):
         """
         if retry_feedback:
             from langchain_core.messages import SystemMessage
+
             messages = messages + [
                 SystemMessage(
                     content=(
@@ -157,7 +158,9 @@ class BaseAgent(ABC):
         """Write real-time console tracking and persist to AGENT_LOG if a db session is available."""
         # 1. Print formatted real-time telemetry block to console/stdout
         try:
-            output_summary = str(output)[:250].replace("\n", " ") if output else (error or "No output")
+            output_summary = (
+                str(output)[:250].replace("\n", " ") if output else (error or "No output")
+            )
             logger.info(
                 f"🤖 [AGENT COMPLETED] Agent: {self.agent_name} | Status: {status} | Latency: {latency_ms}ms | Retries: {retry_count}\n"
                 f"   Output Summary: {output_summary}\n"
@@ -172,6 +175,7 @@ class BaseAgent(ABC):
             return
         try:
             from app.mcp import mcp_server
+
             mcp_server.call_tool(
                 "persist_agent_output",
                 db_session=db,

@@ -17,6 +17,7 @@ T = TypeVar("T")
 
 # ── Error & Result Envelope ────────────────────────────────────
 
+
 class AgentErrorCode(str, Enum):
     VALIDATION_ERROR = "VALIDATION_ERROR"
     LLM_TIMEOUT = "LLM_TIMEOUT"
@@ -47,6 +48,7 @@ class AgentResult(BaseModel, Generic[T]):
 
 
 # ── Sub-Entities ───────────────────────────────────────────────
+
 
 class ExperienceEntry(BaseModel):
     id: str | None = None
@@ -85,16 +87,25 @@ class CertificationEntry(BaseModel):
 
 # ── ResumeAgent Contracts ──────────────────────────────────────
 
+
 class ResumeAgentInput(BaseModel):
-    resume_raw_text: str = Field(..., min_length=1, description="Extracted raw text from resume PDF")
+    resume_raw_text: str = Field(
+        ..., min_length=1, description="Extracted raw text from resume PDF"
+    )
     candidate_id: str | None = None
     file_name: str | None = None
 
 
 class ResumeAnalysis(BaseModel):
-    summary: str = Field(default="", description="Executive candidate summary extracted from resume")
-    technical_skills: list[str] = Field(default_factory=list, description="Technical skills and technologies")
-    soft_skills: list[str] = Field(default_factory=list, description="Soft skills and domain competencies")
+    summary: str = Field(
+        default="", description="Executive candidate summary extracted from resume"
+    )
+    technical_skills: list[str] = Field(
+        default_factory=list, description="Technical skills and technologies"
+    )
+    soft_skills: list[str] = Field(
+        default_factory=list, description="Soft skills and domain competencies"
+    )
     experience: list[ExperienceEntry] = Field(default_factory=list)
     education: list[EducationEntry] = Field(default_factory=list)
     projects: list[ProjectEntry] = Field(default_factory=list)
@@ -102,7 +113,9 @@ class ResumeAnalysis(BaseModel):
     languages: list[str] = Field(default_factory=list)
     strengths: list[str] = Field(default_factory=list)
     weaknesses: list[str] = Field(default_factory=list)
-    career_level: str = Field(default="MID", description="Seniority signal: JUNIOR, MID, SENIOR, STAFF, UNKNOWN")
+    career_level: str = Field(
+        default="MID", description="Seniority signal: JUNIOR, MID, SENIOR, STAFF, UNKNOWN"
+    )
     resume_quality_score: int = Field(default=85, ge=0, le=100)
 
     @field_validator("career_level")
@@ -114,6 +127,7 @@ class ResumeAnalysis(BaseModel):
 
 # ── JDAgent Contracts ──────────────────────────────────────────
 
+
 class JDAnalysisInput(BaseModel):
     jd_raw_text: str = Field(..., min_length=1, description="Raw job description text")
     job_title: str | None = None
@@ -121,7 +135,9 @@ class JDAnalysisInput(BaseModel):
 
 class JDAnalysis(BaseModel):
     target_role: str = Field(default="Software Engineer", description="Target role title")
-    seniority_required: str = Field(default="MID", description="Required seniority: JUNIOR, MID, SENIOR, STAFF")
+    seniority_required: str = Field(
+        default="MID", description="Required seniority: JUNIOR, MID, SENIOR, STAFF"
+    )
     required_skills: list[str] = Field(default_factory=list)
     preferred_skills: list[str] = Field(default_factory=list)
     core_responsibilities: list[str] = Field(default_factory=list)
@@ -135,6 +151,7 @@ class JDAnalysis(BaseModel):
 
 
 # ── InterviewPlannerAgent Contracts ───────────────────────────
+
 
 class InterviewPlanInput(BaseModel):
     seniority_signal: str = Field(default="MID")
@@ -159,6 +176,7 @@ class InterviewPlan(BaseModel):
 
 
 # ── QuestionGeneratorAgent Contracts ─────────────────────────
+
 
 class QuestionGenerationInput(BaseModel):
     interview_id: str
@@ -187,6 +205,7 @@ class GeneratedQuestion(BaseModel):
 
 # ── EvaluationAgent Contracts ─────────────────────────────────
 
+
 class AnswerEvaluationInput(BaseModel):
     question_text: str
     candidate_answer: str
@@ -198,7 +217,9 @@ class AnswerEvaluationInput(BaseModel):
 
 class AnswerEvaluation(BaseModel):
     score: int = Field(..., ge=1, le=10, description="Overall score on 1–10 scale")
-    rubric_breakdown: dict[str, int] = Field(default_factory=dict, description="Sub-scores 1–5 per dimension")
+    rubric_breakdown: dict[str, int] = Field(
+        default_factory=dict, description="Sub-scores 1–5 per dimension"
+    )
     feedback: str = Field(default="", description="Detailed qualitative feedback")
     ideal_answer_summary: str = Field(default="", description="Ideal reference summary")
     needs_human_review: bool = Field(default=False)
@@ -216,6 +237,7 @@ class AnswerEvaluation(BaseModel):
 
 
 # ── ReportAgent Contracts ─────────────────────────────────────
+
 
 class ReportGenerationInput(BaseModel):
     interview_id: str
@@ -237,10 +259,11 @@ class InterviewReport(BaseModel):
 
 # ── Shared Interview Context ──────────────────────────────────
 
+
 class InterviewContext(BaseModel):
     """
     Unified, strongly typed context encapsulating the complete interview state.
-    
+
     Data Ownership & Mutability Rules:
     - IMMUTABLE DATA: Source files and identities (never mutated by agents).
     - RUNTIME STATE: Active round, step index, progress state.

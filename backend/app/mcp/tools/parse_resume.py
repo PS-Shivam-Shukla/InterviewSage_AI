@@ -46,9 +46,7 @@ def parse_resume_pdf(file_path: str) -> dict[str, Any]:
             "char_count": len(cleaned),
             "needs_ocr": False,
         }
-    raise ValueError(
-        f"Unsupported file type: {suffix!r}. Supported: .pdf, .docx, .txt"
-    )
+    raise ValueError(f"Unsupported file type: {suffix!r}. Supported: .pdf, .docx, .txt")
 
 
 def _parse_pdf(path: Path) -> dict[str, Any]:

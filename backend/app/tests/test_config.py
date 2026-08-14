@@ -11,7 +11,9 @@ from app.core.config import Settings
 
 def test_valid_configuration(monkeypatch):
     """Test that a valid configuration instantiates cleanly."""
-    monkeypatch.setenv("SECRET_KEY", "valid-secret-key-that-is-at-least-32-characters-long-and-secure!")
+    monkeypatch.setenv(
+        "SECRET_KEY", "valid-secret-key-that-is-at-least-32-characters-long-and-secure!"
+    )
     monkeypatch.setenv("ENVIRONMENT", "development")
     monkeypatch.setenv("DEBUG", "True")
     monkeypatch.setenv("DATABASE_URL", "sqlite:///./test.db")
@@ -29,7 +31,10 @@ def test_missing_secret_key(monkeypatch):
 
     with pytest.raises(ValidationError) as exc_info:
         Settings(_env_file=None)
-    assert "secret_key" in str(exc_info.value).lower() or "field required" in str(exc_info.value).lower()
+    assert (
+        "secret_key" in str(exc_info.value).lower()
+        or "field required" in str(exc_info.value).lower()
+    )
 
 
 def test_weak_secret_key_too_short(monkeypatch):
@@ -53,12 +58,16 @@ def test_placeholder_secret_key_rejected(monkeypatch):
         monkeypatch.setenv("SECRET_KEY", key)
         with pytest.raises(ValidationError) as exc_info:
             Settings(_env_file=None)
-        assert "known insecure development secret" in str(exc_info.value) or "pattern" in str(exc_info.value)
+        assert "known insecure development secret" in str(exc_info.value) or "pattern" in str(
+            exc_info.value
+        )
 
 
 def test_debug_true_in_production_rejected(monkeypatch):
     """Test that DEBUG=True in production or staging environment raises a ValidationError."""
-    monkeypatch.setenv("SECRET_KEY", "valid-secret-key-that-is-at-least-32-characters-long-and-secure!")
+    monkeypatch.setenv(
+        "SECRET_KEY", "valid-secret-key-that-is-at-least-32-characters-long-and-secure!"
+    )
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("DEBUG", "True")
 
@@ -69,7 +78,9 @@ def test_debug_true_in_production_rejected(monkeypatch):
 
 def test_debug_true_in_staging_rejected(monkeypatch):
     """Test that DEBUG=True in staging environment raises a ValidationError."""
-    monkeypatch.setenv("SECRET_KEY", "valid-secret-key-that-is-at-least-32-characters-long-and-secure!")
+    monkeypatch.setenv(
+        "SECRET_KEY", "valid-secret-key-that-is-at-least-32-characters-long-and-secure!"
+    )
     monkeypatch.setenv("ENVIRONMENT", "staging")
     monkeypatch.setenv("DEBUG", "True")
 
@@ -80,7 +91,9 @@ def test_debug_true_in_staging_rejected(monkeypatch):
 
 def test_invalid_database_url_scheme(monkeypatch):
     """Test that unsupported DATABASE_URL schemes raise a ValidationError."""
-    monkeypatch.setenv("SECRET_KEY", "valid-secret-key-that-is-at-least-32-characters-long-and-secure!")
+    monkeypatch.setenv(
+        "SECRET_KEY", "valid-secret-key-that-is-at-least-32-characters-long-and-secure!"
+    )
     monkeypatch.setenv("DATABASE_URL", "invalid_scheme://localhost/db")
 
     with pytest.raises(ValidationError) as exc_info:
@@ -90,7 +103,9 @@ def test_invalid_database_url_scheme(monkeypatch):
 
 def test_invalid_environment_name(monkeypatch):
     """Test that invalid ENVIRONMENT values raise a ValidationError."""
-    monkeypatch.setenv("SECRET_KEY", "valid-secret-key-that-is-at-least-32-characters-long-and-secure!")
+    monkeypatch.setenv(
+        "SECRET_KEY", "valid-secret-key-that-is-at-least-32-characters-long-and-secure!"
+    )
     monkeypatch.setenv("ENVIRONMENT", "invalid_env_name")
 
     with pytest.raises(ValidationError) as exc_info:

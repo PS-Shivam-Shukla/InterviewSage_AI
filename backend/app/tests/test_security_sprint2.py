@@ -17,6 +17,7 @@ from app.services import AuthService
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _create_test_user(db: Session, email: str, name: str) -> tuple[User, str]:
     """Create a user record with explicit UUID and return (user_obj, jwt_token)."""
     user_id = str(uuid.uuid4())
@@ -40,13 +41,18 @@ def _auth_header(token: str) -> dict:
 
 # ── 1. Resource Ownership Authorization Tests (C-6) ───────────────────────────
 
+
 def test_user_a_cannot_access_user_b_interview(client: TestClient, db_session: Session):
     """Verify HTTP 403 Forbidden when User A attempts to access User B's interview."""
     user_a, token_a = _create_test_user(db_session, "user_a@test.com", "User A")
     user_b, token_b = _create_test_user(db_session, "user_b@test.com", "User B")
 
-    resume_b = Resume(id=str(uuid.uuid4()), user_id=user_b.id, file_path="resume.pdf", raw_text="Resume Text")
-    jd_b = JobDescription(id=str(uuid.uuid4()), user_id=user_b.id, raw_text="JD Text", target_role="Engineer")
+    resume_b = Resume(
+        id=str(uuid.uuid4()), user_id=user_b.id, file_path="resume.pdf", raw_text="Resume Text"
+    )
+    jd_b = JobDescription(
+        id=str(uuid.uuid4()), user_id=user_b.id, raw_text="JD Text", target_role="Engineer"
+    )
     db_session.add_all([resume_b, jd_b])
     db_session.commit()
 
@@ -75,12 +81,16 @@ def test_user_a_cannot_access_user_b_report(client: TestClient, db_session: Sess
     user_a, token_a = _create_test_user(db_session, "user_a_rpt@test.com", "User A")
     user_b, token_b = _create_test_user(db_session, "user_b_rpt@test.com", "User B")
 
-    resume_b = Resume(id=str(uuid.uuid4()), user_id=user_b.id, file_path="resume.pdf", raw_text="Resume")
+    resume_b = Resume(
+        id=str(uuid.uuid4()), user_id=user_b.id, file_path="resume.pdf", raw_text="Resume"
+    )
     jd_b = JobDescription(id=str(uuid.uuid4()), user_id=user_b.id, raw_text="JD", target_role="Dev")
     db_session.add_all([resume_b, jd_b])
     db_session.commit()
 
-    interview_b = Interview(id=str(uuid.uuid4()), user_id=user_b.id, resume_id=resume_b.id, jd_id=jd_b.id)
+    interview_b = Interview(
+        id=str(uuid.uuid4()), user_id=user_b.id, resume_id=resume_b.id, jd_id=jd_b.id
+    )
     db_session.add(interview_b)
     db_session.commit()
 
@@ -94,7 +104,9 @@ def test_user_a_cannot_access_user_b_resume(client: TestClient, db_session: Sess
     user_a, token_a = _create_test_user(db_session, "user_a_res@test.com", "User A")
     user_b, token_b = _create_test_user(db_session, "user_b_res@test.com", "User B")
 
-    resume_b = Resume(id=str(uuid.uuid4()), user_id=user_b.id, file_path="resume_b.pdf", raw_text="Resume B")
+    resume_b = Resume(
+        id=str(uuid.uuid4()), user_id=user_b.id, file_path="resume_b.pdf", raw_text="Resume B"
+    )
     db_session.add(resume_b)
     db_session.commit()
 
@@ -107,7 +119,9 @@ def test_user_a_cannot_access_user_b_job_description(client: TestClient, db_sess
     user_a, token_a = _create_test_user(db_session, "user_a_jd@test.com", "User A")
     user_b, token_b = _create_test_user(db_session, "user_b_jd@test.com", "User B")
 
-    jd_b = JobDescription(id=str(uuid.uuid4()), user_id=user_b.id, raw_text="JD B", target_role="Backend")
+    jd_b = JobDescription(
+        id=str(uuid.uuid4()), user_id=user_b.id, raw_text="JD B", target_role="Backend"
+    )
     db_session.add(jd_b)
     db_session.commit()
 
@@ -116,6 +130,7 @@ def test_user_a_cannot_access_user_b_job_description(client: TestClient, db_sess
 
 
 # ── 2. WebSocket Authentication & Authorization Tests (H-3) ───────────────────
+
 
 def test_websocket_missing_token(client: TestClient, db_session: Session):
     """Verify WebSocket connection rejected when token is missing."""
@@ -136,11 +151,15 @@ def test_websocket_wrong_ownership_rejected(client: TestClient, db_session: Sess
     user_b, token_b = _create_test_user(db_session, "ws_b@test.com", "WS B")
 
     resume_b = Resume(id=str(uuid.uuid4()), user_id=user_b.id, file_path="r.pdf", raw_text="Text")
-    jd_b = JobDescription(id=str(uuid.uuid4()), user_id=user_b.id, raw_text="JD", target_role="Role")
+    jd_b = JobDescription(
+        id=str(uuid.uuid4()), user_id=user_b.id, raw_text="JD", target_role="Role"
+    )
     db_session.add_all([resume_b, jd_b])
     db_session.commit()
 
-    interview_b = Interview(id=str(uuid.uuid4()), user_id=user_b.id, resume_id=resume_b.id, jd_id=jd_b.id)
+    interview_b = Interview(
+        id=str(uuid.uuid4()), user_id=user_b.id, resume_id=resume_b.id, jd_id=jd_b.id
+    )
     db_session.add(interview_b)
     db_session.commit()
 
@@ -162,13 +181,16 @@ def test_websocket_valid_connection(client: TestClient, db_session: Session):
     db_session.add(interview)
     db_session.commit()
 
-    with client.websocket_connect(f"/api/v1/ws/interviews/{interview.id}?token={token}") as websocket:
+    with client.websocket_connect(
+        f"/api/v1/ws/interviews/{interview.id}?token={token}"
+    ) as websocket:
         websocket.send_json({"type": "PING"})
         data = websocket.receive_json()
         assert data["type"] == "PONG"
 
 
 # ── 3. File Upload Hardening Tests (H-4) ──────────────────────────────────────
+
 
 def test_upload_empty_file_rejected(client: TestClient, db_session: Session):
     """Verify HTTP 400 Bad Request on empty file upload (0 bytes)."""
@@ -220,13 +242,18 @@ def test_upload_dangerous_filename_rejected(client: TestClient, db_session: Sess
         files = {"file": (filename, b"content", "application/pdf")}
         res = client.post("/api/v1/resumes/", files=files, headers=_auth_header(token))
         assert res.status_code == 400
-        assert "Dangerous filename detected" in res.json()["detail"] or "Unsupported file extension" in res.json()["detail"]
+        assert (
+            "Dangerous filename detected" in res.json()["detail"]
+            or "Unsupported file extension" in res.json()["detail"]
+        )
 
 
 def test_upload_valid_pdf_accepted(client: TestClient, db_session: Session):
     """Verify successful 201 Created for a valid PDF file upload."""
     user, token = _create_test_user(db_session, "up_valid@test.com", "User")
-    files = {"file": ("valid_resume.pdf", b"%PDF-1.4 sample content Python FastAPI", "application/pdf")}
+    files = {
+        "file": ("valid_resume.pdf", b"%PDF-1.4 sample content Python FastAPI", "application/pdf")
+    }
     res = client.post("/api/v1/resumes/", files=files, headers=_auth_header(token))
     assert res.status_code == 201
     assert res.json()["file_path"] == "valid_resume.pdf"

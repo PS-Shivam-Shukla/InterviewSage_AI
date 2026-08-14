@@ -84,7 +84,11 @@ async def voice_interview_websocket(
     start_time = time.perf_counter()
 
     # 1. Authenticate Token
-    auth_token = token or websocket.headers.get("authorization") or websocket.headers.get("sec-websocket-protocol")
+    auth_token = (
+        token
+        or websocket.headers.get("authorization")
+        or websocket.headers.get("sec-websocket-protocol")
+    )
     if auth_token:
         auth_token = extract_token_from_header(auth_token) or auth_token
 
@@ -93,7 +97,9 @@ async def voice_interview_websocket(
 
     # Fallback for test tokens or default user
     if not user:
-        user = auth_service.user_repo.get_by_email("test@example.com") or auth_service.user_repo.get_by_email("admin@example.com")
+        user = auth_service.user_repo.get_by_email(
+            "test@example.com"
+        ) or auth_service.user_repo.get_by_email("admin@example.com")
 
     if not user:
         logger.warning(f"Voice WS connection rejected: Invalid token for session {session_id}")
@@ -125,7 +131,11 @@ async def voice_interview_websocket(
                 streaming_service.buffer_audio_chunk(session_id, chunk)
                 await voice_manager.send_json(
                     session_id,
-                    {"event": "AUDIO_CHUNK_ACK", "session_id": session_id, "size_bytes": len(chunk)},
+                    {
+                        "event": "AUDIO_CHUNK_ACK",
+                        "session_id": session_id,
+                        "size_bytes": len(chunk),
+                    },
                 )
 
             # Handle Text / JSON Control Messages
@@ -135,17 +145,25 @@ async def voice_interview_websocket(
                     event_type = payload.get("event", "PING")
 
                     if event_type == "PING":
-                        await voice_manager.send_json(session_id, {"event": "PONG", "timestamp": time.time()})
+                        await voice_manager.send_json(
+                            session_id, {"event": "PONG", "timestamp": time.time()}
+                        )
 
                     elif event_type == "END_CANDIDATE_SPEECH":
                         # Process Turn: STT -> InterviewService -> Persistence -> TTS
-                        turn_result = streaming_service.process_voice_turn_orchestrated(session_id, db=db)
+                        turn_result = streaming_service.process_voice_turn_orchestrated(
+                            session_id, db=db
+                        )
 
                         if not turn_result.get("error"):
                             # Track Latency Metrics
-                            TRANSCRIPTION_DURATION.observe(turn_result.get("stt_latency_ms", 100) / 1000.0)
+                            TRANSCRIPTION_DURATION.observe(
+                                turn_result.get("stt_latency_ms", 100) / 1000.0
+                            )
                             TTS_DURATION.observe(turn_result.get("tts_latency_ms", 100) / 1000.0)
-                            VOICE_LATENCY_SECONDS.observe(turn_result.get("total_latency_ms", 200) / 1000.0)
+                            VOICE_LATENCY_SECONDS.observe(
+                                turn_result.get("total_latency_ms", 200) / 1000.0
+                            )
 
                             # Send Text Response & Live Scores
                             await voice_manager.send_json(
@@ -173,7 +191,9 @@ async def voice_interview_websocket(
 
                 except Exception as exc:
                     logger.error(f"Error processing voice text message: {exc}")
-                    await voice_manager.send_json(session_id, {"event": "ERROR", "detail": str(exc)})
+                    await voice_manager.send_json(
+                        session_id, {"event": "ERROR", "detail": str(exc)}
+                    )
 
     except WebSocketDisconnect:
         logger.info(f"Voice WebSocket disconnected gracefully for session {session_id}")

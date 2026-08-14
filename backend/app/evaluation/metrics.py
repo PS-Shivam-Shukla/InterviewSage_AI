@@ -12,15 +12,15 @@ from dataclasses import dataclass
 
 @dataclass
 class EvaluationMetricsResult:
-    correctness: float           # 0.0 to 100.0
-    faithfulness: float          # 0.0 to 100.0
-    hallucination_score: float   # 0.0 to 100.0 (lower is better, 0.0 = zero hallucination)
-    context_precision: float     # 0.0 to 100.0
-    context_recall: float        # 0.0 to 100.0
-    relevancy: float             # 0.0 to 100.0
-    groundedness: float          # 0.0 to 100.0
-    toxicity: float              # 0.0 to 100.0 (lower is better)
-    bias: float                  # 0.0 to 100.0 (lower is better)
+    correctness: float  # 0.0 to 100.0
+    faithfulness: float  # 0.0 to 100.0
+    hallucination_score: float  # 0.0 to 100.0 (lower is better, 0.0 = zero hallucination)
+    context_precision: float  # 0.0 to 100.0
+    context_recall: float  # 0.0 to 100.0
+    relevancy: float  # 0.0 to 100.0
+    groundedness: float  # 0.0 to 100.0
+    toxicity: float  # 0.0 to 100.0 (lower is better)
+    bias: float  # 0.0 to 100.0 (lower is better)
     passed: bool
 
 
@@ -67,7 +67,9 @@ class EvaluationMetrics:
         return round(100.0 - faithfulness, 2)
 
     @staticmethod
-    def calculate_context_precision(retrieved_contexts: list[str], target_concepts: list[str]) -> float:
+    def calculate_context_precision(
+        retrieved_contexts: list[str], target_concepts: list[str]
+    ) -> float:
         """Calculate precision of retrieved context chunks against target concepts."""
         if not retrieved_contexts or not target_concepts:
             return 0.0
@@ -80,7 +82,9 @@ class EvaluationMetrics:
         return round((hits / len(retrieved_contexts)) * 100.0, 2)
 
     @staticmethod
-    def calculate_context_recall(retrieved_contexts: list[str], target_concepts: list[str]) -> float:
+    def calculate_context_recall(
+        retrieved_contexts: list[str], target_concepts: list[str]
+    ) -> float:
         """Calculate recall of target concepts found in retrieved contexts."""
         if not target_concepts:
             return 100.0
@@ -133,7 +137,9 @@ class EvaluationMetrics:
         min_pass_score: float = 70.0,
     ) -> EvaluationMetricsResult:
         """Compute full metrics suite for a single evaluation sample."""
-        correctness = cls.calculate_correctness(answer, expected_answer or "") if expected_answer else 80.0
+        correctness = (
+            cls.calculate_correctness(answer, expected_answer or "") if expected_answer else 80.0
+        )
         faithfulness = cls.calculate_faithfulness(answer, context or answer)
         hallucination = cls.calculate_hallucination_score(answer, context or answer)
         relevancy = cls.calculate_relevancy(question, answer)

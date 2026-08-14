@@ -38,15 +38,19 @@ def test_a_tool_discovery():
 
 def test_b_model_selected_tool_execution():
     """Test B: Fake LLM returns tool_call for map_skills, and runtime executes map_skills."""
+
     class FakePolicyLLM(FakeLLMClient):
         def invoke_structured(self, messages, output_schema, retry_feedback=None):
             return PolicyDecision(
                 action="tool_call",
                 tool_call=ToolCallDecision(
                     tool="map_skills",
-                    arguments={"resume_skills": ["Python", "SQL"], "jd_required_skills": ["Python", "SQL", "Docker"]},
-                    reasoning="Mapping candidate skills to job description."
-                )
+                    arguments={
+                        "resume_skills": ["Python", "SQL"],
+                        "jd_required_skills": ["Python", "SQL", "Docker"],
+                    },
+                    reasoning="Mapping candidate skills to job description.",
+                ),
             )
 
     node = PolicyNode(llm_client=FakePolicyLLM())
@@ -55,19 +59,22 @@ def test_b_model_selected_tool_execution():
 
     assert res["next_node"] == "tool_executor_node"
     assert res["policy_decisions"][0]["tool"] == "map_skills"
-    assert res["policy_decisions"][0]["arguments"] == {"resume_skills": ["Python", "SQL"], "jd_required_skills": ["Python", "SQL", "Docker"]}
+    assert res["policy_decisions"][0]["arguments"] == {
+        "resume_skills": ["Python", "SQL"],
+        "jd_required_skills": ["Python", "SQL", "Docker"],
+    }
 
 
 def test_c_observation_propagation():
     """Test C: Tool result is packaged into Observation and passed into next Policy call."""
     obs = tool_executor.execute_tool(
-        "map_skills",
-        {"resume_skills": ["Python"], "jd_required_skills": ["Python", "FastAPI"]}
+        "map_skills", {"resume_skills": ["Python"], "jd_required_skills": ["Python", "FastAPI"]}
     )
     assert obs.success is True
     assert obs.tool_name == "map_skills"
 
     captured_prompt = ""
+
     class CapturingLLM(FakeLLMClient):
         def invoke_structured(self, messages, output_schema, retry_feedback=None):
             nonlocal captured_prompt
@@ -84,6 +91,7 @@ def test_c_observation_propagation():
 
 def test_d_multi_step_model_selected_tool_sequence():
     """Test D: Fake LLM simulates tool_call(map_skills) -> tool_call(compute_ats_score) -> finish."""
+
     class SequenceLLM(FakeLLMClient):
         def __init__(self):
             super().__init__()
@@ -97,22 +105,26 @@ def test_d_multi_step_model_selected_tool_sequence():
                     tool_call=ToolCallDecision(
                         tool="map_skills",
                         arguments={"resume_skills": ["Python"], "jd_required_skills": ["Python"]},
-                        reasoning="Map skills first."
-                    )
+                        reasoning="Map skills first.",
+                    ),
                 )
             elif self.call_count == 2:
                 return PolicyDecision(
                     action="tool_call",
                     tool_call=ToolCallDecision(
                         tool="compute_ats_score",
-                        arguments={"resume_skills": ["Python"], "jd_skills": ["Python"], "experience_years": 3},
-                        reasoning="Compute ATS score second."
-                    )
+                        arguments={
+                            "resume_skills": ["Python"],
+                            "jd_skills": ["Python"],
+                            "experience_years": 3,
+                        },
+                        reasoning="Compute ATS score second.",
+                    ),
                 )
             else:
                 return PolicyDecision(
                     action="finish",
-                    finish=FinishDecision(reasoning="Sufficient evidence collected.")
+                    finish=FinishDecision(reasoning="Sufficient evidence collected."),
                 )
 
     seq_llm = SequenceLLM()
@@ -141,11 +153,11 @@ def test_d_multi_step_model_selected_tool_sequence():
 
 def test_e_finish_decision():
     """Test E: Policy returns finish decision and terminates loop without tool execution."""
+
     class FinishLLM(FakeLLMClient):
         def invoke_structured(self, messages, output_schema, retry_feedback=None):
             return PolicyDecision(
-                action="finish",
-                finish=FinishDecision(reasoning="Execution complete.")
+                action="finish", finish=FinishDecision(reasoning="Execution complete.")
             )
 
     node = PolicyNode(llm_client=FinishLLM())
@@ -183,6 +195,7 @@ def test_h_maximum_iterations_boundary():
 
 def test_i_tool_execution_failure_handled():
     """Test I: Tool handler exception returns structured Observation with success=False."""
+
     def failing_handler(**kwargs):
         raise RuntimeError("Database connection timeout")
 
@@ -190,7 +203,7 @@ def test_i_tool_execution_failure_handled():
         name="failing_test_tool",
         description="Fails intentionally",
         parameters={},
-        handler=failing_handler
+        handler=failing_handler,
     )
 
     obs = tool_executor.execute_tool("failing_test_tool", {})

@@ -86,7 +86,10 @@ mcp_server.register_tool(
     name="score_answer_rubric",
     description="Return rubric schema or evaluate candidate answer against rubric anchors",
     parameters={
-        "question_type": {"type": "string", "description": "behavioral | fundamentals | advanced | system_design"},
+        "question_type": {
+            "type": "string",
+            "description": "behavioral | fundamentals | advanced | system_design",
+        },
         "seniority_level": {"type": "string", "description": "JUNIOR | MID | SENIOR"},
         "answer_text": {"type": "string", "description": "Candidate answer text (optional)"},
         "question_text": {"type": "string", "description": "Target question text (optional)"},
@@ -112,8 +115,14 @@ mcp_server.register_tool(
         "prompt_version": {"type": "string"},
     },
     handler=persist_agent_output,
-    required_params=["db_session", "interview_id", "agent_name", "node_status",
-                     "input_snapshot", "output_snapshot"],
+    required_params=[
+        "db_session",
+        "interview_id",
+        "agent_name",
+        "node_status",
+        "input_snapshot",
+        "output_snapshot",
+    ],
 )
 
 mcp_server.register_tool(

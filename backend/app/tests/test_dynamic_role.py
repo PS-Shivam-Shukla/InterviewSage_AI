@@ -11,7 +11,9 @@ from app.services.report_service import ReportService
 
 
 def test_1_jd_role_senior_python_developer(db_session):
-    resume = Resume(user_id="user-1", raw_text="Senior Python developer resume", file_path="resume.pdf")
+    resume = Resume(
+        user_id="user-1", raw_text="Senior Python developer resume", file_path="resume.pdf"
+    )
     db_session.add(resume)
     jd = JobDescription(
         user_id="user-1",
@@ -75,10 +77,10 @@ def test_4_no_jd_role_fallback_to_interview(db_session):
 
     service = InterviewService(db_session)
     interview = service.create_interview("user-1", resume_id=resume.id, jd_id=jd.id)
-    
+
     report_service = ReportService(db_session)
     resolved_role = report_service._resolve_role(interview.id)
-    
+
     assert resolved_role == "Interview"
     assert resolved_role != "Senior Software Engineer"
     assert resolved_role != "Software Engineer"

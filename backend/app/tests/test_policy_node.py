@@ -24,8 +24,10 @@ def test_policy_decision_schemas():
     """Verify PolicyDecision structured schemas enforce action payloads."""
     tool_dec = PolicyDecision(
         action="tool_call",
-        tool_call=ToolCallDecision(tool="score_answer_rubric", arguments={"question_type": "technical"}),
-        reasoning="Evaluating technical correctness."
+        tool_call=ToolCallDecision(
+            tool="score_answer_rubric", arguments={"question_type": "technical"}
+        ),
+        reasoning="Evaluating technical correctness.",
     )
     assert tool_dec.action == "tool_call"
     assert tool_dec.tool_call.tool == "score_answer_rubric"
@@ -33,7 +35,7 @@ def test_policy_decision_schemas():
     finish_dec = PolicyDecision(
         action="finish",
         finish=FinishDecision(reasoning="Evaluation turn completed."),
-        reasoning="Evaluation turn completed."
+        reasoning="Evaluation turn completed.",
     )
     assert finish_dec.action == "finish"
     assert finish_dec.finish.reasoning == "Evaluation turn completed."
@@ -43,8 +45,7 @@ def test_tool_executor_execution():
     """Verify ToolExecutor validates tool registration and returns structured Observation."""
     executor = ToolExecutor()
     obs = executor.execute_tool(
-        "score_answer_rubric",
-        {"question_type": "technical", "seniority_level": "MID"}
+        "score_answer_rubric", {"question_type": "technical", "seniority_level": "MID"}
     )
     assert isinstance(obs, Observation)
     assert obs.tool_name == "score_answer_rubric"
@@ -76,15 +77,15 @@ def test_policy_node_model_mediated_tool_loop():
         tool_call=ToolCallDecision(
             tool="score_answer_rubric",
             arguments={"question_type": "technical", "seniority_level": "MID"},
-            reasoning="Selecting rubric tool for answer scoring."
-        )
+            reasoning="Selecting rubric tool for answer scoring.",
+        ),
     )
 
     # 2. Second fake model response: emit finish decision
     fake_dec2 = PolicyDecision(
         action="finish",
         finish=FinishDecision(reasoning="Turn processing finished."),
-        reasoning="Turn processing finished."
+        reasoning="Turn processing finished.",
     )
 
     fake_llm = FakeLLMClient(responses=[fake_dec1, fake_dec2])
@@ -106,8 +107,7 @@ def test_policy_node_model_mediated_tool_loop():
     # Step 2: ToolExecutor executes chosen tool and captures Observation
     executor = ToolExecutor()
     obs = executor.execute_tool(
-        step1_out["policy_decisions"][0]["tool"],
-        step1_out["policy_decisions"][0]["arguments"]
+        step1_out["policy_decisions"][0]["tool"], step1_out["policy_decisions"][0]["arguments"]
     )
     assert obs.success is True
 

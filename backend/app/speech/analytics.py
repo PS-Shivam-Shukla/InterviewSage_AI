@@ -39,7 +39,9 @@ class VoiceAnalyticsService:
         for i, turn in enumerate(candidate_turns):
             words = len(turn.transcript.split()) if turn.transcript else 0
             total_words += words
-            dur = turn.duration_seconds if turn.duration_seconds > 0 else (words / 2.5)  # est 2.5 wps
+            dur = (
+                turn.duration_seconds if turn.duration_seconds > 0 else (words / 2.5)
+            )  # est 2.5 wps
             total_speaking_time += dur
 
             # Answer latency from preceding AI agent turn
@@ -55,7 +57,9 @@ class VoiceAnalyticsService:
         # Acoustic delivery & fluency metrics (pure audio signals, not technical evaluation)
         comm_score = min(100.0, max(40.0, 100.0 - abs(wpm - 140.0) * 0.5 - (avg_latency * 2.0)))
         tech_score = None  # Technical evaluation belongs exclusively to EvaluationAgent
-        confidence = min(100.0, max(40.0, 100.0 - (avg_latency * 5.0) - max(0.0, 130.0 - wpm) * 0.3))
+        confidence = min(
+            100.0, max(40.0, 100.0 - (avg_latency * 5.0) - max(0.0, 130.0 - wpm) * 0.3)
+        )
 
         cand_id = session.candidate_id if session else "candidate-unknown"
 

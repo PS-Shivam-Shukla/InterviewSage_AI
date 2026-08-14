@@ -24,7 +24,9 @@ class JobDescription(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     industry: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # JSON stored as TEXT
     required_skills: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
-    seniority_level: Mapped[str] = mapped_column(String(50), nullable=False, default="NOT_SPECIFIED")
+    seniority_level: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="NOT_SPECIFIED"
+    )
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="PROCESSING")
 
     # Relationships

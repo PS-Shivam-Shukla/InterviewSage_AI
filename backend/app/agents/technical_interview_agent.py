@@ -16,6 +16,7 @@ from app.prompts.loader import get_developer_prompt, get_system_prompt
 
 # ── Output schema ─────────────────────────────────────────────
 
+
 class TechnicalTurn(BaseModel):
     question_text: str
     candidate_answer: str
@@ -25,6 +26,7 @@ class TechnicalTurn(BaseModel):
 
 # ── Agent ─────────────────────────────────────────────────────
 
+
 class TechnicalInterviewAgent(BaseAgent):
     agent_name = "TechnicalInterviewAgent"
     prompt_version = "v1"
@@ -33,7 +35,7 @@ class TechnicalInterviewAgent(BaseAgent):
         return 0.4
 
     def _run(self, state: InterviewState, retry_feedback: str | None = None) -> dict:
-        current_q        = state.get("current_question") or {}
+        current_q = state.get("current_question") or {}
         candidate_answer = state.get("pending_answer", "")
 
         if not candidate_answer or not candidate_answer.strip():
@@ -47,20 +49,16 @@ class TechnicalInterviewAgent(BaseAgent):
         competency = current_q.get("competency_targeted", "")
         difficulty = current_q.get("difficulty", "MEDIUM")
         asked_tech = [
-            q for q in (state.get("questions_asked") or [])
-            if q.get("round_type") == "TECHNICAL"
+            q for q in (state.get("questions_asked") or []) if q.get("round_type") == "TECHNICAL"
         ]
         follow_up_count = sum(1 for q in asked_tech if q.get("is_follow_up"))
-        can_follow_up   = follow_up_count < 1
+        can_follow_up = follow_up_count < 1
 
-        developer = (
-            get_developer_prompt("technical_interview_agent", self.prompt_version)
-            or (
-                "You are a rigorous, fair technical interviewer. "
-                "Probe for depth: time/space complexity, scalability, edge cases, trade-offs. "
-                "Return JSON: {\"question_text\": \"...\", \"candidate_answer\": \"...\", "
-                "\"follow_up_question\": \"...\" or null, \"follow_up_rationale\": \"...\" or null}"
-            )
+        developer = get_developer_prompt("technical_interview_agent", self.prompt_version) or (
+            "You are a rigorous, fair technical interviewer. "
+            "Probe for depth: time/space complexity, scalability, edge cases, trade-offs. "
+            'Return JSON: {"question_text": "...", "candidate_answer": "...", '
+            '"follow_up_question": "..." or null, "follow_up_rationale": "..." or null}'
         )
 
         user_content = (

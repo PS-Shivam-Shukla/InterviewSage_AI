@@ -14,9 +14,9 @@ from alembic import context
 # ── make sure the backend package is importable ──
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app.core.config import settings  # noqa: E402
-import app.models  # noqa: E402 – registers all ORM models
-from app.models.base import Base  # noqa: E402
+from app.core.config import settings
+import app.models  # noqa: F401 - registers all ORM models
+from app.models.base import Base
 
 # Alembic Config object
 config = context.config
@@ -39,7 +39,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        render_as_batch=True,   # required for SQLite ALTER TABLE support
+        render_as_batch=True,  # required for SQLite ALTER TABLE support
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -56,7 +56,7 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            render_as_batch=True,   # required for SQLite ALTER TABLE support
+            render_as_batch=True,  # required for SQLite ALTER TABLE support
         )
         with context.begin_transaction():
             context.run_migrations()

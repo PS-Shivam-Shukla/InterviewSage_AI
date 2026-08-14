@@ -15,19 +15,39 @@ from typing import Any
 import ftfy  # text normalization — pip install ftfy
 
 _REQUIREMENTS_KW = [
-    "requirements", "qualifications", "required", "must have",
-    "you must", "mandatory", "essential",
+    "requirements",
+    "qualifications",
+    "required",
+    "must have",
+    "you must",
+    "mandatory",
+    "essential",
 ]
 _RESPONSIBILITIES_KW = [
-    "responsibilities", "you will", "duties", "what you'll do",
-    "day-to-day", "your role", "key duties",
+    "responsibilities",
+    "you will",
+    "duties",
+    "what you'll do",
+    "day-to-day",
+    "your role",
+    "key duties",
 ]
 _PREFERRED_KW = [
-    "preferred", "nice to have", "bonus", "plus", "desired", "good to have",
+    "preferred",
+    "nice to have",
+    "bonus",
+    "plus",
+    "desired",
+    "good to have",
 ]
 _SKILLS_KW = [
-    "skills", "technologies", "tech stack", "tools", "frameworks",
-    "languages", "proficiency",
+    "skills",
+    "technologies",
+    "tech stack",
+    "tools",
+    "frameworks",
+    "languages",
+    "proficiency",
 ]
 
 
@@ -47,9 +67,9 @@ def parse_jd_text(raw_text: str) -> dict[str, Any]:
     normalized = _clean_jd(raw_text)
     lower = normalized.lower()
 
-    has_req    = any(kw in lower for kw in _REQUIREMENTS_KW)
-    has_resp   = any(kw in lower for kw in _RESPONSIBILITIES_KW)
-    has_pref   = any(kw in lower for kw in _PREFERRED_KW)
+    has_req = any(kw in lower for kw in _REQUIREMENTS_KW)
+    has_resp = any(kw in lower for kw in _RESPONSIBILITIES_KW)
+    has_pref = any(kw in lower for kw in _PREFERRED_KW)
     has_skills = any(kw in lower for kw in _SKILLS_KW)
 
     detected_sections = []

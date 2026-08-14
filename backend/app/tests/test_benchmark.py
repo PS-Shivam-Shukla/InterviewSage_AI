@@ -26,7 +26,11 @@ def test_benchmark_runner_multi_model_execution(db_session: Session):
     assert reports[1]["model_name"] == "gpt-4o"
 
     # Verify DB persistence
-    bm_recs = db_session.query(BenchmarkResult).filter(BenchmarkResult.benchmark_name == "test_benchmark_run").all()
+    bm_recs = (
+        db_session.query(BenchmarkResult)
+        .filter(BenchmarkResult.benchmark_name == "test_benchmark_run")
+        .all()
+    )
     assert len(bm_recs) == 2
 
     model_score = db_session.query(ModelScore).filter(ModelScore.model_name == "gpt-4o").first()

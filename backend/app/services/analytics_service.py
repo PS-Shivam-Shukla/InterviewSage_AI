@@ -33,6 +33,7 @@ class AnalyticsService:
         """Aggregate voice metrics across all voice sessions for candidate."""
         try:
             from sqlalchemy import inspect
+
             if not inspect(self.db.bind).has_table("voice_metrics"):
                 return {
                     "has_voice_data": False,
@@ -40,9 +41,7 @@ class AnalyticsService:
                 }
 
             metrics_list = (
-                self.db.query(VoiceMetrics)
-                .filter(VoiceMetrics.candidate_id == user_id)
-                .all()
+                self.db.query(VoiceMetrics).filter(VoiceMetrics.candidate_id == user_id).all()
             )
         except Exception as exc:
             self.db.rollback()
@@ -118,9 +117,7 @@ class AnalyticsService:
         scores_by_comp: dict[str, list[int]] = defaultdict(list)
         for iv in completed:
             report = (
-                self.db.query(InterviewReport)
-                .filter(InterviewReport.interview_id == iv.id)
-                .first()
+                self.db.query(InterviewReport).filter(InterviewReport.interview_id == iv.id).first()
             )
             if not report or not report.competency_scorecard:
                 continue
@@ -179,9 +176,7 @@ class AnalyticsService:
         comp_data: dict[str, list[int]] = defaultdict(list)
         for iv in completed:
             report = (
-                self.db.query(InterviewReport)
-                .filter(InterviewReport.interview_id == iv.id)
-                .first()
+                self.db.query(InterviewReport).filter(InterviewReport.interview_id == iv.id).first()
             )
             if not report or not report.competency_scorecard:
                 continue
@@ -198,11 +193,13 @@ class AnalyticsService:
         result = []
         for comp, scores in comp_data.items():
             if scores:
-                result.append({
-                    "competency": comp,
-                    "avg_score": round(sum(scores) / len(scores), 1),
-                    "interview_count": len(scores),
-                })
+                result.append(
+                    {
+                        "competency": comp,
+                        "avg_score": round(sum(scores) / len(scores), 1),
+                        "interview_count": len(scores),
+                    }
+                )
         return result
 
     # ── Agent Metrics ─────────────────────────────────────────
@@ -232,13 +229,15 @@ class AnalyticsService:
             tot = st["total"]
             succ = st["success"]
             lats = st["latency"]
-            result.append({
-                "agent_name": agent,
-                "total_calls": tot,
-                "success_rate": round(succ / tot, 2) if tot else 0.0,
-                "avg_latency_ms": round(sum(lats) / len(lats)) if lats else 0,
-                "total_retries": st["retries"],
-            })
+            result.append(
+                {
+                    "agent_name": agent,
+                    "total_calls": tot,
+                    "success_rate": round(succ / tot, 2) if tot else 0.0,
+                    "avg_latency_ms": round(sum(lats) / len(lats)) if lats else 0,
+                    "total_retries": st["retries"],
+                }
+            )
         return result
 
     # ── Sprint 11 Admin Operations ────────────────────────────

@@ -30,7 +30,9 @@ class CandidateMemoryCreate(BaseModel):
     memory_type: str = Field("EPISODIC", description="EPISODIC | SEMANTIC | SUMMARY")
     summary: str = Field(..., description="Memory text summary")
     key_topics: list[str] = Field(default_factory=list, description="Associated key topics")
-    embedding: list[float] | None = Field(None, description="Optional vector embedding representation")
+    embedding: list[float] | None = Field(
+        None, description="Optional vector embedding representation"
+    )
 
 
 class CandidateMemoryResponse(BaseModel):

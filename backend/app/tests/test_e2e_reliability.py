@@ -126,7 +126,9 @@ def test_invalid_authentication_rejection(client: TestClient):
         assert exc is not None
 
 
-def test_invalid_ownership_rejection(client: TestClient, db_session: Session, candidate_a, candidate_b):
+def test_invalid_ownership_rejection(
+    client: TestClient, db_session: Session, candidate_a, candidate_b
+):
     """Verify Candidate B cannot access Candidate A's interview WebSocket."""
     user_a, resume_id_a, jd_id_a, _ = candidate_a
     user_b, _, _, token_b = candidate_b

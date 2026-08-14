@@ -18,7 +18,9 @@ class IndustryBenchmarkEngine:
         self.db = db
 
     def get_candidate_benchmark(self, candidate_id: str) -> IndustryBenchmarkResponse:
-        skills = self.db.query(SkillProgress).filter(SkillProgress.candidate_id == candidate_id).all()
+        skills = (
+            self.db.query(SkillProgress).filter(SkillProgress.candidate_id == candidate_id).all()
+        )
         skill_map = {s.skill_name.lower(): s.current_score for s in skills}
 
         categories_def = [

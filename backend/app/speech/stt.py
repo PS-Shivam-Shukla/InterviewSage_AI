@@ -31,7 +31,9 @@ class STTProvider(ABC):
         pass
 
     @abstractmethod
-    def transcribe_stream(self, chunk_generator: Generator[bytes, None, None]) -> Generator[str, None, None]:
+    def transcribe_stream(
+        self, chunk_generator: Generator[bytes, None, None]
+    ) -> Generator[str, None, None]:
         """Stream transcription from audio chunk generator."""
         pass
 
@@ -52,10 +54,15 @@ class FasterWhisperSTTService(STTProvider):
         """Initialize Faster Whisper model if library is available; otherwise fallback cleanly."""
         try:
             from faster_whisper import WhisperModel
-            logger.info(f"Initializing FasterWhisper STT model='{self.model_name}' device='{self.device}'")
+
+            logger.info(
+                f"Initializing FasterWhisper STT model='{self.model_name}' device='{self.device}'"
+            )
             self._model = WhisperModel(self.model_name, device=self.device, compute_type="int8")
         except Exception as e:
-            logger.warning(f"FasterWhisper native binary not initialized ({e}). Using local STT fallback handler.")
+            logger.warning(
+                f"FasterWhisper native binary not initialized ({e}). Using local STT fallback handler."
+            )
             self._model = None
 
     def transcribe_file(self, file_path: str) -> str:
@@ -64,7 +71,9 @@ class FasterWhisperSTTService(STTProvider):
             try:
                 segments, _ = self._model.transcribe(file_path, beam_size=5)
                 text = " ".join([segment.text for segment in segments]).strip()
-                logger.info(f"STT transcribe_file completed in {(time.perf_counter()-start)*1000:.1f}ms")
+                logger.info(
+                    f"STT transcribe_file completed in {(time.perf_counter()-start)*1000:.1f}ms"
+                )
                 return text
             except Exception as e:
                 logger.error(f"FasterWhisper transcribe error: {e}")
@@ -82,7 +91,9 @@ class FasterWhisperSTTService(STTProvider):
                 buffer = io.BytesIO(audio_bytes)
                 segments, _ = self._model.transcribe(buffer, beam_size=5)
                 text = " ".join([segment.text for segment in segments]).strip()
-                logger.info(f"STT transcribe_bytes completed in {(time.perf_counter()-start)*1000:.1f}ms")
+                logger.info(
+                    f"STT transcribe_bytes completed in {(time.perf_counter()-start)*1000:.1f}ms"
+                )
                 return text
             except Exception as e:
                 logger.error(f"FasterWhisper bytes error: {e}")
@@ -90,7 +101,9 @@ class FasterWhisperSTTService(STTProvider):
         # Fallback for lightweight testing environments
         return "Our primary architecture leverages distributed event-driven microservices."
 
-    def transcribe_stream(self, chunk_generator: Generator[bytes, None, None]) -> Generator[str, None, None]:
+    def transcribe_stream(
+        self, chunk_generator: Generator[bytes, None, None]
+    ) -> Generator[str, None, None]:
         accumulated = bytearray()
         for chunk in chunk_generator:
             accumulated.extend(chunk)

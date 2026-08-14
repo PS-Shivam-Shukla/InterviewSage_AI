@@ -34,7 +34,9 @@ def test_metrics_relevancy_and_toxicity():
     assert toxic == 0.0
     assert bias == 0.0
 
-    toxic_sample, _ = EvaluationMetrics.calculate_toxicity_and_bias("This candidate is dumb and stupid.")
+    toxic_sample, _ = EvaluationMetrics.calculate_toxicity_and_bias(
+        "This candidate is dumb and stupid."
+    )
     assert toxic_sample > 0.0
 
 

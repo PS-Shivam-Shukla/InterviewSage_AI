@@ -21,7 +21,9 @@ class TranscriptRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def get_or_create_live_session(self, session_id: str, interview_id: str, candidate_id: str) -> LiveSession:
+    def get_or_create_live_session(
+        self, session_id: str, interview_id: str, candidate_id: str
+    ) -> LiveSession:
         session = self.db.query(LiveSession).filter(LiveSession.id == session_id).first()
         if not session:
             session = LiveSession(
@@ -57,9 +59,7 @@ class TranscriptRepository:
         agent_name: str = "TechnicalInterviewAgent",
     ) -> ConversationTurn:
         existing_turns = (
-            self.db.query(ConversationTurn)
-            .filter(ConversationTurn.session_id == session_id)
-            .all()
+            self.db.query(ConversationTurn).filter(ConversationTurn.session_id == session_id).all()
         )
         turn_num = len(existing_turns) + 1
 
@@ -133,8 +133,4 @@ class TranscriptRepository:
         )
 
     def get_voice_metrics(self, session_id: str) -> VoiceMetrics | None:
-        return (
-            self.db.query(VoiceMetrics)
-            .filter(VoiceMetrics.session_id == session_id)
-            .first()
-        )
+        return self.db.query(VoiceMetrics).filter(VoiceMetrics.session_id == session_id).first()

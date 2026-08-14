@@ -71,7 +71,9 @@ class BenchmarkRunner:
                     db.add(bm_rec)
 
                     # Update or insert ModelScore aggregate
-                    model_score = db.query(ModelScore).filter(ModelScore.model_name == model_name).first()
+                    model_score = (
+                        db.query(ModelScore).filter(ModelScore.model_name == model_name).first()
+                    )
                     if not model_score:
                         model_score = ModelScore(
                             id=str(uuid.uuid4()),
@@ -80,7 +82,9 @@ class BenchmarkRunner:
                             accuracy_score=eval_summary["pass_rate"],
                             latency_p95_ms=eval_summary["avg_latency_ms"],
                             cost_per_1k_tokens=eval_summary["avg_cost_usd"],
-                            quality_rating="STRONG" if eval_summary["pass_rate"] >= 80 else "MODERATE",
+                            quality_rating=(
+                                "STRONG" if eval_summary["pass_rate"] >= 80 else "MODERATE"
+                            ),
                             updated_at=datetime.now(UTC),
                         )
                         db.add(model_score)

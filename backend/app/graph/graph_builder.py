@@ -71,10 +71,7 @@ def route_after_hr_evaluation(state: InterviewState) -> str:
     """
     plan = state.get("interview_plan") or {}
     hr_target = plan.get("hr_question_count", 5)
-    hr_asked = sum(
-        1 for q in (state.get("questions_asked") or [])
-        if q.get("round_type") == "HR"
-    )
+    hr_asked = sum(1 for q in (state.get("questions_asked") or []) if q.get("round_type") == "HR")
     if hr_asked < hr_target:
         return "question_generator_hr"
     return "question_generator_tech"
@@ -89,8 +86,7 @@ def route_after_tech_evaluation(state: InterviewState) -> str:
     plan = state.get("interview_plan") or {}
     tech_target = plan.get("technical_question_count", 7)
     tech_asked = sum(
-        1 for q in (state.get("questions_asked") or [])
-        if q.get("round_type") == "TECHNICAL"
+        1 for q in (state.get("questions_asked") or []) if q.get("round_type") == "TECHNICAL"
     )
     if tech_asked < tech_target:
         return "question_generator_tech"
@@ -100,6 +96,7 @@ def route_after_tech_evaluation(state: InterviewState) -> str:
 def _stub(name: str) -> Callable:
     def stub_handler(state: InterviewState) -> dict:
         return {"agent_log": [f"Stub node {name} executed"]}
+
     return stub_handler
 
 
@@ -117,6 +114,7 @@ def tool_executor_handler(state: InterviewState) -> dict:
         return {"next_node": "policy_node"}
 
     from app.tools.executor import tool_executor
+
     obs = tool_executor.execute_tool(tool_name, tool_args)
 
     return {
@@ -133,6 +131,7 @@ def route_after_policy(state: InterviewState) -> str:
 # ─────────────────────────────────────────────────────────────
 # Graph builder
 # ─────────────────────────────────────────────────────────────
+
 
 def build_graph(
     resume_agent: Callable = None,
@@ -184,7 +183,9 @@ def build_graph(
         competency_mapping_agent = competency_mapping_agent or CompetencyMappingAgent()
         interview_planner_agent = interview_planner_agent or InterviewPlannerAgent()
         question_generator_hr = question_generator_hr or QuestionGeneratorAgent(round_type="HR")
-        question_generator_tech = question_generator_tech or QuestionGeneratorAgent(round_type="TECHNICAL")
+        question_generator_tech = question_generator_tech or QuestionGeneratorAgent(
+            round_type="TECHNICAL"
+        )
         hr_interview_agent = hr_interview_agent or HRInterviewAgent()
         technical_interview_agent = technical_interview_agent or TechnicalInterviewAgent()
         evaluation_agent_hr = evaluation_agent_hr or EvaluationAgent()
@@ -193,24 +194,26 @@ def build_graph(
         report_generator_agent = report_generator_agent or ReportGeneratorAgent()
 
     nodes = {
-        "supervisor":                  _stub("supervisor"),
-        "resume_agent":                resume_agent or _stub("resume_agent"),
-        "jd_agent":                    jd_agent or _stub("jd_agent"),
-        "ats_agent":                   ats_agent or _stub("ats_agent"),
-        "profile_intelligence_agent":  profile_intelligence_agent or _stub("profile_intelligence_agent"),
-        "competency_mapping_agent":    competency_mapping_agent or _stub("competency_mapping_agent"),
-        "interview_planner_agent":     interview_planner_agent or _stub("interview_planner_agent"),
-        "question_generator_hr":       question_generator_hr or _stub("question_generator_hr"),
-        "hr_interview_agent":          hr_interview_agent or _stub("hr_interview_agent"),
-        "evaluation_agent_hr":         evaluation_agent_hr or _stub("evaluation_agent_hr"),
-        "question_generator_tech":     question_generator_tech or _stub("question_generator_tech"),
-        "technical_interview_agent":   technical_interview_agent or _stub("technical_interview_agent"),
-        "evaluation_agent_tech":       evaluation_agent_tech or _stub("evaluation_agent_tech"),
-        "policy_node":                 policy_node_handler or policy_node,
-        "tool_executor_node":          tool_executor_handler,
-        "career_coach_agent":          career_coach_agent or _stub("career_coach_agent"),
-        "report_generator_agent":      report_generator_agent or _stub("report_generator_agent"),
-        "report_verification_node":    report_verification_handler or report_verification_node,
+        "supervisor": _stub("supervisor"),
+        "resume_agent": resume_agent or _stub("resume_agent"),
+        "jd_agent": jd_agent or _stub("jd_agent"),
+        "ats_agent": ats_agent or _stub("ats_agent"),
+        "profile_intelligence_agent": profile_intelligence_agent
+        or _stub("profile_intelligence_agent"),
+        "competency_mapping_agent": competency_mapping_agent or _stub("competency_mapping_agent"),
+        "interview_planner_agent": interview_planner_agent or _stub("interview_planner_agent"),
+        "question_generator_hr": question_generator_hr or _stub("question_generator_hr"),
+        "hr_interview_agent": hr_interview_agent or _stub("hr_interview_agent"),
+        "evaluation_agent_hr": evaluation_agent_hr or _stub("evaluation_agent_hr"),
+        "question_generator_tech": question_generator_tech or _stub("question_generator_tech"),
+        "technical_interview_agent": technical_interview_agent
+        or _stub("technical_interview_agent"),
+        "evaluation_agent_tech": evaluation_agent_tech or _stub("evaluation_agent_tech"),
+        "policy_node": policy_node_handler or policy_node,
+        "tool_executor_node": tool_executor_handler,
+        "career_coach_agent": career_coach_agent or _stub("career_coach_agent"),
+        "report_generator_agent": report_generator_agent or _stub("report_generator_agent"),
+        "report_verification_node": report_verification_handler or report_verification_node,
     }
 
     graph = StateGraph(InterviewState)
@@ -239,7 +242,7 @@ def build_graph(
         "interview_planner_agent",
         route_after_planner,
         {
-            "question_generator_hr":   "question_generator_hr",
+            "question_generator_hr": "question_generator_hr",
             "question_generator_tech": "question_generator_tech",
         },
     )
@@ -251,7 +254,7 @@ def build_graph(
         "evaluation_agent_hr",
         route_after_hr_evaluation,
         {
-            "question_generator_hr":   "question_generator_hr",
+            "question_generator_hr": "question_generator_hr",
             "question_generator_tech": "question_generator_tech",
         },
     )

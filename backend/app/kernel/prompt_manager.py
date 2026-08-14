@@ -71,13 +71,13 @@ class PromptManager:
         """Retrieve system and user templates by semantic prompt key."""
         if prompt_key in self._registry:
             return self._registry[prompt_key]
-        
+
         # Fallback to default version 1 if specific version not found
         base_key = prompt_key.split(":")[0] if ":" in prompt_key else prompt_key
         fallback_key = f"prompt:{base_key}:v1"
         if fallback_key in self._registry:
             return self._registry[fallback_key]
-            
+
         raise KeyError(f"Prompt template key '{prompt_key}' not found in registry.")
 
     def render(self, prompt_key: str, variables: dict[str, Any]) -> dict[str, str]:
@@ -86,7 +86,7 @@ class PromptManager:
         Uses simple mustache/jinja-style `{{ variable_name }}` syntax.
         """
         templates = self.get_prompt_template(prompt_key)
-        
+
         system_rendered = self._substitute(templates["system"], variables)
         user_rendered = self._substitute(templates["user"], variables)
 

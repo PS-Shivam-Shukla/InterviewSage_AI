@@ -52,6 +52,7 @@ def get_checkpointer(database_url: str | None = None) -> BaseCheckpointSaver:
     try:
         from langgraph.checkpoint.postgres import PostgresSaver
         from psycopg_pool import ConnectionPool
+
         pool = ConnectionPool(url, min_size=1, max_size=10, open=True, timeout=2.0)
         pool.wait(timeout=2.0)
         saver = PostgresSaver(pool)
@@ -66,6 +67,7 @@ def get_checkpointer(database_url: str | None = None) -> BaseCheckpointSaver:
 # Node Handlers with Execution Tracing & Metrics
 # ─────────────────────────────────────────────────────────────
 
+
 def classify_candidate_node(state: GraphState) -> dict[str, Any]:
     """Node: Runs Candidate Classification Engine with execution timing and metrics."""
     start_t = time.perf_counter()
@@ -76,7 +78,9 @@ def classify_candidate_node(state: GraphState) -> dict[str, Any]:
 
         classification = classifier.classify(resume_json, skill_graph)
         duration_ms = int((time.perf_counter() - start_t) * 1000)
-        GRAPH_EXECUTION_SECONDS.labels(node_name="classify_candidate", status="success").observe(duration_ms / 1000.0)
+        GRAPH_EXECUTION_SECONDS.labels(node_name="classify_candidate", status="success").observe(
+            duration_ms / 1000.0
+        )
 
         logger.info(
             "LangGraph Node Finished: classify_candidate_node",
@@ -94,8 +98,14 @@ def classify_candidate_node(state: GraphState) -> dict[str, Any]:
         }
     except Exception as exc:
         duration_ms = int((time.perf_counter() - start_t) * 1000)
-        GRAPH_EXECUTION_SECONDS.labels(node_name="classify_candidate", status="error").observe(duration_ms / 1000.0)
-        logger.error(f"LangGraph Node Failed: classify_candidate_node: {exc}", exc_info=True, extra={"duration_ms": duration_ms})
+        GRAPH_EXECUTION_SECONDS.labels(node_name="classify_candidate", status="error").observe(
+            duration_ms / 1000.0
+        )
+        logger.error(
+            f"LangGraph Node Failed: classify_candidate_node: {exc}",
+            exc_info=True,
+            extra={"duration_ms": duration_ms},
+        )
         raise
 
 
@@ -107,8 +117,9 @@ def generate_blueprint_node(state: GraphState) -> dict[str, Any]:
         classification_data = state.get("classification") or {}
         tier = classification_data.get("tier", "Mid-Level Engineer")
         level = classification_data.get("level", 3)
-        
+
         from app.strategy.classifier import CandidateClassification
+
         class_obj = CandidateClassification(
             tier=tier,
             level=level,
@@ -138,7 +149,9 @@ def generate_blueprint_node(state: GraphState) -> dict[str, Any]:
         }
 
         duration_ms = int((time.perf_counter() - start_t) * 1000)
-        GRAPH_EXECUTION_SECONDS.labels(node_name="generate_blueprint", status="success").observe(duration_ms / 1000.0)
+        GRAPH_EXECUTION_SECONDS.labels(node_name="generate_blueprint", status="success").observe(
+            duration_ms / 1000.0
+        )
 
         logger.info(
             "LangGraph Node Finished: generate_blueprint_node",
@@ -152,8 +165,14 @@ def generate_blueprint_node(state: GraphState) -> dict[str, Any]:
         }
     except Exception as exc:
         duration_ms = int((time.perf_counter() - start_t) * 1000)
-        GRAPH_EXECUTION_SECONDS.labels(node_name="generate_blueprint", status="error").observe(duration_ms / 1000.0)
-        logger.error(f"LangGraph Node Failed: generate_blueprint_node: {exc}", exc_info=True, extra={"duration_ms": duration_ms})
+        GRAPH_EXECUTION_SECONDS.labels(node_name="generate_blueprint", status="error").observe(
+            duration_ms / 1000.0
+        )
+        logger.error(
+            f"LangGraph Node Failed: generate_blueprint_node: {exc}",
+            exc_info=True,
+            extra={"duration_ms": duration_ms},
+        )
         raise
 
 
@@ -175,16 +194,21 @@ def personalize_question_node(state: GraphState) -> dict[str, Any]:
 
         resume_json = state.get("resume_json") or {}
         projects = resume_json.get("projects", [])
-        proj_desc = projects[0].get("description", "general projects") if projects else "general projects"
+        proj_desc = (
+            projects[0].get("description", "general projects") if projects else "general projects"
+        )
 
         masked_context, _ = guardrails.mask_pii(proj_desc)
 
-        rendered = prompt_manager.render("prompt:question_personalizer:v1", {
-            "seniority_level": state.get("classification", {}).get("tier", "Engineer"),
-            "target_competency": cat,
-            "project_context": masked_context,
-            "baseline_question": f"Discuss your architectural approach to {focus}.",
-        })
+        rendered = prompt_manager.render(
+            "prompt:question_personalizer:v1",
+            {
+                "seniority_level": state.get("classification", {}).get("tier", "Engineer"),
+                "target_competency": cat,
+                "project_context": masked_context,
+                "baseline_question": f"Discuss your architectural approach to {focus}.",
+            },
+        )
 
         current_q = {
             "sequence_number": seq,
@@ -194,7 +218,9 @@ def personalize_question_node(state: GraphState) -> dict[str, Any]:
         }
 
         duration_ms = int((time.perf_counter() - start_t) * 1000)
-        GRAPH_EXECUTION_SECONDS.labels(node_name="personalize_question", status="success").observe(duration_ms / 1000.0)
+        GRAPH_EXECUTION_SECONDS.labels(node_name="personalize_question", status="success").observe(
+            duration_ms / 1000.0
+        )
 
         logger.info(
             "LangGraph Node Finished: personalize_question_node",
@@ -207,8 +233,14 @@ def personalize_question_node(state: GraphState) -> dict[str, Any]:
         }
     except Exception as exc:
         duration_ms = int((time.perf_counter() - start_t) * 1000)
-        GRAPH_EXECUTION_SECONDS.labels(node_name="personalize_question", status="error").observe(duration_ms / 1000.0)
-        logger.error(f"LangGraph Node Failed: personalize_question_node: {exc}", exc_info=True, extra={"duration_ms": duration_ms})
+        GRAPH_EXECUTION_SECONDS.labels(node_name="personalize_question", status="error").observe(
+            duration_ms / 1000.0
+        )
+        logger.error(
+            f"LangGraph Node Failed: personalize_question_node: {exc}",
+            exc_info=True,
+            extra={"duration_ms": duration_ms},
+        )
         raise
 
 
@@ -238,7 +270,9 @@ def evaluate_answer_node(state: GraphState) -> dict[str, Any]:
         }
 
         duration_ms = int((time.perf_counter() - start_t) * 1000)
-        GRAPH_EXECUTION_SECONDS.labels(node_name="evaluate_answer", status="success").observe(duration_ms / 1000.0)
+        GRAPH_EXECUTION_SECONDS.labels(node_name="evaluate_answer", status="success").observe(
+            duration_ms / 1000.0
+        )
 
         logger.info(
             "LangGraph Node Finished: evaluate_answer_node",
@@ -247,13 +281,24 @@ def evaluate_answer_node(state: GraphState) -> dict[str, Any]:
 
         return {
             "evaluations": [eval_result],
-            "answers": [{"sequence_number": current_q.get("sequence_number", 1), "answer_text": sanitized_answer}],
+            "answers": [
+                {
+                    "sequence_number": current_q.get("sequence_number", 1),
+                    "answer_text": sanitized_answer,
+                }
+            ],
             "workflow_stage": "ANSWER_EVALUATED",
         }
     except Exception as exc:
         duration_ms = int((time.perf_counter() - start_t) * 1000)
-        GRAPH_EXECUTION_SECONDS.labels(node_name="evaluate_answer", status="error").observe(duration_ms / 1000.0)
-        logger.error(f"LangGraph Node Failed: evaluate_answer_node: {exc}", exc_info=True, extra={"duration_ms": duration_ms})
+        GRAPH_EXECUTION_SECONDS.labels(node_name="evaluate_answer", status="error").observe(
+            duration_ms / 1000.0
+        )
+        logger.error(
+            f"LangGraph Node Failed: evaluate_answer_node: {exc}",
+            exc_info=True,
+            extra={"duration_ms": duration_ms},
+        )
         raise
 
 
@@ -271,6 +316,7 @@ def route_next_step(state: GraphState) -> str:
 # ─────────────────────────────────────────────────────────────
 # Master Graph Builder
 # ─────────────────────────────────────────────────────────────
+
 
 def build_master_workflow(checkpointer: BaseCheckpointSaver | None = None) -> Any:
     """Assembles master execution graph combining DISE, AI Kernel, Checkpointer, and Observability."""

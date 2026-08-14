@@ -15,6 +15,7 @@ from app.mcp.tools.score_answer_rubric import score_answer_rubric
 # MCPServer core
 # ─────────────────────────────────────────────────────────────
 
+
 class TestMCPServerRegistry:
     def _server(self) -> MCPServer:
         s = MCPServer()
@@ -40,7 +41,7 @@ class TestMCPServerRegistry:
 
     def test_call_tool_missing_required(self):
         s = self._server()
-        result = s.call_tool("echo")       # missing msg
+        result = s.call_tool("echo")  # missing msg
         assert result.success is False
         assert "Missing required" in (result.error or "")
 
@@ -118,6 +119,7 @@ class TestURIMatching:
 # ─────────────────────────────────────────────────────────────
 # Individual tool tests
 # ─────────────────────────────────────────────────────────────
+
 
 class TestComputeATSScore:
     def test_full_match(self):
@@ -201,7 +203,7 @@ class TestScoreAnswerRubric:
 
     def test_alias_hr(self):
         rubric = score_answer_rubric("hr")
-        assert len(rubric["dimensions"]) == 5   # maps to behavioral
+        assert len(rubric["dimensions"]) == 5  # maps to behavioral
 
     def test_unknown_type_defaults_to_fundamentals(self):
         rubric = score_answer_rubric("random_type")
@@ -219,13 +221,13 @@ class TestGenerateReportPDF:
             "overall_score": 8,
             "competency_scorecard": [{"competency": "Coding", "score": 8}],
             "improvement_plan": [
-                {"competency": "System Design",
-                 "recommended_action": "Study distributed systems"}
+                {"competency": "System Design", "recommended_action": "Study distributed systems"}
             ],
         }
         result = generate_report_pdf(report_data, output_dir=str(tmp_path))
         assert result["success"] is True
         from pathlib import Path
+
         assert Path(result["file_path"]).exists()
 
     def test_output_contains_interview_id(self, tmp_path):

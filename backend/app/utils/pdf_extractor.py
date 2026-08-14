@@ -9,6 +9,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def extract_text_from_pdf_bytes(file_bytes: bytes) -> str:
     """
     Extract readable text from PDF binary bytes.
@@ -22,6 +23,7 @@ def extract_text_from_pdf_bytes(file_bytes: bytes) -> str:
     # Strategy 1: PyMuPDF (fitz)
     try:
         import fitz
+
         doc = fitz.open(stream=file_bytes, filetype="pdf")
         text_parts = []
         for page in doc:
@@ -37,6 +39,7 @@ def extract_text_from_pdf_bytes(file_bytes: bytes) -> str:
             import io
 
             import PyPDF2
+
             reader = PyPDF2.PdfReader(io.BytesIO(file_bytes))
             text_parts = []
             for page in reader.pages:

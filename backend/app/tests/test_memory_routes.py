@@ -78,7 +78,9 @@ def test_compress_memories_route(client: TestClient, db_session: Session, sample
     assert "compressed_summary" in data
 
 
-def test_memory_route_ownership_authorization(client: TestClient, db_session: Session, sample_user: User):
+def test_memory_route_ownership_authorization(
+    client: TestClient, db_session: Session, sample_user: User
+):
     """Verify user A cannot access candidate memory of user B."""
     other_user = User(
         email="other@example.com",

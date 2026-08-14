@@ -21,12 +21,14 @@ from typing import Any
 # Data structures
 # ─────────────────────────────────────────────────────────────
 
+
 @dataclass
 class ToolSchema:
     """Metadata + callable for one registered tool."""
+
     name: str
     description: str
-    parameters: dict[str, Any]          # JSON Schema-style parameter spec
+    parameters: dict[str, Any]  # JSON Schema-style parameter spec
     handler: Callable[..., Any]
     required_params: list[str] = field(default_factory=list)
 
@@ -34,22 +36,25 @@ class ToolSchema:
 @dataclass
 class ResourceSchema:
     """Metadata + callable for one registered resource."""
-    uri_template: str                   # e.g. "resource://industry-standards/{role}"
+
+    uri_template: str  # e.g. "resource://industry-standards/{role}"
     description: str
-    handler: Callable[..., Any]         # called with the resolved URI variables
+    handler: Callable[..., Any]  # called with the resolved URI variables
 
 
 @dataclass
 class PromptSchema:
     """A server-managed, versioned prompt template."""
+
     name: str
     version: str
-    template: str                       # raw prompt string with {variable} placeholders
+    template: str  # raw prompt string with {variable} placeholders
 
 
 @dataclass
 class ToolCallResult:
     """Standardised result returned to the calling agent."""
+
     tool_name: str
     success: bool
     output: Any
@@ -60,6 +65,7 @@ class ToolCallResult:
 # ─────────────────────────────────────────────────────────────
 # MCP Server
 # ─────────────────────────────────────────────────────────────
+
 
 class MCPServer:
     """
@@ -116,6 +122,7 @@ class MCPServer:
         Invoke a registered tool with real-time console telemetry.
         """
         from app.core.logging import get_logger
+
         mcp_logger = get_logger(__name__)
 
         mcp_logger.info(
@@ -209,8 +216,7 @@ class MCPServer:
     def list_resources(self) -> list[dict[str, Any]]:
         """Return discoverable resource metadata."""
         return [
-            {"uri_template": r.uri_template, "description": r.description}
-            for r in self._resources
+            {"uri_template": r.uri_template, "description": r.description} for r in self._resources
         ]
 
     def read_resource(self, uri: str) -> Any | None:
@@ -250,6 +256,7 @@ class MCPServer:
 # ─────────────────────────────────────────────────────────────
 # URI template matching helper
 # ─────────────────────────────────────────────────────────────
+
 
 def _match_uri(template: str, uri: str) -> dict[str, str] | None:
     """

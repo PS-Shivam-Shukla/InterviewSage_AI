@@ -53,16 +53,28 @@ def test_mcp_server_call_tool_score_answer_rubric():
     assert "seniority_context" in response.output
 
 
-
 def test_submit_answer_atomic_transaction_and_agent_log(db_session: Session):
     """Verify submit_answer creates Question, Answer, Evaluation, and AgentLog atomically."""
-    user = User(id=str(uuid.uuid4()), email="atom_test@test.com", password_hash="hash", full_name="Atom Test")
+    user = User(
+        id=str(uuid.uuid4()),
+        email="atom_test@test.com",
+        password_hash="hash",
+        full_name="Atom Test",
+    )
     resume = Resume(id=str(uuid.uuid4()), user_id=user.id, file_path="r.pdf", raw_text="Resume")
-    jd = JobDescription(id=str(uuid.uuid4()), user_id=user.id, raw_text="JD", target_role="Backend Engineer")
+    jd = JobDescription(
+        id=str(uuid.uuid4()), user_id=user.id, raw_text="JD", target_role="Backend Engineer"
+    )
     db_session.add_all([user, resume, jd])
     db_session.commit()
 
-    interview = Interview(id=str(uuid.uuid4()), user_id=user.id, resume_id=resume.id, jd_id=jd.id, status="IN_PROGRESS")
+    interview = Interview(
+        id=str(uuid.uuid4()),
+        user_id=user.id,
+        resume_id=resume.id,
+        jd_id=jd.id,
+        status="IN_PROGRESS",
+    )
     db_session.add(interview)
     db_session.commit()
 
@@ -76,11 +88,17 @@ def test_submit_answer_atomic_transaction_and_agent_log(db_session: Session):
     assert res["status"] == "IN_PROGRESS"
     assert "evaluation" in res
 
-    question = db_session.query(InterviewQuestion).filter(InterviewQuestion.interview_id == interview.id).first()
+    question = (
+        db_session.query(InterviewQuestion)
+        .filter(InterviewQuestion.interview_id == interview.id)
+        .first()
+    )
     assert question is not None
     assert question.question_text == "Explain enterprise backend design patterns."
 
-    answer = db_session.query(InterviewAnswer).filter(InterviewAnswer.question_id == question.id).first()
+    answer = (
+        db_session.query(InterviewAnswer).filter(InterviewAnswer.question_id == question.id).first()
+    )
     assert answer is not None
     assert "connection pooling" in answer.answer_text
 
@@ -96,7 +114,12 @@ def test_submit_answer_atomic_transaction_and_agent_log(db_session: Session):
 
 def test_submit_answer_atomic_rollback_on_failure(db_session: Session, monkeypatch):
     """Verify that a database error causes rollback of all records in submit_answer."""
-    user = User(id=str(uuid.uuid4()), email="rollback_test@test.com", password_hash="hash", full_name="Rollback Test")
+    user = User(
+        id=str(uuid.uuid4()),
+        email="rollback_test@test.com",
+        password_hash="hash",
+        full_name="Rollback Test",
+    )
     resume = Resume(id=str(uuid.uuid4()), user_id=user.id, file_path="r.pdf", raw_text="Resume")
     jd = JobDescription(id=str(uuid.uuid4()), user_id=user.id, raw_text="JD", target_role="Dev")
     db_session.add_all([user, resume, jd])
@@ -140,9 +163,16 @@ def test_sqlite_connection_pool_compatibility():
 
 def test_offloaded_langgraph_invoke(db_session: Session):
     """Verify get_interview_plan executes LangGraph workflow and returns blueprint plan envelope."""
-    user = User(id=str(uuid.uuid4()), email="graph_test@test.com", password_hash="hash", full_name="Graph Test")
+    user = User(
+        id=str(uuid.uuid4()),
+        email="graph_test@test.com",
+        password_hash="hash",
+        full_name="Graph Test",
+    )
     resume = Resume(id=str(uuid.uuid4()), user_id=user.id, file_path="r.pdf", raw_text="Resume")
-    jd = JobDescription(id=str(uuid.uuid4()), user_id=user.id, raw_text="JD", target_role="Python Developer")
+    jd = JobDescription(
+        id=str(uuid.uuid4()), user_id=user.id, raw_text="JD", target_role="Python Developer"
+    )
     db_session.add_all([user, resume, jd])
     db_session.commit()
 

@@ -13,7 +13,10 @@ from app.services.analytics_service import AnalyticsService
 
 # ── Helpers ───────────────────────────────────────────────────
 
-def _seed_completed_interview(db_session, user, resume, jd, score: int, scorecard: list) -> Interview:
+
+def _seed_completed_interview(
+    db_session, user, resume, jd, score: int, scorecard: list
+) -> Interview:
     """Create a completed interview with a persisted report."""
     iv = Interview(
         user_id=user.id,
@@ -41,6 +44,7 @@ def _seed_completed_interview(db_session, user, resume, jd, score: int, scorecar
 
 # ── Summary ───────────────────────────────────────────────────
 
+
 class TestAnalyticsSummary:
     def test_empty_user_returns_zeros(self, db_session, sample_user):
         svc = AnalyticsService(db_session)
@@ -52,7 +56,10 @@ class TestAnalyticsSummary:
 
     def test_counts_correctly(self, db_session, sample_user, sample_resume, sample_jd):
         _seed_completed_interview(
-            db_session, sample_user, sample_resume, sample_jd,
+            db_session,
+            sample_user,
+            sample_resume,
+            sample_jd,
             score=8,
             scorecard=[{"competency": "Coding", "score": 8}],
         )
@@ -64,11 +71,14 @@ class TestAnalyticsSummary:
 
     def test_weak_competency_flagged(self, db_session, sample_user, sample_resume, sample_jd):
         _seed_completed_interview(
-            db_session, sample_user, sample_resume, sample_jd,
+            db_session,
+            sample_user,
+            sample_resume,
+            sample_jd,
             score=4,
             scorecard=[
-                {"competency": "Coding",      "score": 4},
-                {"competency": "Communication","score": 8},
+                {"competency": "Coding", "score": 4},
+                {"competency": "Communication", "score": 8},
             ],
         )
         svc = AnalyticsService(db_session)
@@ -76,21 +86,23 @@ class TestAnalyticsSummary:
         assert "Coding" in result["weak_competencies"]
         assert "Communication" not in result["weak_competencies"]
 
-    def test_average_score_across_multiple(
-        self, db_session, sample_user, sample_resume, sample_jd
-    ):
+    def test_average_score_across_multiple(self, db_session, sample_user, sample_resume, sample_jd):
         for score in [6, 8, 10]:
             _seed_completed_interview(
-                db_session, sample_user, sample_resume, sample_jd,
+                db_session,
+                sample_user,
+                sample_resume,
+                sample_jd,
                 score=score,
                 scorecard=[{"competency": "Coding", "score": score}],
             )
         svc = AnalyticsService(db_session)
         result = svc.get_summary(sample_user.id)
-        assert result["average_score"] == 8.0   # (6+8+10)/3
+        assert result["average_score"] == 8.0  # (6+8+10)/3
 
 
 # ── Trends ────────────────────────────────────────────────────
+
 
 class TestAnalyticsTrends:
     def test_empty_returns_empty_list(self, db_session, sample_user):
@@ -100,12 +112,20 @@ class TestAnalyticsTrends:
     def test_returns_completed_only(self, db_session, sample_user, sample_resume, sample_jd):
         # One completed, one in-progress
         _seed_completed_interview(
-            db_session, sample_user, sample_resume, sample_jd,
-            score=7, scorecard=[],
+            db_session,
+            sample_user,
+            sample_resume,
+            sample_jd,
+            score=7,
+            scorecard=[],
         )
         in_prog = Interview(
-            user_id=sample_user.id, resume_id=sample_resume.id, jd_id=sample_jd.id,
-            status="IN_PROGRESS", overall_score=None, started_at=datetime.utcnow(),
+            user_id=sample_user.id,
+            resume_id=sample_resume.id,
+            jd_id=sample_jd.id,
+            status="IN_PROGRESS",
+            overall_score=None,
+            started_at=datetime.utcnow(),
         )
         db_session.add(in_prog)
         db_session.commit()
@@ -117,8 +137,12 @@ class TestAnalyticsTrends:
 
     def test_trend_shape(self, db_session, sample_user, sample_resume, sample_jd):
         _seed_completed_interview(
-            db_session, sample_user, sample_resume, sample_jd,
-            score=9, scorecard=[],
+            db_session,
+            sample_user,
+            sample_resume,
+            sample_jd,
+            score=9,
+            scorecard=[],
         )
         svc = AnalyticsService(db_session)
         trends = svc.get_trends(sample_user.id)
@@ -129,21 +153,26 @@ class TestAnalyticsTrends:
 
 # ── Competencies ──────────────────────────────────────────────
 
+
 class TestAnalyticsCompetencies:
     def test_empty_returns_empty_list(self, db_session, sample_user):
         svc = AnalyticsService(db_session)
         assert svc.get_competencies(sample_user.id) == []
 
-    def test_averages_across_interviews(
-        self, db_session, sample_user, sample_resume, sample_jd
-    ):
+    def test_averages_across_interviews(self, db_session, sample_user, sample_resume, sample_jd):
         _seed_completed_interview(
-            db_session, sample_user, sample_resume, sample_jd,
+            db_session,
+            sample_user,
+            sample_resume,
+            sample_jd,
             score=6,
             scorecard=[{"competency": "Coding", "score": 6}],
         )
         _seed_completed_interview(
-            db_session, sample_user, sample_resume, sample_jd,
+            db_session,
+            sample_user,
+            sample_resume,
+            sample_jd,
             score=8,
             scorecard=[{"competency": "Coding", "score": 8}],
         )
@@ -155,10 +184,13 @@ class TestAnalyticsCompetencies:
 
     def test_multiple_competencies(self, db_session, sample_user, sample_resume, sample_jd):
         _seed_completed_interview(
-            db_session, sample_user, sample_resume, sample_jd,
+            db_session,
+            sample_user,
+            sample_resume,
+            sample_jd,
             score=7,
             scorecard=[
-                {"competency": "Coding",       "score": 8},
+                {"competency": "Coding", "score": 8},
                 {"competency": "System Design", "score": 6},
             ],
         )
@@ -170,6 +202,7 @@ class TestAnalyticsCompetencies:
 
 
 # ── Agent Metrics ─────────────────────────────────────────────
+
 
 class TestAgentMetrics:
     def test_empty_logs_returns_empty(self, db_session):
@@ -212,12 +245,15 @@ class TestAgentMetrics:
 
     def test_multiple_agents(self, db_session, sample_interview):
         for agent in ["ResumeAgent", "JDAgent", "ATSAgent"]:
-            db_session.add(AgentLog(
-                interview_id=sample_interview.id,
-                agent_name=agent,
-                node_status="SUCCESS",
-                latency_ms=50, retry_count=0,
-            ))
+            db_session.add(
+                AgentLog(
+                    interview_id=sample_interview.id,
+                    agent_name=agent,
+                    node_status="SUCCESS",
+                    latency_ms=50,
+                    retry_count=0,
+                )
+            )
         db_session.commit()
 
         svc = AnalyticsService(db_session)

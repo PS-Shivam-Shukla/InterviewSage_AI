@@ -18,7 +18,9 @@ from app.services.question_relevance_service import (
 def candidate_context():
     return {
         "candidate_skills": ["Python", "FastAPI", "PostgreSQL", "Redis", "REST"],
-        "work_experience_bullets": ["Developed REST microservices using FastAPI, Redis, and PostgreSQL."],
+        "work_experience_bullets": [
+            "Developed REST microservices using FastAPI, Redis, and PostgreSQL."
+        ],
         "jd_required_skills": ["Python", "FastAPI", "PostgreSQL", "System Design"],
         "relevant_experience_months": 36,
         "seniority_level": "MID",
@@ -29,14 +31,14 @@ def test_gate5_exact_duplicate_rejected(candidate_context):
     """Test 1: Exact duplicate question must be rejected by Gate 5."""
     q_existing = "Explain Python decorators and how they work in backend services."
     questions_asked = [{"question_text": q_existing, "competency_targeted": "Python"}]
-    
+
     res = QuestionRelevanceService.validate_question(
         question_text=q_existing,
         question_difficulty="INTERMEDIATE",
         round_type="technical",
         questions_asked=questions_asked,
         competency_targeted="Python",
-        **candidate_context
+        **candidate_context,
     )
     assert res.accepted is False
     assert "GATE 5 FAILED" in res.reason
@@ -46,7 +48,9 @@ def test_gate5_exact_duplicate_rejected(candidate_context):
 def test_gate5_strong_paraphrase_rejected(candidate_context):
     """Test 2: Strong paraphrase question must be rejected by Gate 5."""
     q_existing = "How do PostgreSQL database indexes improve query latency in backend applications?"
-    q_paraphrase = "How do database indexes in PostgreSQL improve query latency for backend applications?"
+    q_paraphrase = (
+        "How do database indexes in PostgreSQL improve query latency for backend applications?"
+    )
     questions_asked = [{"question_text": q_existing, "competency_targeted": "Database"}]
 
     res = QuestionRelevanceService.validate_question(
@@ -55,7 +59,7 @@ def test_gate5_strong_paraphrase_rejected(candidate_context):
         round_type="technical",
         questions_asked=questions_asked,
         competency_targeted="Database",
-        **candidate_context
+        **candidate_context,
     )
     assert res.accepted is False
     assert "GATE 5 FAILED" in res.reason
@@ -74,7 +78,7 @@ def test_gate5_same_competency_different_question_accepted(candidate_context):
         round_type="technical",
         questions_asked=questions_asked,
         competency_targeted="Python",
-        **candidate_context
+        **candidate_context,
     )
     assert res.accepted is True
     assert res.duplicate_score <= 0.45
@@ -92,7 +96,7 @@ def test_gate5_same_concept_different_cognitive_angle_accepted(candidate_context
         round_type="technical",
         questions_asked=questions_asked,
         competency_targeted="Caching",
-        **candidate_context
+        **candidate_context,
     )
     assert res.accepted is True
     assert res.duplicate_score <= 0.45
@@ -114,7 +118,7 @@ def test_gate5_the_038_case_reproduced_and_accepted(candidate_context):
         round_type="technical",
         questions_asked=questions_asked,
         competency_targeted="API",
-        **candidate_context
+        **candidate_context,
     )
     # Under calibrated threshold 0.45, this score (0.4364) is ACCEPTED without triggering an unnecessary retry!
     assert res.accepted is True
@@ -122,15 +126,20 @@ def test_gate5_the_038_case_reproduced_and_accepted(candidate_context):
 
 def test_gate5_threshold_boundary_epsilon(candidate_context):
     """Test 5: Validates exact threshold boundary behavior (score <= 0.45 vs > 0.45)."""
-    questions_asked = [{"question_text": "Describe FastAPI background task processing.", "competency_targeted": "FastAPI"}]
-    
+    questions_asked = [
+        {
+            "question_text": "Describe FastAPI background task processing.",
+            "competency_targeted": "FastAPI",
+        }
+    ]
+
     res = QuestionRelevanceService.validate_question(
         question_text="Describe FastAPI background task processing.",
         question_difficulty="INTERMEDIATE",
         round_type="technical",
         questions_asked=questions_asked,
         competency_targeted="FastAPI",
-        **candidate_context
+        **candidate_context,
     )
     assert res.accepted is False
     assert res.duplicate_score == 1.0
@@ -145,18 +154,22 @@ def test_accepted_question_does_not_retry(mocker):
             question_text=expected_q,
             competency_targeted="Python",
             difficulty="INTERMEDIATE",
-            question_type="fundamentals"
-        )
+            question_type="fundamentals",
+        ),
     )
 
     state: InterviewState = {
         "candidate_id": "c1",
         "job_id": "j1",
-        "resume_data": {"seniority_signal": "MID", "relevant_experience_months": 36, "skills": ["Python", "FastAPI"]},
+        "resume_data": {
+            "seniority_signal": "MID",
+            "relevant_experience_months": 36,
+            "skills": ["Python", "FastAPI"],
+        },
         "jd_data": {"target_role": "Backend Developer", "required_skills": ["Python", "FastAPI"]},
         "competency_matrix": [{"name": "Python", "weight": 50}],
         "questions_asked": [],
-        "interview_plan": {"total_questions": 5}
+        "interview_plan": {"total_questions": 5},
     }
 
     agent = QuestionGeneratorAgent(round_type="TECHNICAL")

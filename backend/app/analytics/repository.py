@@ -23,9 +23,20 @@ class AnalyticsRepository:
     def get_interview_counts(self) -> dict[str, int]:
         """Aggregate total, completed, in-progress, and failed interview counts."""
         total = self.db.query(func.count(Interview.id)).scalar() or 0
-        completed = self.db.query(func.count(Interview.id)).filter(Interview.status == "COMPLETED").scalar() or 0
-        in_progress = self.db.query(func.count(Interview.id)).filter(Interview.status == "IN_PROGRESS").scalar() or 0
-        failed = self.db.query(func.count(Interview.id)).filter(Interview.status == "FAILED").scalar() or 0
+        completed = (
+            self.db.query(func.count(Interview.id)).filter(Interview.status == "COMPLETED").scalar()
+            or 0
+        )
+        in_progress = (
+            self.db.query(func.count(Interview.id))
+            .filter(Interview.status == "IN_PROGRESS")
+            .scalar()
+            or 0
+        )
+        failed = (
+            self.db.query(func.count(Interview.id)).filter(Interview.status == "FAILED").scalar()
+            or 0
+        )
 
         return {
             "total": total,
@@ -52,7 +63,9 @@ class AnalyticsRepository:
         """Aggregate correctness, faithfulness, hallucination, and pass rates from EvaluationRun."""
         avg_correctness = self.db.query(func.avg(EvaluationRun.avg_correctness)).scalar() or 82.5
         avg_faithfulness = self.db.query(func.avg(EvaluationRun.avg_faithfulness)).scalar() or 88.0
-        avg_hallucination = self.db.query(func.avg(EvaluationRun.avg_hallucination)).scalar() or 12.0
+        avg_hallucination = (
+            self.db.query(func.avg(EvaluationRun.avg_hallucination)).scalar() or 12.0
+        )
         avg_relevancy = self.db.query(func.avg(EvaluationRun.avg_relevancy)).scalar() or 85.0
 
         return {

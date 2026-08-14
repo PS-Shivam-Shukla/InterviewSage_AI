@@ -18,6 +18,7 @@ from app.prompts.loader import get_system_prompt
 
 # ── Output schema ─────────────────────────────────────────────
 
+
 class CompetencyScore(BaseModel):
     competency: str
     score: float
@@ -45,6 +46,7 @@ class ReportOutput(BaseModel):
 
 # ── Helpers ───────────────────────────────────────────────────
 
+
 def _build_scorecard(
     evaluations: list[dict], matrix: list[dict]
 ) -> tuple[list[CompetencyScore], float]:
@@ -60,24 +62,27 @@ def _build_scorecard(
     weighted_sum = 0.0
 
     for comp in matrix:
-        name   = comp["name"]
+        name = comp["name"]
         weight = comp.get("weight", 10) / 100.0
         scores = comp_scores.get(name, [])
-        avg    = sum(scores) / len(scores) if scores else 0.0
-        scorecard.append(CompetencyScore(
-            competency=name,
-            score=round(avg, 1),
-            max_score=100.0,
-            percentage=round(avg, 1),
-        ))
-        weighted_sum  += avg * weight
-        total_weight  += weight
+        avg = sum(scores) / len(scores) if scores else 0.0
+        scorecard.append(
+            CompetencyScore(
+                competency=name,
+                score=round(avg, 1),
+                max_score=100.0,
+                percentage=round(avg, 1),
+            )
+        )
+        weighted_sum += avg * weight
+        total_weight += weight
 
     overall = round(weighted_sum / total_weight, 1) if total_weight > 0 else 0.0
     return scorecard, overall
 
 
 # ── Agent ─────────────────────────────────────────────────────
+
 
 class ReportGeneratorAgent(BaseAgent):
     agent_name = "ReportGeneratorAgent"
@@ -87,12 +92,12 @@ class ReportGeneratorAgent(BaseAgent):
         return 0.3
 
     def _run(self, state: InterviewState, retry_feedback: str | None = None) -> dict:
-        evaluations   = state.get("evaluations") or []
-        questions     = state.get("questions_asked") or []
-        answers       = state.get("answers") or []
-        matrix        = state.get("competency_matrix") or []
+        evaluations = state.get("evaluations") or []
+        questions = state.get("questions_asked") or []
+        answers = state.get("answers") or []
+        matrix = state.get("competency_matrix") or []
         coaching_plan = state.get("coaching_plan") or {}
-        interview_id  = state.get("interview_id", "")
+        interview_id = state.get("interview_id", "")
 
         # ── Deterministic aggregation (no LLM needed) ─────────
         scorecard, overall_score = _build_scorecard(evaluations, matrix)
@@ -101,14 +106,16 @@ class ReportGeneratorAgent(BaseAgent):
         for i, (q, a, e) in enumerate(zip(questions, answers, evaluations), 1):
             raw_s = float(e.get("score", 0))
             score_val = int(raw_s * 10) if (0 < raw_s <= 10) else int(raw_s)
-            transcript.append(TranscriptTurn(
-                sequence_number=i,
-                round_type=q.get("round_type", ""),
-                question_text=q.get("question_text", ""),
-                answer_text=a.get("answer_text", "")[:500],
-                score=score_val,
-                feedback=e.get("feedback", ""),
-            ))
+            transcript.append(
+                TranscriptTurn(
+                    sequence_number=i,
+                    round_type=q.get("round_type", ""),
+                    question_text=q.get("question_text", ""),
+                    answer_text=a.get("answer_text", "")[:500],
+                    score=score_val,
+                    feedback=e.get("feedback", ""),
+                )
+            )
 
         improvement_plan = coaching_plan.get("items", [])
 
@@ -159,7 +166,7 @@ class ReportGeneratorAgent(BaseAgent):
 
     def _on_failure(self, state: InterviewState, error: str) -> dict:
         evaluations = state.get("evaluations") or []
-        matrix      = state.get("competency_matrix") or []
+        matrix = state.get("competency_matrix") or []
         scorecard, overall = _build_scorecard(evaluations, matrix)
         return {
             "final_report": {

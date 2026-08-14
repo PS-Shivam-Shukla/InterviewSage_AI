@@ -28,7 +28,9 @@ class MemoryService:
     def get_candidate_memory(self, candidate_id: str) -> CandidateProfileResponse:
         return self.manager.get_candidate_profile(candidate_id)
 
-    def save_memory(self, candidate_id: str, payload: CandidateMemoryCreate) -> CandidateMemoryResponse:
+    def save_memory(
+        self, candidate_id: str, payload: CandidateMemoryCreate
+    ) -> CandidateMemoryResponse:
         return self.manager.save_memory(candidate_id, payload)
 
     def get_timeline(self, candidate_id: str) -> list[CandidateTimelineItem]:

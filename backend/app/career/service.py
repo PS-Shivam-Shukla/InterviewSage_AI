@@ -58,7 +58,11 @@ class CareerIntelligenceService:
             outcome=pred.outcome,
             key_reasons=reasons,
             strengths=[r for r in reasons if "strong" in r.lower() or "proven" in r.lower()],
-            drawbacks=[r for r in reasons if "gap" in r.lower() or "latency" in r.lower() or "low" in r.lower()],
+            drawbacks=[
+                r
+                for r in reasons
+                if "gap" in r.lower() or "latency" in r.lower() or "low" in r.lower()
+            ],
         )
 
     def get_benchmark(self, candidate_id: str) -> IndustryBenchmarkResponse:
@@ -81,7 +85,9 @@ class CareerIntelligenceService:
             status=sess.status,
         )
 
-    def get_adaptive_next_question(self, payload: AdaptiveNextQuestionRequest) -> AdaptiveNextQuestionResponse:
+    def get_adaptive_next_question(
+        self, payload: AdaptiveNextQuestionRequest
+    ) -> AdaptiveNextQuestionResponse:
         res = self.adaptive.process_answer_and_adjust(
             session_id=payload.session_id,
             performance_score=payload.performance_score,

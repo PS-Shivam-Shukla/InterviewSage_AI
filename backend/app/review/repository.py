@@ -48,7 +48,9 @@ class ReviewRepository:
             query = query.filter(ReviewQueue.status == status)
         return query.order_by(ReviewQueue.created_at.desc()).limit(limit).all()
 
-    def update_review_status(self, review_id: str, status: str, admin_id: str | None = None) -> ReviewQueue | None:
+    def update_review_status(
+        self, review_id: str, status: str, admin_id: str | None = None
+    ) -> ReviewQueue | None:
         """Update review item status."""
         item = self.db.query(ReviewQueue).filter(ReviewQueue.id == review_id).first()
         if item:

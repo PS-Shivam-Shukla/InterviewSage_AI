@@ -20,6 +20,7 @@ from app.graph.state import InterviewState
 # Helpers
 # ─────────────────────────────────────────────────────────────
 
+
 def _base_state(**overrides) -> InterviewState:
     """Return a minimal valid InterviewState for testing."""
     state: InterviewState = {
@@ -54,6 +55,7 @@ def _make_question(round_type: str) -> dict:
 # Graph compilation
 # ─────────────────────────────────────────────────────────────
 
+
 class TestGraphCompilation:
     def test_builds_without_error(self):
         """Graph should compile with all-stub agents."""
@@ -66,12 +68,21 @@ class TestGraphCompilation:
         # LangGraph exposes nodes via the underlying graph attribute
         node_names = set(graph.get_graph().nodes.keys())
         expected = {
-            "supervisor", "resume_agent", "jd_agent", "ats_agent",
-            "profile_intelligence_agent", "competency_mapping_agent",
-            "interview_planner_agent", "question_generator_hr",
-            "hr_interview_agent", "evaluation_agent_hr",
-            "question_generator_tech", "technical_interview_agent",
-            "evaluation_agent_tech", "career_coach_agent", "report_generator_agent",
+            "supervisor",
+            "resume_agent",
+            "jd_agent",
+            "ats_agent",
+            "profile_intelligence_agent",
+            "competency_mapping_agent",
+            "interview_planner_agent",
+            "question_generator_hr",
+            "hr_interview_agent",
+            "evaluation_agent_hr",
+            "question_generator_tech",
+            "technical_interview_agent",
+            "evaluation_agent_tech",
+            "career_coach_agent",
+            "report_generator_agent",
             "__start__",
         }
         assert expected.issubset(node_names)
@@ -82,10 +93,10 @@ class TestGraphCompilation:
         assert graph is not None
 
 
-
 # ─────────────────────────────────────────────────────────────
 # Routing function unit tests
 # ─────────────────────────────────────────────────────────────
+
 
 class TestRoutingFunctions:
     def test_route_planner_hr_first(self):
@@ -119,7 +130,8 @@ class TestRoutingFunctions:
         state = _base_state(
             interview_plan={"hr_question_count": 2, "technical_question_count": 3},
             questions_asked=[
-                _make_question("HR"), _make_question("HR"),
+                _make_question("HR"),
+                _make_question("HR"),
                 _make_question("TECHNICAL"),  # 1 out of 3
             ],
         )
@@ -149,6 +161,7 @@ class TestRoutingFunctions:
 # State accumulation
 # ─────────────────────────────────────────────────────────────
 
+
 class TestStateAccumulation:
     def test_questions_asked_appends(self):
         """questions_asked reducer should concatenate lists."""
@@ -156,6 +169,7 @@ class TestStateAccumulation:
         existing = [_make_question("HR")]
         new_q = [_make_question("TECHNICAL")]
         from app.graph.state import _append
+
         result = _append(existing, new_q)
         assert len(result) == 2
         assert result[0]["round_type"] == "HR"
@@ -164,6 +178,7 @@ class TestStateAccumulation:
     def test_error_log_appends(self):
         """error_log reducer should concatenate error entries."""
         from app.graph.state import _append
+
         log1 = [{"agent": "resume_agent", "error": "parse failed"}]
         log2 = [{"agent": "jd_agent", "error": "empty text"}]
         result = _append(log1, log2)
@@ -172,6 +187,7 @@ class TestStateAccumulation:
     def test_answers_appends(self):
         """answers reducer accumulates across turns."""
         from app.graph.state import _append
+
         a1 = [{"question_id": "q1", "text": "I did X"}]
         a2 = [{"question_id": "q2", "text": "I used Y"}]
         result = _append(a1, a2)
@@ -182,6 +198,7 @@ class TestStateAccumulation:
 # Full stub run (smoke test)
 # ─────────────────────────────────────────────────────────────
 
+
 class TestFullStubRun:
     def test_stub_run_with_tiny_plan(self):
         """
@@ -190,6 +207,7 @@ class TestFullStubRun:
         inject the minimal state changes needed to satisfy the
         routing conditions.
         """
+
         # Build agents that inject the minimum required state
         def planner_agent(state):
             return {"interview_plan": {"hr_question_count": 1, "technical_question_count": 1}}
@@ -239,7 +257,7 @@ class TestFullStubRun:
         initial_state = _base_state(
             resume_raw_text="Experienced Senior Python Backend Engineer.",
             jd_raw_text="Requires Senior Backend Engineer with Python and FastAPI.",
-            interview_plan={"hr_question_count": 1, "technical_question_count": 1}
+            interview_plan={"hr_question_count": 1, "technical_question_count": 1},
         )
         result = graph.invoke(initial_state)
 

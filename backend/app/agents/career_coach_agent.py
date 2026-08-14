@@ -17,6 +17,7 @@ from app.prompts.loader import get_developer_prompt, get_system_prompt
 
 # ── Output schema ─────────────────────────────────────────────
 
+
 class CoachingItem(BaseModel):
     competency: str
     current_score: float = Field(ge=0.0, le=10.0)
@@ -42,6 +43,7 @@ class CoachingPlanOutput(BaseModel):
 
 # ── Helper ────────────────────────────────────────────────────
 
+
 def _compute_competency_averages(
     evaluations: list[dict], questions_asked: list[dict]
 ) -> dict[str, float]:
@@ -55,6 +57,7 @@ def _compute_competency_averages(
 
 # ── Agent ─────────────────────────────────────────────────────
 
+
 class CareerCoachAgent(BaseAgent):
     agent_name = "CareerCoachAgent"
     prompt_version = "v1"
@@ -63,15 +66,13 @@ class CareerCoachAgent(BaseAgent):
         return 0.4
 
     def _run(self, state: InterviewState, retry_feedback: str | None = None) -> dict:
-        evaluations    = state.get("evaluations") or []
-        questions      = state.get("questions_asked") or []
-        answers        = state.get("answers") or []
-        matrix         = state.get("competency_matrix") or []
+        evaluations = state.get("evaluations") or []
+        questions = state.get("questions_asked") or []
+        answers = state.get("answers") or []
+        matrix = state.get("competency_matrix") or []
 
         if len(evaluations) < 1:
-            return {
-                "coaching_plan": CoachingPlanOutput(items=[], partial_data=True).model_dump()
-            }
+            return {"coaching_plan": CoachingPlanOutput(items=[], partial_data=True).model_dump()}
 
         averages = _compute_competency_averages(evaluations, questions)
 
@@ -91,9 +92,9 @@ class CareerCoachAgent(BaseAgent):
             f"Competency averages: {averages}\n"
             f"Competency matrix (for context): {matrix}\n\n"
             f"Full Q&A transcript:\n{transcript}\n\n"
-            "Return JSON: {\"items\": [{\"competency\": ..., \"current_score\": ..., "
-            "\"specific_gap_description\": ..., \"recommended_action\": ..., \"priority\": ...}], "
-            "\"partial_data\": false}"
+            'Return JSON: {"items": [{"competency": ..., "current_score": ..., '
+            '"specific_gap_description": ..., "recommended_action": ..., "priority": ...}], '
+            '"partial_data": false}'
         )
 
         messages = LLMClient.build_messages(
@@ -102,7 +103,9 @@ class CareerCoachAgent(BaseAgent):
             user_content=user_content,
         )
 
-        plan: CoachingPlanOutput = self._invoke_structured(messages, CoachingPlanOutput, retry_feedback)
+        plan: CoachingPlanOutput = self._invoke_structured(
+            messages, CoachingPlanOutput, retry_feedback
+        )
         return {"coaching_plan": plan.model_dump()}
 
     def _on_failure(self, state: InterviewState, error: str) -> dict:
@@ -119,6 +122,8 @@ class CareerCoachAgent(BaseAgent):
             for i, (comp, avg) in enumerate(sorted(averages.items(), key=lambda x: x[1]))
         ]
         return {
-            "coaching_plan": CoachingPlanOutput(items=fallback_items, partial_data=True).model_dump(),
+            "coaching_plan": CoachingPlanOutput(
+                items=fallback_items, partial_data=True
+            ).model_dump(),
             "error_log": [{"agent": self.agent_name, "error": error}],
         }

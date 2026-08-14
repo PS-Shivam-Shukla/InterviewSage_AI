@@ -49,7 +49,11 @@ def test_evaluator_run_suite_with_db(db_session: Session):
     assert eval_summary["pass_rate"] >= 0.0
 
     # Verify DB records
-    run_rec = db_session.query(EvaluationRun).filter(EvaluationRun.run_name == "unit_test_suite_run").first()
+    run_rec = (
+        db_session.query(EvaluationRun)
+        .filter(EvaluationRun.run_name == "unit_test_suite_run")
+        .first()
+    )
     assert run_rec is not None
     assert run_rec.total_samples > 0
 

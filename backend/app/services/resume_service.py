@@ -24,7 +24,9 @@ class ResumeService:
         self.db = db
         self.resume_repo = ResumeRepository(db)
 
-    def upload_resume_fast(self, user_id: str, filename: str, file_bytes: bytes | None = None) -> tuple[dict, str]:
+    def upload_resume_fast(
+        self, user_id: str, filename: str, file_bytes: bytes | None = None
+    ) -> tuple[dict, str]:
         """Validate upload, extract raw text, persist initial DB record (<50ms), and return for background processing."""
         t_start = time.monotonic()
         logger.info(f"INFO Resume upload started: {filename} for user {user_id}")
@@ -64,6 +66,7 @@ class ResumeService:
         """Background task for LLM parsing & deterministic Seniority Engine evaluation."""
         from app.core.database import SessionLocal
         from app.services.seniority_engine import SeniorityEngine
+
         db = SessionLocal()
         try:
             logger.info(f"Background ResumeAgent processing started for resume {resume_id}")
@@ -95,9 +98,13 @@ class ResumeService:
                 resume.seniority_breakdown = json.dumps(seniority_res)
                 resume.status = "COMPLETED"
                 db.commit()
-                logger.info(f"Background ResumeAgent & SeniorityEngine completed for {resume_id}: signal={career_level}, score={seniority_score}")
+                logger.info(
+                    f"Background ResumeAgent & SeniorityEngine completed for {resume_id}: signal={career_level}, score={seniority_score}"
+                )
         except Exception as exc:
-            logger.error(f"Background ResumeAgent processing failed for {resume_id}: {exc}", exc_info=True)
+            logger.error(
+                f"Background ResumeAgent processing failed for {resume_id}: {exc}", exc_info=True
+            )
             try:
                 resume = db.query(Resume).filter(Resume.id == resume_id).first()
                 if resume:
@@ -137,7 +144,9 @@ class ResumeService:
             logger.error(f"Error deleting resume {resume_id}: {e}")
             return False
 
-    def replace_resume(self, resume_id: str, filename: str, file_bytes: bytes | None = None) -> dict | None:
+    def replace_resume(
+        self, resume_id: str, filename: str, file_bytes: bytes | None = None
+    ) -> dict | None:
         resume = self.resume_repo.get_by_id(resume_id)
         if not resume:
             return None
@@ -174,7 +183,14 @@ class ResumeService:
                 "strengths": [],
                 "weaknesses": [],
                 "suggestions": [],
-                "section_completeness": {"contact": 0, "summary": 0, "experience": 0, "education": 0, "skills": 0, "projects": 0},
+                "section_completeness": {
+                    "contact": 0,
+                    "summary": 0,
+                    "experience": 0,
+                    "education": 0,
+                    "skills": 0,
+                    "projects": 0,
+                },
             }
 
         # Explicit FAILED state: Surface failure clearly
@@ -199,7 +215,14 @@ class ResumeService:
                 "strengths": [],
                 "weaknesses": [],
                 "suggestions": [],
-                "section_completeness": {"contact": 0, "summary": 0, "experience": 0, "education": 0, "skills": 0, "projects": 0},
+                "section_completeness": {
+                    "contact": 0,
+                    "summary": 0,
+                    "experience": 0,
+                    "education": 0,
+                    "skills": 0,
+                    "projects": 0,
+                },
             }
 
         # Read stored AI JSON when COMPLETED
@@ -221,29 +244,38 @@ class ResumeService:
             normalized_exp = []
             for idx, item in enumerate(raw_exp):
                 if isinstance(item, dict):
-                    normalized_exp.append({
-                        "id": item.get("id") or f"exp-{idx+1}",
-                        "title": item.get("title") or item.get("role") or "Software Engineer",
-                        "company": item.get("company") or "Tech Company",
-                        "period": item.get("period") or item.get("years") or "2020 - Present",
-                        "description": item.get("description") or "",
-                        "highlights": item.get("highlights") or [],
-                        "technologies": item.get("technologies") or tech_skills[:4],
-                    })
+                    normalized_exp.append(
+                        {
+                            "id": item.get("id") or f"exp-{idx+1}",
+                            "title": item.get("title") or item.get("role") or "Software Engineer",
+                            "company": item.get("company") or "Tech Company",
+                            "period": item.get("period") or item.get("years") or "2020 - Present",
+                            "description": item.get("description") or "",
+                            "highlights": item.get("highlights") or [],
+                            "technologies": item.get("technologies") or tech_skills[:4],
+                        }
+                    )
 
-            summary_text = ai_dict.get("summary") or f"Extracted candidate profile for {resume.file_path}."
+            summary_text = (
+                ai_dict.get("summary") or f"Extracted candidate profile for {resume.file_path}."
+            )
 
             # Parse persisted Seniority Engine evaluation object
             seniority_eval = {}
             if getattr(resume, "seniority_breakdown", None):
                 try:
-                    seniority_eval = json.loads(resume.seniority_breakdown) if isinstance(resume.seniority_breakdown, str) else resume.seniority_breakdown
+                    seniority_eval = (
+                        json.loads(resume.seniority_breakdown)
+                        if isinstance(resume.seniority_breakdown, str)
+                        else resume.seniority_breakdown
+                    )
                 except Exception:
                     seniority_eval = {}
 
             # Fallback evaluation on-the-fly if legacy record without persisted breakdown
             if not seniority_eval and ai_dict:
                 from app.services.seniority_engine import SeniorityEngine
+
                 seniority_eval = SeniorityEngine.evaluate(ai_dict)
 
             return {
@@ -251,13 +283,17 @@ class ResumeService:
                 "file_name": resume.file_path,
                 "status": "COMPLETED",
                 "resume_quality_score": ai_dict.get("resume_quality_score", 85),
-                "seniority_signal": resume.seniority_signal or seniority_eval.get("seniority_signal", "MID"),
-                "seniority_score": getattr(resume, "seniority_score", None) or seniority_eval.get("seniority_score", 0),
-                "experience_metrics": seniority_eval.get("experience_metrics") or {
+                "seniority_signal": resume.seniority_signal
+                or seniority_eval.get("seniority_signal", "MID"),
+                "seniority_score": getattr(resume, "seniority_score", None)
+                or seniority_eval.get("seniority_score", 0),
+                "experience_metrics": seniority_eval.get("experience_metrics")
+                or {
                     "total_months": getattr(resume, "total_experience_months", 0),
                     "relevant_months": getattr(resume, "relevant_experience_months", 0),
                 },
-                "seniority_breakdown": seniority_eval.get("seniority_breakdown") or {
+                "seniority_breakdown": seniority_eval.get("seniority_breakdown")
+                or {
                     "experience_score": 0,
                     "ownership_score": 0,
                     "architecture_score": 0,
@@ -280,7 +316,8 @@ class ResumeService:
                 "strengths": ai_dict.get("strengths") or [],
                 "weaknesses": ai_dict.get("weaknesses") or [],
                 "suggestions": ai_dict.get("suggestions") or [],
-                "section_completeness": ai_dict.get("section_completeness") or {
+                "section_completeness": ai_dict.get("section_completeness")
+                or {
                     "contact": 100,
                     "summary": 90,
                     "experience": 90,
@@ -290,7 +327,9 @@ class ResumeService:
                 },
             }
         except Exception as e:
-            logger.error(f"Error constructing resume analysis response for {resume_id}: {e}", exc_info=True)
+            logger.error(
+                f"Error constructing resume analysis response for {resume_id}: {e}", exc_info=True
+            )
             # Fallback canonical response if parsing error occurs
             return {
                 "resume_id": resume.id,
@@ -311,7 +350,14 @@ class ResumeService:
                 "strengths": ["Demonstrated engineering experience"],
                 "weaknesses": [],
                 "suggestions": [],
-                "section_completeness": {"contact": 100, "summary": 80, "experience": 80, "education": 80, "skills": 80, "projects": 50},
+                "section_completeness": {
+                    "contact": 100,
+                    "summary": 80,
+                    "experience": 80,
+                    "education": 80,
+                    "skills": 80,
+                    "projects": 50,
+                },
             }
 
     def _format_resume(self, resume: Resume) -> dict:
@@ -338,5 +384,9 @@ class ResumeService:
             "parsed_skills": skills,
             "parsed_experience": exp,
             "seniority_signal": resume.seniority_signal,
-            "created_at": resume.created_at.isoformat() if hasattr(resume.created_at, "isoformat") else str(resume.created_at),
+            "created_at": (
+                resume.created_at.isoformat()
+                if hasattr(resume.created_at, "isoformat")
+                else str(resume.created_at)
+            ),
         }

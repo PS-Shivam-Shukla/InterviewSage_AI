@@ -45,12 +45,18 @@ def test_get_company_profile_route(client: TestClient, db_session: Session, samp
     assert "behavioral_weight" in data
 
 
-def test_adaptive_session_routes(client: TestClient, db_session: Session, sample_user: User, sample_interview: Interview):
+def test_adaptive_session_routes(
+    client: TestClient, db_session: Session, sample_user: User, sample_interview: Interview
+):
     """Verify POST /api/v1/career/adaptive/start and /next-question."""
     headers = _auth_headers(sample_user, db_session)
     start_res = client.post(
         "/api/v1/career/adaptive/start",
-        json={"interview_id": sample_interview.id, "candidate_id": sample_user.id, "initial_difficulty": 5.0},
+        json={
+            "interview_id": sample_interview.id,
+            "candidate_id": sample_user.id,
+            "initial_difficulty": 5.0,
+        },
         headers=headers,
     )
     assert start_res.status_code == 200
@@ -76,7 +82,9 @@ def test_roadmap_route(client: TestClient, db_session: Session, sample_user: Use
     assert "daily_plan" in data
 
 
-def test_replay_route(client: TestClient, db_session: Session, sample_user: User, sample_interview: Interview):
+def test_replay_route(
+    client: TestClient, db_session: Session, sample_user: User, sample_interview: Interview
+):
     """Verify GET /api/v1/career/replay/{interview_id}."""
     headers = _auth_headers(sample_user, db_session)
     res = client.get(f"/api/v1/career/replay/{sample_interview.id}", headers=headers)
@@ -94,7 +102,9 @@ def test_skill_gap_route(client: TestClient, db_session: Session, sample_user: U
     assert "gaps" in data
 
 
-def test_recruiter_insights_route(client: TestClient, db_session: Session, sample_user: User, sample_interview: Interview):
+def test_recruiter_insights_route(
+    client: TestClient, db_session: Session, sample_user: User, sample_interview: Interview
+):
     """Verify GET /api/v1/career/recruiter-insights/{interview_id}."""
     headers = _auth_headers(sample_user, db_session)
     res = client.get(f"/api/v1/career/recruiter-insights/{sample_interview.id}", headers=headers)

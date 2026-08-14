@@ -18,15 +18,47 @@ class SkillGapAnalyzer:
         self.db = db
 
     def analyze_skill_gaps(self, candidate_id: str) -> SkillGapResponse:
-        skills = self.db.query(SkillProgress).filter(SkillProgress.candidate_id == candidate_id).all()
+        skills = (
+            self.db.query(SkillProgress).filter(SkillProgress.candidate_id == candidate_id).all()
+        )
         weak_skills = [s for s in skills if s.current_score < 70.0]
 
         concept_mapping = {
-            "redis": ["Redis Persistence (RDB/AOF)", "Redis Cluster Sharding", "Eviction Policies (LRU/LFU)", "Pub/Sub Messaging", "Redis Streams"],
-            "kafka": ["Partition Rebalancing", "Consumer Group Offset Commit", "Log Compaction", "Idempotent Producer", "ISR Replica Sync"],
-            "postgresql": ["B-Tree vs GIN Indexes", "MVCC & Vacuum Optimization", "WAL Replication Lag", "Connection Pooling (PgBouncer)", "EXPLAIN ANALYZE tuning"],
-            "system design": ["Distributed Consensus (Raft/Paxos)", "Consistent Hashing", "Rate Limiting Algorithms", "CQRS Architecture", "Event Sourcing"],
-            "python": ["Asyncio Event Loop Lifecycle", "GIL Mutex Implications", "Metaclasses & Decorators", "Memory Profiling & Leaks", "Generators vs Iterators"],
+            "redis": [
+                "Redis Persistence (RDB/AOF)",
+                "Redis Cluster Sharding",
+                "Eviction Policies (LRU/LFU)",
+                "Pub/Sub Messaging",
+                "Redis Streams",
+            ],
+            "kafka": [
+                "Partition Rebalancing",
+                "Consumer Group Offset Commit",
+                "Log Compaction",
+                "Idempotent Producer",
+                "ISR Replica Sync",
+            ],
+            "postgresql": [
+                "B-Tree vs GIN Indexes",
+                "MVCC & Vacuum Optimization",
+                "WAL Replication Lag",
+                "Connection Pooling (PgBouncer)",
+                "EXPLAIN ANALYZE tuning",
+            ],
+            "system design": [
+                "Distributed Consensus (Raft/Paxos)",
+                "Consistent Hashing",
+                "Rate Limiting Algorithms",
+                "CQRS Architecture",
+                "Event Sourcing",
+            ],
+            "python": [
+                "Asyncio Event Loop Lifecycle",
+                "GIL Mutex Implications",
+                "Metaclasses & Decorators",
+                "Memory Profiling & Leaks",
+                "Generators vs Iterators",
+            ],
         }
 
         gaps = []
@@ -43,7 +75,15 @@ class SkillGapAnalyzer:
         else:
             for s in weak_skills:
                 key = s.skill_name.lower()
-                concepts = concept_mapping.get(key, ["Advanced Tuning", "Cluster Deployment", "Failover Recovery", "Performance Metrics"])
+                concepts = concept_mapping.get(
+                    key,
+                    [
+                        "Advanced Tuning",
+                        "Cluster Deployment",
+                        "Failover Recovery",
+                        "Performance Metrics",
+                    ],
+                )
                 gaps.append(
                     SkillGapItem(
                         topic=s.skill_name,

@@ -44,15 +44,18 @@ class MCPProtocolClient:
             "────────────────────────────────────────────────────────────────────────────────"
         )
         from app.mcp.server import mcp_server
+
         raw_tools = mcp_server.list_tools()
         result = []
         for t in raw_tools:
-            result.append({
-                "name": t.get("name"),
-                "description": t.get("description"),
-                "parameters": t.get("parameters"),
-                "required": t.get("required"),
-            })
+            result.append(
+                {
+                    "name": t.get("name"),
+                    "description": t.get("description"),
+                    "parameters": t.get("parameters"),
+                    "required": t.get("required"),
+                }
+            )
         latency = int((time.monotonic() - t0) * 1000)
         logger.info(
             f"🔌 [MCP CLIENT DISCOVERY COMPLETED] Tools Discovered: {len(result)} | Latency: {latency}ms\n"
@@ -72,10 +75,15 @@ class MCPProtocolClient:
             f"────────────────────────────────────────────────────────────────────────────────"
         )
         from app.mcp.server import mcp_server
+
         res = mcp_server.call_tool(name, **arguments)
         latency = int((time.monotonic() - t0) * 1000)
         success = getattr(res, "success", False)
-        out_summary = str(getattr(res, "output", None))[:200].replace("\n", " ") if success else getattr(res, "error", None)
+        out_summary = (
+            str(getattr(res, "output", None))[:200].replace("\n", " ")
+            if success
+            else getattr(res, "error", None)
+        )
 
         logger.info(
             f"🔌 [MCP CLIENT TOOL COMPLETED] Tool: '{name}' | Status: {'SUCCESS' if success else 'FAILED'} | Latency: {latency}ms\n"

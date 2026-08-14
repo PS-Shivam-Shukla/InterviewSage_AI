@@ -34,6 +34,7 @@ def _acquire_db_session() -> tuple[Session, bool]:
     or instantiates SessionLocal in production (should_close=True).
     """
     from app.main import app
+
     if get_db in app.dependency_overrides:
         override = app.dependency_overrides[get_db]
         gen = override()
@@ -88,16 +89,17 @@ async def websocket_interview_session(
     if auth_token:
         auth_token = extract_token_from_header(auth_token) or auth_token
     else:
-        auth_header = (
-            websocket.headers.get("authorization")
-            or websocket.headers.get("sec-websocket-protocol")
+        auth_header = websocket.headers.get("authorization") or websocket.headers.get(
+            "sec-websocket-protocol"
         )
         if auth_header:
             auth_token = extract_token_from_header(auth_header) or auth_header
 
     if not auth_token:
         logger.warning(f"WebSocket connection rejected: Missing token for interview {interview_id}")
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Authentication token required")
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION, reason="Authentication token required"
+        )
         return
 
     # 2. Authenticate token & verify interview ownership with on-demand DB session
@@ -106,19 +108,30 @@ async def websocket_interview_session(
         auth_service = AuthService(db)
         user = auth_service.get_current_user(auth_token) if auth_token else None
         if not user:
-            user = auth_service.user_repo.get_by_email("test@example.com") or auth_service.user_repo.get_by_email("admin@example.com")
+            user = auth_service.user_repo.get_by_email(
+                "test@example.com"
+            ) or auth_service.user_repo.get_by_email("admin@example.com")
 
         if not user:
-            logger.warning(f"WebSocket connection rejected: Invalid or expired token for interview {interview_id}")
-            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid or expired token")
+            logger.warning(
+                f"WebSocket connection rejected: Invalid or expired token for interview {interview_id}"
+            )
+            await websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION, reason="Invalid or expired token"
+            )
             return
 
         interview_repo = InterviewRepository(db)
         interview = interview_repo.get_by_id(interview_id)
         if interview and interview.user_id and interview.user_id != user.id:
             if user.email not in ("test@example.com", "admin@example.com"):
-                logger.warning(f"WebSocket connection rejected: User {user.id} unauthorized for interview {interview_id}")
-                await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Forbidden: Unauthorized interview access")
+                logger.warning(
+                    f"WebSocket connection rejected: User {user.id} unauthorized for interview {interview_id}"
+                )
+                await websocket.close(
+                    code=status.WS_1008_POLICY_VIOLATION,
+                    reason="Forbidden: Unauthorized interview access",
+                )
                 return
     finally:
         if should_close:
@@ -138,46 +151,56 @@ async def websocket_interview_session(
                 chunk = message["bytes"]
                 if len(chunk) > 0:
                     streaming_service.buffer_audio_chunk(interview_id, chunk)
-                    await websocket.send_json({
-                        "type": "AUDIO_CHUNK_ACK",
-                        "event": "AUDIO_CHUNK_ACK",
-                        "interview_id": interview_id,
-                        "size_bytes": len(chunk),
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "AUDIO_CHUNK_ACK",
+                            "event": "AUDIO_CHUNK_ACK",
+                            "interview_id": interview_id,
+                            "size_bytes": len(chunk),
+                        }
+                    )
             elif message.get("text"):
                 try:
                     data = json.loads(message["text"])
                     event_type = data.get("type") or data.get("event") or "PING"
 
                     if event_type == "PING":
-                        await websocket.send_json({"type": "PONG", "event": "PONG", "interview_id": interview_id})
+                        await websocket.send_json(
+                            {"type": "PONG", "event": "PONG", "interview_id": interview_id}
+                        )
                     elif event_type == "END_CANDIDATE_SPEECH":
                         if interview_id in _processing_sessions:
-                            await websocket.send_json({
-                                "type": "PROCESSING_IN_PROGRESS",
-                                "interview_id": interview_id,
-                                "message": "Turn processing already in progress.",
-                            })
+                            await websocket.send_json(
+                                {
+                                    "type": "PROCESSING_IN_PROGRESS",
+                                    "interview_id": interview_id,
+                                    "message": "Turn processing already in progress.",
+                                }
+                            )
                             continue
 
                         _processing_sessions.add(interview_id)
                         try:
                             raw_bytes = streaming_service.get_buffered_bytes(interview_id)
                             if not raw_bytes or len(raw_bytes) == 0:
-                                await websocket.send_json({
-                                    "type": "ERROR",
-                                    "event": "ERROR",
-                                    "interview_id": interview_id,
-                                    "message": "No candidate audio received for turn.",
-                                })
+                                await websocket.send_json(
+                                    {
+                                        "type": "ERROR",
+                                        "event": "ERROR",
+                                        "interview_id": interview_id,
+                                        "message": "No candidate audio received for turn.",
+                                    }
+                                )
                                 continue
 
-                            await websocket.send_json({
-                                "type": "TURN_COMPLETE",
-                                "interview_id": interview_id,
-                                "status": "PROCESSING",
-                                "message": "Candidate speech completed. Transcribing and evaluating...",
-                            })
+                            await websocket.send_json(
+                                {
+                                    "type": "TURN_COMPLETE",
+                                    "interview_id": interview_id,
+                                    "status": "PROCESSING",
+                                    "message": "Candidate speech completed. Transcribing and evaluating...",
+                                }
+                            )
 
                             # Process voice turn with an on-demand DB session
                             db_turn, should_close_turn = _acquire_db_session()
@@ -190,25 +213,29 @@ async def websocket_interview_session(
                                     db_turn.close()
 
                             if turn_result.get("error"):
-                                await websocket.send_json({
-                                    "type": "ERROR",
-                                    "event": "ERROR",
-                                    "interview_id": interview_id,
-                                    "message": turn_result.get("message"),
-                                })
+                                await websocket.send_json(
+                                    {
+                                        "type": "ERROR",
+                                        "event": "ERROR",
+                                        "interview_id": interview_id,
+                                        "message": turn_result.get("message"),
+                                    }
+                                )
                                 continue
 
-                            await websocket.send_json({
-                                "type": "TURN_COMPLETE",
-                                "event": "TURN_COMPLETE",
-                                "interview_id": interview_id,
-                                "status": "COMPLETED",
-                                "candidate_transcript": turn_result["candidate_transcript"],
-                                "agent_response": turn_result["agent_response"],
-                                "evaluation": turn_result["evaluation"],
-                                "next_question": turn_result["next_question"],
-                                "live_scores": turn_result["live_scores"],
-                            })
+                            await websocket.send_json(
+                                {
+                                    "type": "TURN_COMPLETE",
+                                    "event": "TURN_COMPLETE",
+                                    "interview_id": interview_id,
+                                    "status": "COMPLETED",
+                                    "candidate_transcript": turn_result["candidate_transcript"],
+                                    "agent_response": turn_result["agent_response"],
+                                    "evaluation": turn_result["evaluation"],
+                                    "next_question": turn_result["next_question"],
+                                    "live_scores": turn_result["live_scores"],
+                                }
+                            )
 
                             audio_out = turn_result.get("audio_response_bytes")
                             if audio_out:

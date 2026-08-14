@@ -53,15 +53,19 @@ class Interview(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         "InterviewPlan", back_populates="interview", uselist=False, cascade="all, delete-orphan"
     )
     questions: Mapped[list[InterviewQuestion]] = relationship(
-        "InterviewQuestion", back_populates="interview",
-        cascade="all, delete-orphan", order_by="InterviewQuestion.sequence_number"
+        "InterviewQuestion",
+        back_populates="interview",
+        cascade="all, delete-orphan",
+        order_by="InterviewQuestion.sequence_number",
     )
     report: Mapped[InterviewReport | None] = relationship(
         "InterviewReport", back_populates="interview", uselist=False, cascade="all, delete-orphan"
     )
     agent_logs: Mapped[list[AgentLog]] = relationship(
-        "AgentLog", back_populates="interview",
-        cascade="all, delete-orphan", order_by="AgentLog.created_at"
+        "AgentLog",
+        back_populates="interview",
+        cascade="all, delete-orphan",
+        order_by="AgentLog.created_at",
     )
 
     @property
@@ -83,8 +87,7 @@ class CompetencyMatrix(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "competency_matrices"
 
     interview_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("interviews.id", ondelete="CASCADE"),
-        nullable=False, unique=True
+        String(36), ForeignKey("interviews.id", ondelete="CASCADE"), nullable=False, unique=True
     )
     # JSON list of {name, weight, description}
     competencies: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
@@ -99,8 +102,7 @@ class InterviewPlan(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "interview_plans"
 
     interview_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("interviews.id", ondelete="CASCADE"),
-        nullable=False, unique=True
+        String(36), ForeignKey("interviews.id", ondelete="CASCADE"), nullable=False, unique=True
     )
     hr_question_count: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
     technical_question_count: Mapped[int] = mapped_column(Integer, nullable=False, default=7)
@@ -121,8 +123,7 @@ class InterviewQuestion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     interview_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("interviews.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        String(36), ForeignKey("interviews.id", ondelete="CASCADE"), nullable=False, index=True
     )
     # HR | TECHNICAL
     round_type: Mapped[str] = mapped_column(String(20), nullable=False)
@@ -134,8 +135,7 @@ class InterviewQuestion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     interview: Mapped[Interview] = relationship("Interview", back_populates="questions")
     answer: Mapped[InterviewAnswer | None] = relationship(
-        "InterviewAnswer", back_populates="question",
-        uselist=False, cascade="all, delete-orphan"
+        "InterviewAnswer", back_populates="question", uselist=False, cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
@@ -146,18 +146,17 @@ class InterviewAnswer(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "interview_answers"
 
     question_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("interview_questions.id", ondelete="CASCADE"),
-        nullable=False, unique=True   # one answer per question
+        String(36),
+        ForeignKey("interview_questions.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,  # one answer per question
     )
     answer_text: Mapped[str] = mapped_column(Text, nullable=False)
     response_time_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    question: Mapped[InterviewQuestion] = relationship(
-        "InterviewQuestion", back_populates="answer"
-    )
+    question: Mapped[InterviewQuestion] = relationship("InterviewQuestion", back_populates="answer")
     evaluation: Mapped[Evaluation | None] = relationship(
-        "Evaluation", back_populates="answer",
-        uselist=False, cascade="all, delete-orphan"
+        "Evaluation", back_populates="answer", uselist=False, cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
@@ -168,8 +167,10 @@ class Evaluation(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "evaluations"
 
     answer_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("interview_answers.id", ondelete="CASCADE"),
-        nullable=False, unique=True   # one evaluation per answer
+        String(36),
+        ForeignKey("interview_answers.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,  # one evaluation per answer
     )
     score: Mapped[int] = mapped_column(Integer, nullable=False)
     # JSON: {dimension: sub_score}
@@ -187,8 +188,7 @@ class InterviewReport(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "interview_reports"
 
     interview_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("interviews.id", ondelete="CASCADE"),
-        nullable=False, unique=True
+        String(36), ForeignKey("interviews.id", ondelete="CASCADE"), nullable=False, unique=True
     )
     # JSON lists
     competency_scorecard: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
@@ -210,8 +210,7 @@ class AgentLog(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "agent_logs"
 
     interview_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("interviews.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        String(36), ForeignKey("interviews.id", ondelete="CASCADE"), nullable=False, index=True
     )
     agent_name: Mapped[str] = mapped_column(String(100), nullable=False)
     node_status: Mapped[str] = mapped_column(String(20), nullable=False)  # SUCCESS|RETRY|FAILED

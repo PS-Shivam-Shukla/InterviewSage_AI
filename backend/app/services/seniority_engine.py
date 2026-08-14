@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 
 # ── Data Models ──────────────────────────────────────────────────
 
+
 class SeniorityBreakdown(BaseModel):
     experience_score: int = Field(..., ge=0, le=40)
     ownership_score: int = Field(..., ge=0, le=20)
@@ -48,22 +49,36 @@ class SeniorityEvaluationResult(BaseModel):
 # ── Helper Functions ──────────────────────────────────────────────
 
 MONTH_MAP = {
-    "jan": 1, "january": 1,
-    "feb": 2, "february": 2,
-    "mar": 3, "march": 3,
-    "apr": 4, "april": 4,
+    "jan": 1,
+    "january": 1,
+    "feb": 2,
+    "february": 2,
+    "mar": 3,
+    "march": 3,
+    "apr": 4,
+    "april": 4,
     "may": 5,
-    "jun": 6, "june": 6,
-    "jul": 7, "july": 7,
-    "aug": 8, "august": 8,
-    "sep": 9, "september": 9, "sept": 9,
-    "oct": 10, "october": 10,
-    "nov": 11, "november": 11,
-    "dec": 12, "december": 12,
+    "jun": 6,
+    "june": 6,
+    "jul": 7,
+    "july": 7,
+    "aug": 8,
+    "august": 8,
+    "sep": 9,
+    "september": 9,
+    "sept": 9,
+    "oct": 10,
+    "october": 10,
+    "nov": 11,
+    "november": 11,
+    "dec": 12,
+    "december": 12,
 }
 
 
-def parse_month_year(date_str: str, default_to_present: bool = False, ref_date: datetime.date | None = None) -> datetime.date | None:
+def parse_month_year(
+    date_str: str, default_to_present: bool = False, ref_date: datetime.date | None = None
+) -> datetime.date | None:
     """Parse string representations of dates like 'Jan 2022', '2022-01', '01/2022', '2022', 'Present'."""
     if not date_str or not isinstance(date_str, str):
         return ref_date if (default_to_present and ref_date) else None
@@ -139,18 +154,47 @@ def merge_employment_intervals(intervals: list[tuple[datetime.date, datetime.dat
 
 
 TECHNICAL_ROLE_KEYWORDS = {
-    "developer", "engineer", "architect", "programmer", "coder",
-    "software", "backend", "frontend", "full stack", "fullstack",
-    "ai", "ml", "machine learning", "data engineer", "devops",
-    "cloud", "sre", "systems", "tech lead", "cto", "vp of engineering",
-    "technical lead", "data scientist", "security engineer"
+    "developer",
+    "engineer",
+    "architect",
+    "programmer",
+    "coder",
+    "software",
+    "backend",
+    "frontend",
+    "full stack",
+    "fullstack",
+    "ai",
+    "ml",
+    "machine learning",
+    "data engineer",
+    "devops",
+    "cloud",
+    "sre",
+    "systems",
+    "tech lead",
+    "cto",
+    "vp of engineering",
+    "technical lead",
+    "data scientist",
+    "security engineer",
 }
 
 
 NON_TECHNICAL_TITLE_KEYWORDS = {
-    "sales", "marketing", "recruiter", "talent", "human resources", "hr",
-    "accountant", "finance", "legal", "customer support", "customer service",
-    "account executive", "operations manager"
+    "sales",
+    "marketing",
+    "recruiter",
+    "talent",
+    "human resources",
+    "hr",
+    "accountant",
+    "finance",
+    "legal",
+    "customer support",
+    "customer service",
+    "account executive",
+    "operations manager",
 }
 
 
@@ -160,7 +204,10 @@ def is_technical_role(title: str, description: str = "", technologies: list[str]
 
     # Exclude explicit non-technical roles unless title explicitly contains engineering/development keywords
     if any(nk in title_clean for nk in NON_TECHNICAL_TITLE_KEYWORDS):
-        if not any(tk in title_clean for tk in ["engineer", "developer", "architect", "programmer", "tech lead", "cto"]):
+        if not any(
+            tk in title_clean
+            for tk in ["engineer", "developer", "architect", "programmer", "tech lead", "cto"]
+        ):
             return False
 
     combined = f"{title_clean} {' '.join(technologies or [])}".lower()
@@ -175,6 +222,7 @@ def is_technical_role(title: str, description: str = "", technologies: list[str]
 
 
 # ── Seniority Engine ──────────────────────────────────────────────
+
 
 class SeniorityEngine:
 
@@ -245,7 +293,9 @@ class SeniorityEngine:
         leadership_score, lead_evidence = cls._score_leadership(dedup_entries)
         complexity_score, comp_evidence = cls._score_complexity(dedup_entries, resume_data)
 
-        raw_score = exp_score + ownership_score + architecture_score + leadership_score + complexity_score
+        raw_score = (
+            exp_score + ownership_score + architecture_score + leadership_score + complexity_score
+        )
         raw_score = max(0, min(100, raw_score))
 
         # 3. Guardrails & Threshold Evaluation
@@ -319,18 +369,41 @@ class SeniorityEngine:
     def _score_ownership(entries: list[dict[str, Any]]) -> tuple[int, list[str]]:
         score = 0
         evidence = []
-        combined_text = " ".join([
-            f"{e.get('title','')} {e.get('description','')} {' '.join(e.get('highlights',[]))} {' '.join(e.get('ownership_bullets',[]))}"
-            for e in entries
-        ]).lower()
+        combined_text = " ".join(
+            [
+                f"{e.get('title','')} {e.get('description','')} {' '.join(e.get('highlights',[]))} {' '.join(e.get('ownership_bullets',[]))}"
+                for e in entries
+            ]
+        ).lower()
 
-        if any(kw in combined_text for kw in ["end-to-end", "end to end", "owned major", "core service owner", "lead architect"]):
+        if any(
+            kw in combined_text
+            for kw in [
+                "end-to-end",
+                "end to end",
+                "owned major",
+                "core service owner",
+                "lead architect",
+            ]
+        ):
             score = 20
             evidence.append("Major system & core service end-to-end ownership")
-        elif any(kw in combined_text for kw in ["owned", "owner", "designed and built", "built and deployed", "sole developer"]):
+        elif any(
+            kw in combined_text
+            for kw in [
+                "owned",
+                "owner",
+                "designed and built",
+                "built and deployed",
+                "sole developer",
+            ]
+        ):
             score = 15
             evidence.append("End-to-end feature and service ownership")
-        elif any(kw in combined_text for kw in ["independent", "independently", "responsible for", "implemented feature"]):
+        elif any(
+            kw in combined_text
+            for kw in ["independent", "independently", "responsible for", "implemented feature"]
+        ):
             score = 10
             evidence.append("Independent feature ownership & delivery")
         elif entries:
@@ -343,15 +416,35 @@ class SeniorityEngine:
     def _score_architecture(entries: list[dict[str, Any]]) -> tuple[int, list[str]]:
         score = 0
         evidence = []
-        combined_text = " ".join([
-            f"{e.get('title','')} {e.get('description','')} {' '.join(e.get('highlights',[]))} {' '.join(e.get('architecture_bullets',[]))}"
-            for e in entries
-        ]).lower()
+        combined_text = " ".join(
+            [
+                f"{e.get('title','')} {e.get('description','')} {' '.join(e.get('highlights',[]))} {' '.join(e.get('architecture_bullets',[]))}"
+                for e in entries
+            ]
+        ).lower()
 
-        if any(kw in combined_text for kw in ["multi-system", "distributed systems", "event-driven", "microservices architecture", "rag system"]):
+        if any(
+            kw in combined_text
+            for kw in [
+                "multi-system",
+                "distributed systems",
+                "event-driven",
+                "microservices architecture",
+                "rag system",
+            ]
+        ):
             score = 15
             evidence.append("Strong multi-component system architecture ownership")
-        elif any(kw in combined_text for kw in ["designed architecture", "database architecture", "api architecture", "schema design", "rest api"]):
+        elif any(
+            kw in combined_text
+            for kw in [
+                "designed architecture",
+                "database architecture",
+                "api architecture",
+                "schema design",
+                "rest api",
+            ]
+        ):
             score = 10
             evidence.append("Regular system design & API architecture responsibility")
         elif any(kw in combined_text for kw in ["architecture", "design", "refactored"]):
@@ -364,15 +457,30 @@ class SeniorityEngine:
     def _score_leadership(entries: list[dict[str, Any]]) -> tuple[int, list[str]]:
         score = 0
         evidence = []
-        combined_text = " ".join([
-            f"{e.get('title','')} {e.get('description','')} {' '.join(e.get('highlights',[]))} {' '.join(e.get('leadership_bullets',[]))}"
-            for e in entries
-        ]).lower()
+        combined_text = " ".join(
+            [
+                f"{e.get('title','')} {e.get('description','')} {' '.join(e.get('highlights',[]))} {' '.join(e.get('leadership_bullets',[]))}"
+                for e in entries
+            ]
+        ).lower()
 
-        if any(kw in combined_text for kw in ["tech lead", "technical lead", "engineering manager", "cross-team", "led team", "supervising"]):
+        if any(
+            kw in combined_text
+            for kw in [
+                "tech lead",
+                "technical lead",
+                "engineering manager",
+                "cross-team",
+                "led team",
+                "supervising",
+            ]
+        ):
             score = 15
             evidence.append("Team & technical engineering leadership")
-        elif any(kw in combined_text for kw in ["mentored", "code review", "guided developers", "onboarded"]):
+        elif any(
+            kw in combined_text
+            for kw in ["mentored", "code review", "guided developers", "onboarded"]
+        ):
             score = 10
             evidence.append("Regular mentoring & code review leadership")
         elif any(kw in combined_text for kw in ["reviewed", "collaborated"]):
@@ -382,19 +490,38 @@ class SeniorityEngine:
         return score, evidence
 
     @staticmethod
-    def _score_complexity(entries: list[dict[str, Any]], resume_data: dict[str, Any]) -> tuple[int, list[str]]:
+    def _score_complexity(
+        entries: list[dict[str, Any]], resume_data: dict[str, Any]
+    ) -> tuple[int, list[str]]:
         score = 2
         evidence = []
         tech_skills = resume_data.get("technical_skills") or []
-        combined_text = f"{' '.join(tech_skills)} " + " ".join([
-            f"{e.get('description','')} {' '.join(e.get('highlights',[]))}"
-            for e in entries
-        ]).lower()
+        combined_text = (
+            f"{' '.join(tech_skills)} "
+            + " ".join(
+                [f"{e.get('description','')} {' '.join(e.get('highlights',[]))}" for e in entries]
+            ).lower()
+        )
 
-        if any(kw in combined_text for kw in ["scale", "high traffic", "millions", "latency", "vector search", "llm", "rag", "optimization"]):
+        if any(
+            kw in combined_text
+            for kw in [
+                "scale",
+                "high traffic",
+                "millions",
+                "latency",
+                "vector search",
+                "llm",
+                "rag",
+                "optimization",
+            ]
+        ):
             score = 10
             evidence.append("High scale / high complexity production system delivery")
-        elif any(kw in combined_text for kw in ["docker", "fastapi", "postgresql", "pipeline", "etl", "microservice"]):
+        elif any(
+            kw in combined_text
+            for kw in ["docker", "fastapi", "postgresql", "pipeline", "etl", "microservice"]
+        ):
             score = 8
             evidence.append("High complexity backend microservice engineering")
         elif len(tech_skills) > 4:
@@ -434,7 +561,9 @@ class SeniorityEngine:
             if leadership_score < 10 or architecture_score < 10:
                 signal = "SENIOR"
                 score = min(score, 79)
-                limitations.append("Capped at SENIOR: Missing evidence of cross-team leadership or multi-system architecture strategy.")
+                limitations.append(
+                    "Capped at SENIOR: Missing evidence of cross-team leadership or multi-system architecture strategy."
+                )
 
         # SENIOR Guardrail: Requires >= 36 relevant experience months AND (ownership >= 10 OR architecture >= 5)
         if signal == "SENIOR":
@@ -445,7 +574,9 @@ class SeniorityEngine:
             elif ownership_score < 10 and architecture_score < 5:
                 signal = "MID"
                 score = min(score, 59)
-                limitations.append("Capped at MID: Requires explicit feature ownership or system design responsibility.")
+                limitations.append(
+                    "Capped at MID: Requires explicit feature ownership or system design responsibility."
+                )
 
         if not limitations and signal in ("JUNIOR", "INTERN"):
             limitations.append("Early career history with task-level execution focus.")

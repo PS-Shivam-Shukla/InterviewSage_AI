@@ -275,4 +275,3 @@ def score_answer_rubric(
     }.get((seniority_level or "MID").upper(), "Apply standard thresholds")
 
     return rubric
-

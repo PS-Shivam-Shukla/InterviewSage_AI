@@ -16,11 +16,27 @@ from pydantic import BaseModel, Field
 
 # Phrase set for explicit candidate non-answers
 NON_ANSWER_PHRASES = {
-    "i dont know", "i don't know", "idk", "not sure", "no idea",
-    "i have no idea", "i don't have experience", "no experience",
-    "can't answer", "cannot answer", "don't know", "dont know",
-    "i do not know", "i am not sure", "haven't used this",
-    "have not used this", "skip", "pass", "no answer", "n/a", "na",
+    "i dont know",
+    "i don't know",
+    "idk",
+    "not sure",
+    "no idea",
+    "i have no idea",
+    "i don't have experience",
+    "no experience",
+    "can't answer",
+    "cannot answer",
+    "don't know",
+    "dont know",
+    "i do not know",
+    "i am not sure",
+    "haven't used this",
+    "have not used this",
+    "skip",
+    "pass",
+    "no answer",
+    "n/a",
+    "na",
 }
 
 
@@ -76,7 +92,9 @@ class AnswerSanityGuard:
             )
 
         # Regex match for common variations like "i really dont know" or "i'm not sure about this"
-        if re.search(r"\b(i\s*(don'?t|dont)\s*know|idk|no\s*idea|not\s*sure|no\s*experience)\b", lower_clean):
+        if re.search(
+            r"\b(i\s*(don'?t|dont)\s*know|idk|no\s*idea|not\s*sure|no\s*experience)\b", lower_clean
+        ):
             # If the response is short (< 50 chars) and contains a non-answer phrase, classify as NO_ANSWER
             if len(clean) < 50:
                 return SanityGuardResult(
@@ -91,12 +109,17 @@ class AnswerSanityGuard:
         # Aptitude response pattern check (numeric, currency, boolean, ratio, options, fractions, units)
         is_aptitude_round = (round_type or "").upper() == "APTITUDE"
         is_numeric_or_boolean_format = bool(
-            re.match(r"^[\$\€\£\₹]?\s*-?\d+(\.\d+)?\s*[\$\€\£\₹\%\s]*(km/h|km|h|days?|hours?|years?|rupees|dollars|percent)?$", lower_clean)
+            re.match(
+                r"^[\$\€\£\₹]?\s*-?\d+(\.\d+)?\s*[\$\€\£\₹\%\s]*(km/h|km|h|days?|hours?|years?|rupees|dollars|percent)?$",
+                lower_clean,
+            )
             or lower_clean in {"true", "false", "yes", "no"}
             or lower_clean in {"a", "b", "c", "d", "option a", "option b", "option c", "option d"}
             or re.match(r"^\d+\s*:\s*\d+$", lower_clean)  # ratio like 8:15
             or re.match(r"^\d+\s*/\s*\d+$", lower_clean)  # fraction like 1/2
-            or re.match(r"^\d+%\s*(increase|decrease)?$", lower_clean)  # percentage like 4% decrease
+            or re.match(
+                r"^\d+%\s*(increase|decrease)?$", lower_clean
+            )  # percentage like 4% decrease
         )
 
         # For Aptitude round, if response is not a valid quantitative or option format, flag as GIBBERISH/OFF_TOPIC
@@ -121,7 +144,10 @@ class AnswerSanityGuard:
             for pat_len in range(1, 6):
                 if len(no_space) >= pat_len * 2:
                     pat = no_space[:pat_len]
-                    if pat * (len(no_space) // pat_len) == no_space[:pat_len * (len(no_space) // pat_len)]:
+                    if (
+                        pat * (len(no_space) // pat_len)
+                        == no_space[: pat_len * (len(no_space) // pat_len)]
+                    ):
                         pattern_match = True
                         break
 
@@ -138,7 +164,9 @@ class AnswerSanityGuard:
                         needs_llm_eval=False,
                     )
             else:
-                if (len(clean) < 80 and (unique_char_ratio < 0.25 or pattern_match or unique_chars <= 4)):
+                if len(clean) < 80 and (
+                    unique_char_ratio < 0.25 or pattern_match or unique_chars <= 4
+                ):
                     return SanityGuardResult(
                         is_valid_answer=False,
                         answer_quality="GIBBERISH",
@@ -149,7 +177,19 @@ class AnswerSanityGuard:
                     )
 
         # 3. Known single-word non-technical filler (only for non-aptitude)
-        filler_words = {"test", "abc", "asdf", "qwerty", "hello", "hi", "hey", "lol", "haha", "ok", "okay"}
+        filler_words = {
+            "test",
+            "abc",
+            "asdf",
+            "qwerty",
+            "hello",
+            "hi",
+            "hey",
+            "lol",
+            "haha",
+            "ok",
+            "okay",
+        }
         if lower_clean in filler_words and not is_aptitude_round:
             return SanityGuardResult(
                 is_valid_answer=False,

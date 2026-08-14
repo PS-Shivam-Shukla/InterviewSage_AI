@@ -10,7 +10,9 @@ from pathlib import Path
 from typing import Any
 
 
-def generate_report_pdf(report_data: dict[str, Any], output_dir: str = "./uploads") -> dict[str, Any]:
+def generate_report_pdf(
+    report_data: dict[str, Any], output_dir: str = "./uploads"
+) -> dict[str, Any]:
     """
     Generate a PDF report from interview report data.
 
@@ -41,9 +43,7 @@ def generate_report_pdf(report_data: dict[str, Any], output_dir: str = "./upload
     if isinstance(scorecard, str):
         scorecard = json.loads(scorecard)
     for item in scorecard:
-        lines.append(
-            f"  {item.get('competency', '?'):<30} {item.get('score', '?')}/10"
-        )
+        lines.append(f"  {item.get('competency', '?'):<30} {item.get('score', '?')}/10")
 
     lines += [
         "",

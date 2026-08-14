@@ -49,7 +49,10 @@ class GoldenDatasetManager:
     def get_interview_questions(self) -> list[EvaluationSample]:
         """Load baseline interview questions and expected concepts."""
         raw_questions = self._read_json("interview_questions.json")
-        raw_answers = {item["id"]: item.get("expected_answer") for item in self._read_json("expected_answers.json")}
+        raw_answers = {
+            item["id"]: item.get("expected_answer")
+            for item in self._read_json("expected_answers.json")
+        }
 
         samples = []
         for q in raw_questions:

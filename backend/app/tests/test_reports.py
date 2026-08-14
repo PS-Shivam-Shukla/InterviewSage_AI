@@ -31,7 +31,9 @@ def _create_test_user(db: Session, email_suffix: str) -> tuple[User, str]:
     return user, token
 
 
-def _create_completed_interview_with_report(db: Session, user_id: str) -> tuple[Interview, InterviewReport]:
+def _create_completed_interview_with_report(
+    db: Session, user_id: str
+) -> tuple[Interview, InterviewReport]:
     resume = Resume(
         id=str(uuid.uuid4()),
         user_id=user_id,

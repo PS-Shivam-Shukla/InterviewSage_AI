@@ -113,7 +113,9 @@ class MemoryRepository:
     def get_skill_progress(self, candidate_id: str, skill_name: str) -> SkillProgress | None:
         return (
             self.db.query(SkillProgress)
-            .filter(SkillProgress.candidate_id == candidate_id, SkillProgress.skill_name == skill_name)
+            .filter(
+                SkillProgress.candidate_id == candidate_id, SkillProgress.skill_name == skill_name
+            )
             .first()
         )
 
@@ -144,7 +146,7 @@ class MemoryRepository:
             prev_score = prog.current_score
             n = prog.total_evaluations + 1
             new_avg = round(((prog.average_score * prog.total_evaluations) + score) / n, 2)
-            
+
             # Trend calculation
             if score > prev_score + 2.0:
                 trend = "IMPROVING"
@@ -191,7 +193,9 @@ class MemoryRepository:
         return (
             self.db.query(LearningRecommendation)
             .filter(LearningRecommendation.candidate_id == candidate_id)
-            .order_by(LearningRecommendation.week_number.asc(), LearningRecommendation.priority.asc())
+            .order_by(
+                LearningRecommendation.week_number.asc(), LearningRecommendation.priority.asc()
+            )
             .all()
         )
 

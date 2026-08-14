@@ -80,7 +80,12 @@ _STANDARDS: dict[str, dict[str, Any]] = {
     },
     "ml-engineer": {
         "core_skills": ["Python", "PyTorch/TensorFlow", "Scikit-learn", "SQL", "Statistics"],
-        "advanced_skills": ["MLOps", "Feature Engineering", "Model Serving", "Distributed Training"],
+        "advanced_skills": [
+            "MLOps",
+            "Feature Engineering",
+            "Model Serving",
+            "Distributed Training",
+        ],
         "industry_tools": ["PyTorch", "Scikit-learn", "MLflow", "Docker", "Kubernetes"],
         "seniority_expectations": {
             "JUNIOR": "Implements models from research papers, familiar with ML lifecycle",

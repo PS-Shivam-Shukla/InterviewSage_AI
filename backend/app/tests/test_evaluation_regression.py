@@ -128,7 +128,11 @@ def test_technical_question_valid_explanation():
             "question_type": "technical",
             "round_type": "TECHNICAL",
         },
-        "answers": [{"answer_text": "FastAPI uses Depends() to inject shared services like DB sessions into route handlers."}],
+        "answers": [
+            {
+                "answer_text": "FastAPI uses Depends() to inject shared services like DB sessions into route handlers."
+            }
+        ],
         "profile_summary": {"calibrated_seniority": "MID"},
     }
     res = agent(state)
@@ -154,7 +158,11 @@ def test_hr_question_behavioral_evaluation():
             "question_type": "hr",
             "round_type": "HR",
         },
-        "answers": [{"answer_text": "We disagreed on DB schema design. I scheduled a design review and presented benchmark data."}],
+        "answers": [
+            {
+                "answer_text": "We disagreed on DB schema design. I scheduled a design review and presented benchmark data."
+            }
+        ],
         "profile_summary": {"calibrated_seniority": "SENIOR"},
     }
     res = agent(state)
@@ -170,7 +178,9 @@ def test_system_failure_does_not_fabricate_50_percent():
     assert eval_rec["score"] == 0
     assert eval_rec["needs_human_review"] is True
     assert eval_rec["answer_quality"] == "EVALUATION_UNAVAILABLE"
-    assert eval_rec["feedback"] != "Evaluated based on response structure and key concepts provided."
+    assert (
+        eval_rec["feedback"] != "Evaluated based on response structure and key concepts provided."
+    )
 
 
 def test_fresher_technical_strong_explanation_all_scores_populated():
@@ -195,7 +205,11 @@ def test_fresher_technical_strong_explanation_all_scores_populated():
             "question_type": "technical",
             "round_type": "TECHNICAL",
         },
-        "answers": [{"answer_text": "FastAPI uses Depends() to inject reusable dependency functions into routes automatically."}],
+        "answers": [
+            {
+                "answer_text": "FastAPI uses Depends() to inject reusable dependency functions into routes automatically."
+            }
+        ],
         "profile_summary": {"calibrated_seniority": "FRESHER"},
     }
     res = agent(state)
@@ -228,7 +242,11 @@ def test_junior_technical_clear_but_incorrect():
             "question_type": "technical",
             "round_type": "TECHNICAL",
         },
-        "answers": [{"answer_text": "FastAPI dependency injection is executed as a global middleware pipeline on every incoming HTTP request."}],
+        "answers": [
+            {
+                "answer_text": "FastAPI dependency injection is executed as a global middleware pipeline on every incoming HTTP request."
+            }
+        ],
         "profile_summary": {"calibrated_seniority": "JUNIOR"},
     }
     res = agent(state)
@@ -296,7 +314,11 @@ def test_fresher_technical_hedging_phrases_evaluates_confidence():
             "question_type": "technical",
             "round_type": "TECHNICAL",
         },
-        "answers": [{"answer_text": "I think FastAPI maybe uses something called Depends, but I'm not completely sure how it works."}],
+        "answers": [
+            {
+                "answer_text": "I think FastAPI maybe uses something called Depends, but I'm not completely sure how it works."
+            }
+        ],
         "profile_summary": {"calibrated_seniority": "FRESHER"},
     }
     res = agent(state)

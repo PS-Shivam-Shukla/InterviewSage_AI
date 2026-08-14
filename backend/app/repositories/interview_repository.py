@@ -76,9 +76,7 @@ class InterviewPlanRepository(Repository[InterviewPlan]):
     def get_by_interview(self, interview_id: str) -> InterviewPlan | None:
         """Get interview plan for an interview."""
         return (
-            self.db.query(InterviewPlan)
-            .filter(InterviewPlan.interview_id == interview_id)
-            .first()
+            self.db.query(InterviewPlan).filter(InterviewPlan.interview_id == interview_id).first()
         )
 
 
@@ -141,17 +139,9 @@ class InterviewAnswerRepository(Repository[InterviewAnswer]):
         )
         results = []
         for q in questions:
-            ans = (
-                self.db.query(InterviewAnswer)
-                .filter(InterviewAnswer.question_id == q.id)
-                .first()
-            )
+            ans = self.db.query(InterviewAnswer).filter(InterviewAnswer.question_id == q.id).first()
             if ans:
-                ev = (
-                    self.db.query(Evaluation)
-                    .filter(Evaluation.answer_id == ans.id)
-                    .first()
-                )
+                ev = self.db.query(Evaluation).filter(Evaluation.answer_id == ans.id).first()
                 eval_dict = {}
                 if ev:
                     try:
@@ -166,13 +156,15 @@ class InterviewAnswerRepository(Repository[InterviewAnswer]):
                     else:
                         eval_dict = {"score": ev.score, "reasoning": ev.feedback}
 
-                results.append({
-                    "question_id": q.id,
-                    "question_text": q.question_text,
-                    "candidate_answer": ans.answer_text,
-                    "evaluation": eval_dict,
-                    "timestamp": ans.created_at.isoformat() if ans.created_at else None,
-                })
+                results.append(
+                    {
+                        "question_id": q.id,
+                        "question_text": q.question_text,
+                        "candidate_answer": ans.answer_text,
+                        "evaluation": eval_dict,
+                        "timestamp": ans.created_at.isoformat() if ans.created_at else None,
+                    }
+                )
         return results
 
 
@@ -184,11 +176,7 @@ class EvaluationRepository(Repository[Evaluation]):
 
     def get_by_answer(self, answer_id: str) -> Evaluation | None:
         """Get evaluation for an answer."""
-        return (
-            self.db.query(Evaluation)
-            .filter(Evaluation.answer_id == answer_id)
-            .first()
-        )
+        return self.db.query(Evaluation).filter(Evaluation.answer_id == answer_id).first()
 
 
 class InterviewReportRepository(Repository[InterviewReport]):

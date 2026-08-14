@@ -12,31 +12,24 @@ def test_negative_constraint_contract():
     # Negative constraint passes when no forbidden keyword is present
     res1 = NegativeConstraintContract.validate(
         "Explain Python asyncio event loops and coroutine task scheduling.",
-        ["React", "Vue", "Frontend"]
+        ["React", "Vue", "Frontend"],
     )
     assert res1.is_valid is True
     assert len(res1.violations) == 0
 
     # Negative constraint fails when forbidden keyword 'React' is present
     res2 = NegativeConstraintContract.validate(
-        "How do you build a React 19 component using hooks?",
-        ["React", "Vue", "Frontend"]
+        "How do you build a React 19 component using hooks?", ["React", "Vue", "Frontend"]
     )
     assert res2.is_valid is False
     assert "React" in res2.violations
 
 
 def test_blueprint_constraint_contract():
-    valid_bp = {
-        "total_questions": 2,
-        "blueprint_items": [{"seq": 1}, {"seq": 2}]
-    }
+    valid_bp = {"total_questions": 2, "blueprint_items": [{"seq": 1}, {"seq": 2}]}
     assert BlueprintConstraintContract.validate(valid_bp).is_valid is True
 
-    invalid_bp = {
-        "total_questions": 5,
-        "blueprint_items": [{"seq": 1}]
-    }
+    invalid_bp = {"total_questions": 5, "blueprint_items": [{"seq": 1}]}
     assert BlueprintConstraintContract.validate(invalid_bp).is_valid is False
 
 

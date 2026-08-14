@@ -63,7 +63,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         # Extract X-Request-ID header or generate a new UUID
         request_id = request.headers.get("X-Request-ID") or f"req-{uuid.uuid4().hex[:12]}"
-        
+
         # Extract user_id or interview_id if present in headers or query
         user_id = request.headers.get("X-User-ID", "")
         interview_id = request.headers.get("X-Interview-ID", "")

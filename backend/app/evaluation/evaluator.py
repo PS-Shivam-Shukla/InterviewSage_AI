@@ -117,7 +117,9 @@ class AIEvaluator:
         passed_count = 0
 
         for sample in samples:
-            res = self.evaluate_sample(sample, prompt_version=prompt_version, model_name=model_name, provider=provider)
+            res = self.evaluate_sample(
+                sample, prompt_version=prompt_version, model_name=model_name, provider=provider
+            )
             results.append(res)
 
             m: EvaluationMetricsResult = res["metrics"]
