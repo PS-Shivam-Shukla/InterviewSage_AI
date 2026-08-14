@@ -6,7 +6,8 @@ Manages graph relationships connecting Candidate -> Interview -> Skill -> Questi
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from sqlalchemy.orm import Session
 
 from app.models.career import KnowledgeGraphEdge, KnowledgeGraphNode
@@ -18,7 +19,7 @@ class KnowledgeGraphEngine:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def add_node(self, node_type: str, label: str, properties: Optional[Dict[str, Any]] = None) -> KnowledgeGraphNode:
+    def add_node(self, node_type: str, label: str, properties: dict[str, Any] | None = None) -> KnowledgeGraphNode:
         node = KnowledgeGraphNode(
             node_type=node_type,
             label=label,
@@ -40,7 +41,7 @@ class KnowledgeGraphEngine:
         self.db.refresh(edge)
         return edge
 
-    def get_candidate_knowledge_subgraph(self, candidate_id: str) -> Dict[str, Any]:
+    def get_candidate_knowledge_subgraph(self, candidate_id: str) -> dict[str, Any]:
         nodes = self.db.query(KnowledgeGraphNode).limit(50).all()
         edges = self.db.query(KnowledgeGraphEdge).limit(50).all()
         return {

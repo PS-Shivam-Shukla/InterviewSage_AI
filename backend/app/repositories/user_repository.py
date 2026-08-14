@@ -2,7 +2,7 @@
 User repository.
 """
 
-from typing import Optional
+
 from sqlalchemy.orm import Session
 
 from app.models import User
@@ -15,6 +15,6 @@ class UserRepository(Repository[User]):
     def __init__(self, db: Session):
         super().__init__(db, User)
 
-    def get_by_email(self, email: str) -> Optional[User]:
+    def get_by_email(self, email: str) -> User | None:
         """Get user by email address."""
         return self.db.query(User).filter(User.email == email).first()

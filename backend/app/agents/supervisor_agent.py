@@ -7,11 +7,10 @@ Does NOT execute LLM calls directly; delegates all domain reasoning to specialis
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
 
 from app.core.logging import get_logger
 from app.graph.state import InterviewState
-from app.schemas.agent_contracts import AgentError, AgentErrorCode, AgentResult
+from app.schemas.agent_contracts import AgentError
 
 logger = get_logger(__name__)
 
@@ -37,7 +36,7 @@ class WorkflowState(str, Enum):
 
 
 # Deterministic state transition table
-ALLOWED_TRANSITIONS: Dict[WorkflowState, Set[WorkflowState]] = {
+ALLOWED_TRANSITIONS: dict[WorkflowState, set[WorkflowState]] = {
     WorkflowState.INITIALIZING: {WorkflowState.RESUME_ANALYSIS, WorkflowState.FAILED},
     WorkflowState.RESUME_ANALYSIS: {WorkflowState.JD_ANALYSIS, WorkflowState.FAILED},
     WorkflowState.JD_ANALYSIS: {WorkflowState.INTERVIEW_PLANNING, WorkflowState.FAILED},
@@ -84,7 +83,7 @@ class SupervisorAgent:
             logger.warning(f"[Supervisor] Unknown workflow state transition: {current_state} -> {next_state}")
             return False
 
-    def validate_prerequisites(self, target_state: str, state: InterviewState) -> Tuple[bool, Optional[str]]:
+    def validate_prerequisites(self, target_state: str, state: InterviewState) -> tuple[bool, str | None]:
         """Validate whether state contains all required data before transitioning to target_state."""
         try:
             target = WorkflowState(target_state)

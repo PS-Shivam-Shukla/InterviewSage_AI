@@ -2,11 +2,10 @@
 Unit and Integration Tests for Transcript Engine & Download Routes (/api/v1/transcripts/*).
 """
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models import User, Interview, Resume, JobDescription
+from app.models import Interview, User
 from app.services import AuthService
 from app.transcript.service import TranscriptService
 

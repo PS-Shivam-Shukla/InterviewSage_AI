@@ -13,9 +13,9 @@ Architecture:
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
-
+from typing import Any
 
 # ─────────────────────────────────────────────────────────────
 # Data structures
@@ -26,9 +26,9 @@ class ToolSchema:
     """Metadata + callable for one registered tool."""
     name: str
     description: str
-    parameters: Dict[str, Any]          # JSON Schema-style parameter spec
+    parameters: dict[str, Any]          # JSON Schema-style parameter spec
     handler: Callable[..., Any]
-    required_params: List[str] = field(default_factory=list)
+    required_params: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -53,7 +53,7 @@ class ToolCallResult:
     tool_name: str
     success: bool
     output: Any
-    error: Optional[str] = None
+    error: str | None = None
     latency_ms: int = 0
 
 
@@ -75,10 +75,10 @@ class MCPServer:
     """
 
     def __init__(self) -> None:
-        self._tools: Dict[str, ToolSchema] = {}
-        self._resources: List[ResourceSchema] = []
-        self._prompts: Dict[str, PromptSchema] = {}
-        self._call_log: List[Dict[str, Any]] = []
+        self._tools: dict[str, ToolSchema] = {}
+        self._resources: list[ResourceSchema] = []
+        self._prompts: dict[str, PromptSchema] = {}
+        self._call_log: list[dict[str, Any]] = []
 
     # ── Tool registry ─────────────────────────────────────────
 
@@ -86,9 +86,9 @@ class MCPServer:
         self,
         name: str,
         description: str,
-        parameters: Dict[str, Any],
+        parameters: dict[str, Any],
         handler: Callable[..., Any],
-        required_params: Optional[List[str]] = None,
+        required_params: list[str] | None = None,
     ) -> None:
         """Register a tool with the server."""
         self._tools[name] = ToolSchema(
@@ -99,7 +99,7 @@ class MCPServer:
             required_params=required_params or [],
         )
 
-    def list_tools(self) -> List[Dict[str, Any]]:
+    def list_tools(self) -> list[dict[str, Any]]:
         """Return discoverable tool schemas (name, description, parameters)."""
         return [
             {
@@ -206,14 +206,14 @@ class MCPServer:
             )
         )
 
-    def list_resources(self) -> List[Dict[str, Any]]:
+    def list_resources(self) -> list[dict[str, Any]]:
         """Return discoverable resource metadata."""
         return [
             {"uri_template": r.uri_template, "description": r.description}
             for r in self._resources
         ]
 
-    def read_resource(self, uri: str) -> Optional[Any]:
+    def read_resource(self, uri: str) -> Any | None:
         """
         Read a resource by its concrete URI.
         Matches against registered URI templates.
@@ -231,14 +231,14 @@ class MCPServer:
         key = f"{name}:{version}"
         self._prompts[key] = PromptSchema(name=name, version=version, template=template)
 
-    def get_prompt(self, name: str, version: str = "v1") -> Optional[str]:
+    def get_prompt(self, name: str, version: str = "v1") -> str | None:
         """Retrieve a prompt template by name and version."""
         schema = self._prompts.get(f"{name}:{version}")
         return schema.template if schema else None
 
     # ── Observability ─────────────────────────────────────────
 
-    def get_call_log(self) -> List[Dict[str, Any]]:
+    def get_call_log(self) -> list[dict[str, Any]]:
         """Return the internal call log for admin/debugging."""
         return list(self._call_log)
 
@@ -251,7 +251,7 @@ class MCPServer:
 # URI template matching helper
 # ─────────────────────────────────────────────────────────────
 
-def _match_uri(template: str, uri: str) -> Optional[Dict[str, str]]:
+def _match_uri(template: str, uri: str) -> dict[str, str] | None:
     """
     Match a concrete URI against a template with {variable} placeholders.
 
@@ -266,7 +266,7 @@ def _match_uri(template: str, uri: str) -> Optional[Dict[str, str]]:
     if len(t_parts) != len(u_parts):
         return None
 
-    variables: Dict[str, str] = {}
+    variables: dict[str, str] = {}
     for t_seg, u_seg in zip(t_parts, u_parts):
         if t_seg.startswith("{") and t_seg.endswith("}"):
             variables[t_seg[1:-1]] = u_seg

@@ -1,9 +1,7 @@
-import json
-from datetime import datetime, timezone
-from sqlalchemy.orm import Session
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
-from app.models.interview import Interview, InterviewQuestion, InterviewAnswer, Evaluation, AgentLog
+from app.models.interview import Evaluation, InterviewAnswer, InterviewQuestion
 from app.services.interview_service import InterviewService
 
 

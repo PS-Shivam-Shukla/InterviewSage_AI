@@ -7,14 +7,13 @@ Every recommendation MUST cite the specific question/answer that exposed the gap
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import List, Optional
+
 from pydantic import BaseModel, Field, model_validator
 
 from app.agents.base import BaseAgent
 from app.core.llm_client import LLMClient
 from app.graph.state import InterviewState
-from app.prompts.loader import get_system_prompt, get_developer_prompt
-
+from app.prompts.loader import get_developer_prompt, get_system_prompt
 
 # ── Output schema ─────────────────────────────────────────────
 
@@ -27,11 +26,11 @@ class CoachingItem(BaseModel):
 
 
 class CoachingPlanOutput(BaseModel):
-    items: List[CoachingItem]
+    items: list[CoachingItem]
     partial_data: bool = False
 
     @model_validator(mode="after")
-    def has_specific_citations(self) -> "CoachingPlanOutput":
+    def has_specific_citations(self) -> CoachingPlanOutput:
         for item in self.items:
             if len(item.specific_gap_description) < 20:
                 raise ValueError(
@@ -63,7 +62,7 @@ class CareerCoachAgent(BaseAgent):
     def _temperature(self) -> float:
         return 0.4
 
-    def _run(self, state: InterviewState, retry_feedback: Optional[str] = None) -> dict:
+    def _run(self, state: InterviewState, retry_feedback: str | None = None) -> dict:
         evaluations    = state.get("evaluations") or []
         questions      = state.get("questions_asked") or []
         answers        = state.get("answers") or []

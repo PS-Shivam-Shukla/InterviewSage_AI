@@ -5,12 +5,12 @@ Verifies Request Correlation IDs, Structured JSON Logging, Prometheus Metrics, a
 
 import json
 import logging
-import pytest
+
 from fastapi.testclient import TestClient
 
 from app.core.logging import StructuredFormatter
 from app.core.metrics import GRAPH_EXECUTION_SECONDS, INTERVIEW_REQUESTS_TOTAL
-from app.core.request_context import get_request_id, set_request_context
+from app.core.request_context import set_request_context
 from app.main import app
 
 client = TestClient(app)

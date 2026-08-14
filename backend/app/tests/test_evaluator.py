@@ -3,12 +3,11 @@ Unit and Integration Tests for AIEvaluator Subsystem.
 Verifies evaluation suite execution, DB persistence, and sample scoring using explicit FakeAIGateway double.
 """
 
-import pytest
 from sqlalchemy.orm import Session
 
-from app.evaluation.evaluator import AIEvaluator
 from app.evaluation.datasets import EvaluationSample
-from app.models.evaluation import EvaluationRun, EvaluationResult
+from app.evaluation.evaluator import AIEvaluator
+from app.models.evaluation import EvaluationResult, EvaluationRun
 from app.tests.fakes.fake_gateway import FakeAIGateway
 
 

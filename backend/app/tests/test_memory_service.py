@@ -2,12 +2,11 @@
 Unit and Integration Tests for MemoryService, MemoryRepository, & MemorySummarizer.
 """
 
-import pytest
 from sqlalchemy.orm import Session
 
 from app.memory.schemas import CandidateMemoryCreate
 from app.memory.service import MemoryService
-from app.models import User, Interview
+from app.models import Interview, User
 
 
 def test_memory_service_profile_creation_and_update(db_session: Session, sample_user: User):

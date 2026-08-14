@@ -7,7 +7,9 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from collections.abc import AsyncGenerator
+from typing import Any
+
 from sqlalchemy.orm import Session
 
 from app.ai.gateway import AIGateway
@@ -22,12 +24,12 @@ logger = get_logger(__name__)
 class AudioStreamingService:
     """Manages full bi-directional audio streaming session for live voice interviews."""
 
-    def __init__(self, db: Optional[Session] = None) -> None:
+    def __init__(self, db: Session | None = None) -> None:
         self.db = db
         self.stt = FasterWhisperSTTService()
         self.tts = KokoroTTSService()
         self.gateway = AIGateway()
-        self._buffers: Dict[str, bytearray] = {}
+        self._buffers: dict[str, bytearray] = {}
 
     def buffer_audio_chunk(self, session_id: str, chunk: bytes) -> int:
         """Buffer incoming audio chunk for session."""
@@ -44,8 +46,8 @@ class AudioStreamingService:
             self._buffers[session_id].clear()
 
     def process_candidate_audio_turn(
-        self, session_id: str, audio_bytes: Optional[bytes] = None
-    ) -> Dict[str, Any]:
+        self, session_id: str, audio_bytes: bytes | None = None
+    ) -> dict[str, Any]:
         """
         Process candidate audio input: STT -> LLM response -> TTS audio output.
         """
@@ -97,8 +99,8 @@ class AudioStreamingService:
         }
 
     def process_voice_turn_orchestrated(
-        self, session_id: str, db: Session, audio_bytes: Optional[bytes] = None
-    ) -> Dict[str, Any]:
+        self, session_id: str, db: Session, audio_bytes: bytes | None = None
+    ) -> dict[str, Any]:
         """
         Orchestrates full voice turn pipeline with persistence:
         1. Validates audio buffer (empty audio -> error).
@@ -128,8 +130,8 @@ class AudioStreamingService:
 
         # 2. Evaluation & Persistence via InterviewService
         from app.services.interview_service import InterviewService
-        from app.transcript.service import TranscriptService
         from app.speech.analytics import VoiceAnalyticsService
+        from app.transcript.service import TranscriptService
 
         interview_service = InterviewService(db)
         interview_obj = interview_service.get_interview(session_id)

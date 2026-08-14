@@ -4,11 +4,9 @@ Persists low-confidence AI evaluation reviews and recruiter qualitative feedback
 """
 
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
-from sqlalchemy import Column, Float, ForeignKey, Integer, String, Text, DateTime
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, DateTime, Float, String, Text
 
 from app.models.base import Base
 
@@ -25,8 +23,8 @@ class ReviewQueue(Base):
     reason = Column(String(255), nullable=False, default="Low confidence evaluation score")
     assigned_admin = Column(String(100), nullable=True, index=True)
     status = Column(String(50), nullable=False, default="PENDING", index=True)  # PENDING | IN_REVIEW | APPROVED | REJECTED
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), nullable=False)
 
 
 class RecruiterFeedback(Base):
@@ -40,4 +38,4 @@ class RecruiterFeedback(Base):
     recruiter_id = Column(String(100), nullable=False, index=True)
     rating_action = Column(String(50), nullable=False)  # APPROVE | REJECT | NEEDS_REVIEW
     comment = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)

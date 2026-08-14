@@ -2,16 +2,15 @@
 Unit and integration tests for AI Kernel & DISE components.
 """
 
-import pytest
 
-from app.strategy.classifier import CandidateClassifier
-from app.strategy.blueprint_generator import BlueprintGenerator
-from app.strategy.difficulty_engine import DifficultyEngine
-from app.kernel.prompt_manager import PromptManager
+from app.graph.workflow_master import build_master_workflow
+from app.kernel.context_builder import ContextBuilder
 from app.kernel.guardrails import Guardrails
 from app.kernel.model_router import ModelRouter
-from app.kernel.context_builder import ContextBuilder
-from app.graph.workflow_master import build_master_workflow
+from app.kernel.prompt_manager import PromptManager
+from app.strategy.blueprint_generator import BlueprintGenerator
+from app.strategy.classifier import CandidateClassifier
+from app.strategy.difficulty_engine import DifficultyEngine
 
 
 def test_candidate_classifier():

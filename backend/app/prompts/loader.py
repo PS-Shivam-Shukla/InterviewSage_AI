@@ -4,10 +4,9 @@ Loads versioned prompt modules by agent name and version string.
 """
 
 import importlib
-from typing import Optional
 
 
-def load_prompt(agent_name: str, version: str = "v1") -> Optional[object]:
+def load_prompt(agent_name: str, version: str = "v1") -> object | None:
     """
     Load a prompt module for the given agent and version.
 

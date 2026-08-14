@@ -4,14 +4,10 @@ Verifies that the interview page and backend endpoints dynamically output the ta
 and never hardcode 'Senior Software Engineer Interview'.
 """
 
-import pytest
 from app.models.job_description import JobDescription
-from app.models.interview import Interview
+from app.models.resume import Resume
 from app.services.interview_service import InterviewService
 from app.services.report_service import ReportService
-
-
-from app.models.resume import Resume
 
 
 def test_1_jd_role_senior_python_developer(db_session):

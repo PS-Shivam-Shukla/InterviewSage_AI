@@ -12,17 +12,17 @@ Implements:
 from __future__ import annotations
 
 import random
-import time
 import re
-from typing import List, Optional
-from pydantic import BaseModel, Field, field_validator
+import time
+
+from pydantic import BaseModel, field_validator
 
 from app.agents.base import BaseAgent
 from app.core.llm_client import LLMClient
 from app.core.logging import get_logger
 from app.graph.state import InterviewState
 from app.mcp import mcp_server
-from app.prompts.loader import get_system_prompt, get_developer_prompt
+from app.prompts.loader import get_developer_prompt, get_system_prompt
 
 logger = get_logger(__name__)
 
@@ -175,7 +175,7 @@ class QuestionGeneratorAgent(BaseAgent):
     def _temperature(self) -> float:
         return 0.6   # variety in questions
 
-    def _run(self, state: InterviewState, retry_feedback: Optional[str] = None) -> dict:
+    def _run(self, state: InterviewState, retry_feedback: str | None = None) -> dict:
         t_attempt_start = time.monotonic()
         resume_data   = state.get("resume_data") or {}
         jd_data       = state.get("jd_data") or {}

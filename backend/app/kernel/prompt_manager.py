@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
 import re
+from typing import Any
 
 # Fallback default prompt templates for core system nodes
 DEFAULT_PROMPTS: dict[str, dict[str, str]] = {

@@ -4,7 +4,8 @@ Pydantic Schemas for AI Career Intelligence Subsystem.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -13,9 +14,9 @@ class HiringPredictionResponse(BaseModel):
     hire_probability: float = Field(..., description="Hire probability 0.0 - 100.0%")
     confidence_score: float = Field(..., description="AI confidence score 0.0 - 100.0%")
     outcome: str = Field(..., description="Hire | Borderline | Reject")
-    key_reasons: List[str] = Field(default_factory=list)
-    strengths: List[str] = Field(default_factory=list)
-    drawbacks: List[str] = Field(default_factory=list)
+    key_reasons: list[str] = Field(default_factory=list)
+    strengths: list[str] = Field(default_factory=list)
+    drawbacks: list[str] = Field(default_factory=list)
 
 
 class BenchmarkCategoryDetail(BaseModel):
@@ -29,7 +30,7 @@ class BenchmarkCategoryDetail(BaseModel):
 class IndustryBenchmarkResponse(BaseModel):
     candidate_id: str
     overall_percentile: float
-    categories: List[BenchmarkCategoryDetail]
+    categories: list[BenchmarkCategoryDetail]
 
 
 class CompanyProfileResponse(BaseModel):
@@ -38,7 +39,7 @@ class CompanyProfileResponse(BaseModel):
     coding_weight: float
     system_design_weight: float
     behavioral_weight: float
-    key_principles: List[str]
+    key_principles: list[str]
 
 
 class AdaptiveStartRequest(BaseModel):
@@ -72,20 +73,20 @@ class AdaptiveNextQuestionResponse(BaseModel):
 class SkillGapItem(BaseModel):
     topic: str
     severity: str
-    missing_concepts: List[str]
+    missing_concepts: list[str]
 
 
 class SkillGapResponse(BaseModel):
     candidate_id: str
     total_gaps: int
-    gaps: List[SkillGapItem]
+    gaps: list[SkillGapItem]
 
 
 class CareerRoadmapResponse(BaseModel):
     candidate_id: str
-    daily_plan: List[Dict[str, Any]]
-    weekly_plan: List[Dict[str, Any]]
-    monthly_plan: List[Dict[str, Any]]
+    daily_plan: list[dict[str, Any]]
+    weekly_plan: list[dict[str, Any]]
+    monthly_plan: list[dict[str, Any]]
 
 
 class InterviewAnnotationItem(BaseModel):
@@ -97,13 +98,13 @@ class InterviewAnnotationItem(BaseModel):
 class InterviewReplayResponse(BaseModel):
     interview_id: str
     total_annotations: int
-    annotations: List[InterviewAnnotationItem]
+    annotations: list[InterviewAnnotationItem]
 
 
 class RecruiterInsightsResponse(BaseModel):
     interview_id: str
     recommendation: str
     ai_confidence: float
-    primary_rejection_factors: List[str]
+    primary_rejection_factors: list[str]
     highest_impact_round: str
-    recommended_improvements: List[str]
+    recommended_improvements: list[str]

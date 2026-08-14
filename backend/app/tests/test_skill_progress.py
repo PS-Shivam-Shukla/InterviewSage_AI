@@ -2,7 +2,6 @@
 Unit and Integration Tests for Skill Progress & Longitudinal Trend Tracking.
 """
 
-import pytest
 from sqlalchemy.orm import Session
 
 from app.memory.repository import MemoryRepository

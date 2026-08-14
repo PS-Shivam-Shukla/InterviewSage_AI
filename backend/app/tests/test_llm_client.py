@@ -2,12 +2,11 @@
 LLM Client unit tests — all tests use FakeLLMClient (zero real API calls).
 """
 
-import pytest
-from pydantic import BaseModel
 from langchain_core.messages import HumanMessage, SystemMessage
+from pydantic import BaseModel
 
 from app.core.llm_client import FakeLLMClient, LLMClient
-from app.prompts.loader import get_system_prompt, get_developer_prompt, load_prompt
+from app.prompts.loader import get_developer_prompt, get_system_prompt, load_prompt
 
 
 class SampleOutput(BaseModel):

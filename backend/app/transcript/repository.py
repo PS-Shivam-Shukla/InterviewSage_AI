@@ -4,8 +4,6 @@ Transcript Repository — SQL CRUD layer for live sessions, conversation turns, 
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.models.voice import (
@@ -38,10 +36,10 @@ class TranscriptRepository:
             self.db.refresh(session)
         return session
 
-    def get_live_session(self, session_id: str) -> Optional[LiveSession]:
+    def get_live_session(self, session_id: str) -> LiveSession | None:
         return self.db.query(LiveSession).filter(LiveSession.id == session_id).first()
 
-    def list_active_sessions(self) -> List[LiveSession]:
+    def list_active_sessions(self) -> list[LiveSession]:
         return (
             self.db.query(LiveSession)
             .filter(LiveSession.status.in_(["ACTIVE", "IN_PROGRESS"]))
@@ -79,7 +77,7 @@ class TranscriptRepository:
         self.db.refresh(turn)
         return turn
 
-    def list_turns(self, session_id: str) -> List[ConversationTurn]:
+    def list_turns(self, session_id: str) -> list[ConversationTurn]:
         return (
             self.db.query(ConversationTurn)
             .filter(ConversationTurn.session_id == session_id)
@@ -126,7 +124,7 @@ class TranscriptRepository:
         self.db.refresh(export)
         return export
 
-    def get_transcript_by_interview(self, interview_id: str) -> Optional[TranscriptExport]:
+    def get_transcript_by_interview(self, interview_id: str) -> TranscriptExport | None:
         return (
             self.db.query(TranscriptExport)
             .filter(TranscriptExport.interview_id == interview_id)
@@ -134,7 +132,7 @@ class TranscriptRepository:
             .first()
         )
 
-    def get_voice_metrics(self, session_id: str) -> Optional[VoiceMetrics]:
+    def get_voice_metrics(self, session_id: str) -> VoiceMetrics | None:
         return (
             self.db.query(VoiceMetrics)
             .filter(VoiceMetrics.session_id == session_id)

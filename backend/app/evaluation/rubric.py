@@ -6,7 +6,6 @@ Defines scoring criteria for Technical, Behavioral, and Executive evaluation typ
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List
 
 
 @dataclass
@@ -19,11 +18,11 @@ class RubricCriterion:
 class EvaluationRubric:
     """Base evaluation rubric containing criteria and weights."""
 
-    def __init__(self, name: str, criteria: List[RubricCriterion]) -> None:
+    def __init__(self, name: str, criteria: list[RubricCriterion]) -> None:
         self.name = name
         self.criteria = criteria
 
-    def score(self, scores: Dict[str, float]) -> float:
+    def score(self, scores: dict[str, float]) -> float:
         """Calculate weighted composite score from component scores dict."""
         total_score = 0.0
         total_weight = 0.0

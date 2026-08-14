@@ -5,7 +5,6 @@ Generates structured daily, weekly, and monthly action plans for candidate skill
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
 from sqlalchemy.orm import Session
 
 from app.career.schemas import CareerRoadmapResponse

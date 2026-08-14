@@ -4,7 +4,8 @@ Admin Review Subsystem Wrapper.
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any
+
 from sqlalchemy.orm import Session
 
 from app.review.service import ReviewService
@@ -16,13 +17,13 @@ class AdminReviewManager:
     def __init__(self, db: Session) -> None:
         self.service = ReviewService(db)
 
-    def get_queue(self, status: Optional[str] = None) -> List[Any]:
+    def get_queue(self, status: str | None = None) -> list[Any]:
         return self.service.get_queue(status=status)
 
-    def update_status(self, review_id: str, status: str, admin_id: Optional[str] = None) -> Any:
+    def update_status(self, review_id: str, status: str, admin_id: str | None = None) -> Any:
         return self.service.process_review(review_id=review_id, status=status, admin_id=admin_id)
 
-    def submit_feedback(self, interview_id: str, recruiter_id: str, rating_action: str, question_id: Optional[str] = None, comment: Optional[str] = None) -> Any:
+    def submit_feedback(self, interview_id: str, recruiter_id: str, rating_action: str, question_id: str | None = None, comment: str | None = None) -> Any:
         return self.service.record_feedback(
             interview_id=interview_id,
             recruiter_id=recruiter_id,

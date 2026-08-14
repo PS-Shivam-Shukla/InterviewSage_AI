@@ -8,15 +8,24 @@ Phase 1 - Sprint 3 Tests:
 """
 
 import uuid
+
 import pytest
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.core.database import build_engine
 from app.mcp import mcp_server
 from app.mcp.tools.score_answer_rubric import score_answer_rubric
-from app.models import User, Resume, JobDescription, Interview, InterviewQuestion, InterviewAnswer, Evaluation, AgentLog
-from app.services.interview_service import InterviewService, master_workflow
+from app.models import (
+    AgentLog,
+    Evaluation,
+    Interview,
+    InterviewAnswer,
+    InterviewQuestion,
+    JobDescription,
+    Resume,
+    User,
+)
+from app.services.interview_service import InterviewService
 
 
 def test_mcp_score_answer_rubric_aligned_contract():

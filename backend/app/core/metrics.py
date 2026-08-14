@@ -6,8 +6,7 @@ and Real-Time Voice Engine metrics.
 
 from __future__ import annotations
 
-from typing import Any
-from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 from starlette.responses import Response
 
 # ── PROMETHEUS METRIC DEFINITIONS ────────────────────────────────

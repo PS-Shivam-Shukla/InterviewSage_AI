@@ -2,12 +2,11 @@
 Unit and Integration Tests for SkillGapAnalyzer & CareerRoadmapGenerator.
 """
 
-import pytest
 from sqlalchemy.orm import Session
 
 from app.career.roadmap import CareerRoadmapGenerator
 from app.career.skill_gap import SkillGapAnalyzer
-from app.models import User, SkillProgress
+from app.models import SkillProgress, User
 
 
 def test_skill_gap_analyzer(db_session: Session, sample_user: User):

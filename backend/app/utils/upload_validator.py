@@ -9,7 +9,9 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
+
 from fastapi import HTTPException, UploadFile, status
+
 from app.core.config import settings
 
 ALLOWED_MIME_TYPES = {

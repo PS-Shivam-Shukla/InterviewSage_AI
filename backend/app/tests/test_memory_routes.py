@@ -3,7 +3,6 @@ Integration Tests for Candidate Memory API Routes (/api/v1/memory/*).
 Validates ownership authorization, CRUD, skill progression, recommendations, and memory compression.
 """
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 

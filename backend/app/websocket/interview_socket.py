@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Dict, Optional
+
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.orm import Session
 
@@ -23,7 +23,6 @@ from app.core.metrics import (
     VOICE_REQUESTS_TOTAL,
 )
 from app.core.security import extract_token_from_header
-from app.repositories import InterviewRepository
 from app.services import AuthService
 from app.speech.analytics import VoiceAnalyticsService
 from app.speech.streaming import AudioStreamingService
@@ -37,7 +36,7 @@ class VoiceConnectionManager:
     """Manages active voice WebSocket connections with reconnect and broadcast support."""
 
     def __init__(self):
-        self.active_sockets: Dict[str, WebSocket] = {}
+        self.active_sockets: dict[str, WebSocket] = {}
 
     async def connect(self, session_id: str, websocket: WebSocket):
         await websocket.accept()
@@ -74,7 +73,7 @@ voice_manager = VoiceConnectionManager()
 async def voice_interview_websocket(
     websocket: WebSocket,
     session_id: str,
-    token: Optional[str] = Query(None),
+    token: str | None = Query(None),
     db: Session = Depends(get_db),
 ):
     """
@@ -121,7 +120,7 @@ async def voice_interview_websocket(
                 break
 
             # Handle Binary Audio Chunk
-            if "bytes" in message and message["bytes"]:
+            if message.get("bytes"):
                 chunk = message["bytes"]
                 streaming_service.buffer_audio_chunk(session_id, chunk)
                 await voice_manager.send_json(
@@ -130,7 +129,7 @@ async def voice_interview_websocket(
                 )
 
             # Handle Text / JSON Control Messages
-            elif "text" in message and message["text"]:
+            elif message.get("text"):
                 try:
                     payload = json.loads(message["text"])
                     event_type = payload.get("event", "PING")

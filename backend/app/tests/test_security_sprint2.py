@@ -6,14 +6,14 @@ Phase 1 - Sprint 2 Security Audit Tests:
 """
 
 import uuid
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models import User, Resume, JobDescription, Interview
-from app.services import AuthService
 from app.core.config import settings
-
+from app.models import Interview, JobDescription, Resume, User
+from app.services import AuthService
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -119,9 +119,8 @@ def test_user_a_cannot_access_user_b_job_description(client: TestClient, db_sess
 
 def test_websocket_missing_token(client: TestClient, db_session: Session):
     """Verify WebSocket connection rejected when token is missing."""
-    with pytest.raises(Exception):
-        with client.websocket_connect("/api/v1/ws/interviews/some-id"):
-            pass
+    with pytest.raises(Exception), client.websocket_connect("/api/v1/ws/interviews/some-id"):
+        pass
 
 
 def test_websocket_invalid_token(client: TestClient, db_session: Session):

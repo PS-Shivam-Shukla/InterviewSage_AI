@@ -4,9 +4,9 @@ Loads and validates environment variables using Pydantic BaseSettings.
 Strict enterprise security validation enforced at startup.
 """
 
-from typing import List, Optional
-from pydantic_settings import BaseSettings, SettingsConfigDict
+
 from pydantic import Field, field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Known weak / placeholder secret patterns to reject
 REJECTED_SECRET_PATTERNS = [
@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     ollama_base_url: str = Field(
         default="http://localhost:11434", alias="OLLAMA_BASE_URL"
     )
-    llm_api_key: Optional[str] = Field(default="local-ollama-key", alias="LLM_API_KEY")
+    llm_api_key: str | None = Field(default="local-ollama-key", alias="LLM_API_KEY")
     llm_temperature: float = Field(default=0.4, alias="LLM_TEMPERATURE")
     llm_max_tokens: int = Field(default=2000, alias="LLM_MAX_TOKENS")
     llm_fallback_model: str = Field(
@@ -93,7 +93,7 @@ class Settings(BaseSettings):
     )
 
     @property
-    def cors_origins_list(self) -> List[str]:
+    def cors_origins_list(self) -> list[str]:
         """Parse CORS origins from comma-separated string to list."""
         if isinstance(self.cors_origins, str):
             return [origin.strip() for origin in self.cors_origins.split(",")]

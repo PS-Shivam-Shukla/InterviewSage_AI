@@ -4,10 +4,9 @@ Persists prompt versioning metadata, LLM request execution traces, response snap
 """
 
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, String, Text, DateTime
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
@@ -25,7 +24,7 @@ class PromptVersion(Base):
     user_template = Column(Text, nullable=False)
     description = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True, index=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
 
 class LLMRequest(Base):
@@ -47,7 +46,7 @@ class LLMRequest(Base):
     cost_usd = Column(Float, default=0.0)
     success = Column(Boolean, default=True)
     error_message = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
     responses = relationship("LLMResponse", back_populates="llm_request", cascade="all, delete-orphan")
 
@@ -63,7 +62,7 @@ class LLMResponse(Base):
     parsed_output = Column(Text, nullable=True)
     retry_count = Column(Integer, default=0)
     repair_performed = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
     llm_request = relationship("LLMRequest", back_populates="responses")
 
@@ -82,4 +81,4 @@ class TokenUsage(Base):
     completion_tokens = Column(Integer, default=0)
     total_tokens = Column(Integer, default=0)
     estimated_cost_usd = Column(Float, default=0.0)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)

@@ -4,8 +4,6 @@ Analytics & Admin Operations Pydantic Schemas.
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -40,13 +38,13 @@ class LiveInterviewItem(BaseModel):
 class TimelineStep(BaseModel):
     step_number: int
     event_type: str  # QUESTION | ANSWER | EVALUATION | AGENT_LOG | CHECKPOINT
-    timestamp: Optional[str] = None
-    question_text: Optional[str] = None
-    candidate_answer: Optional[str] = None
-    score: Optional[float] = None
-    reasoning: Optional[str] = None
-    next_agent: Optional[str] = None
-    checkpoint_id: Optional[str] = None
+    timestamp: str | None = None
+    question_text: str | None = None
+    candidate_answer: str | None = None
+    score: float | None = None
+    reasoning: str | None = None
+    next_agent: str | None = None
+    checkpoint_id: str | None = None
 
 
 class InterviewTimelineResponse(BaseModel):
@@ -54,31 +52,31 @@ class InterviewTimelineResponse(BaseModel):
     candidate_name: str
     job_title: str
     current_stage: str
-    timeline: List[TimelineStep] = Field(default_factory=list)
+    timeline: list[TimelineStep] = Field(default_factory=list)
 
 
 class PromptHistoryItem(BaseModel):
     prompt_key: str
     version: str
-    created_at: Optional[str] = None
+    created_at: str | None = None
     description: str = ""
     is_active: bool = True
-    variables: List[str] = Field(default_factory=list)
+    variables: list[str] = Field(default_factory=list)
 
 
 class RecruiterFeedbackRequest(BaseModel):
     interview_id: str
-    question_id: Optional[str] = None
+    question_id: str | None = None
     rating_action: str  # APPROVE | REJECT | NEEDS_REVIEW
-    comment: Optional[str] = None
+    comment: str | None = None
 
 
 class ReviewQueueItemResponse(BaseModel):
     review_id: str
     interview_id: str
-    response_id: Optional[str] = None
+    response_id: str | None = None
     confidence: float
     reason: str
-    assigned_admin: Optional[str] = None
+    assigned_admin: str | None = None
     status: str
     created_at: str

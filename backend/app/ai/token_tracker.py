@@ -6,14 +6,15 @@ Estimates token usage, calculates cost, records Prometheus counters, and persist
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
+from typing import Any
+
 from sqlalchemy.orm import Session
 
 from app.ai.cost_tracker import CostTracker
 from app.core.logging import get_logger
 from app.core.metrics import LLM_COST_TOTAL, LLM_TOKENS_TOTAL
-from app.models.llm_audit import LLMRequest, TokenUsage
+from app.models.llm_audit import TokenUsage
 
 logger = get_logger(__name__)
 
@@ -35,11 +36,11 @@ class TokenTracker:
         model_name: str,
         prompt_text: str,
         completion_text: str,
-        db: Optional[Session] = None,
-        interview_id: Optional[str] = None,
-        user_id: Optional[str] = None,
-        prompt_tokens_override: Optional[int] = None,
-        completion_tokens_override: Optional[int] = None,
+        db: Session | None = None,
+        interview_id: str | None = None,
+        user_id: str | None = None,
+        prompt_tokens_override: int | None = None,
+        completion_tokens_override: int | None = None,
     ) -> dict[str, Any]:
         """
         Compute tokens, calculate cost, update metrics, and optionally persist TokenUsage.
@@ -69,7 +70,7 @@ class TokenTracker:
                     completion_tokens=c_tokens,
                     total_tokens=total_tokens,
                     estimated_cost_usd=cost_usd,
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
                 )
                 db.add(usage_record)
                 db.commit()

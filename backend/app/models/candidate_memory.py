@@ -9,10 +9,10 @@ Tables:
 """
 
 import json
-from datetime import datetime, timezone
-from typing import Any, List, Optional
+from datetime import UTC, datetime
+
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, UUIDPrimaryKeyMixin
 
@@ -29,37 +29,37 @@ class CandidateProfile(UUIDPrimaryKeyMixin, Base):
     current_level: Mapped[str] = mapped_column(String(50), nullable=False, default="MID")
     strengths: Mapped[str] = mapped_column(Text, nullable=False, default="[]")  # JSON list
     weaknesses: Mapped[str] = mapped_column(Text, nullable=False, default="[]")  # JSON list
-    summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
         nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )
 
-    def set_skills(self, skills_list: List[str]) -> None:
+    def set_skills(self, skills_list: list[str]) -> None:
         self.skills = json.dumps(skills_list)
 
-    def get_skills(self) -> List[str]:
+    def get_skills(self) -> list[str]:
         return json.loads(self.skills) if self.skills else []
 
-    def set_strengths(self, strengths_list: List[str]) -> None:
+    def set_strengths(self, strengths_list: list[str]) -> None:
         self.strengths = json.dumps(strengths_list)
 
-    def get_strengths(self) -> List[str]:
+    def get_strengths(self) -> list[str]:
         return json.loads(self.strengths) if self.strengths else []
 
-    def set_weaknesses(self, weaknesses_list: List[str]) -> None:
+    def set_weaknesses(self, weaknesses_list: list[str]) -> None:
         self.weaknesses = json.dumps(weaknesses_list)
 
-    def get_weaknesses(self) -> List[str]:
+    def get_weaknesses(self) -> list[str]:
         return json.loads(self.weaknesses) if self.weaknesses else []
 
     def __repr__(self) -> str:
@@ -73,7 +73,7 @@ class CandidateMemory(UUIDPrimaryKeyMixin, Base):
         String(36), ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
-    interview_id: Mapped[Optional[str]] = mapped_column(
+    interview_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("interviews.id", ondelete="SET NULL"),
         nullable=True, index=True
     )
@@ -81,25 +81,25 @@ class CandidateMemory(UUIDPrimaryKeyMixin, Base):
     memory_type: Mapped[str] = mapped_column(String(50), nullable=False, default="EPISODIC")
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     key_topics: Mapped[str] = mapped_column(Text, nullable=False, default="[]")  # JSON list
-    embedding: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON list of floats
+    embedding: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON list of floats
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
         nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )
 
-    def set_topics(self, topics: List[str]) -> None:
+    def set_topics(self, topics: list[str]) -> None:
         self.key_topics = json.dumps(topics)
 
-    def get_topics(self) -> List[str]:
+    def get_topics(self) -> list[str]:
         return json.loads(self.key_topics) if self.key_topics else []
 
     def __repr__(self) -> str:
@@ -126,14 +126,14 @@ class SkillProgress(UUIDPrimaryKeyMixin, Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
         nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )
 
@@ -148,7 +148,7 @@ class LearningRecommendation(UUIDPrimaryKeyMixin, Base):
         String(36), ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
-    interview_id: Mapped[Optional[str]] = mapped_column(
+    interview_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("interviews.id", ondelete="SET NULL"),
         nullable=True
     )
@@ -160,14 +160,14 @@ class LearningRecommendation(UUIDPrimaryKeyMixin, Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
         nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )
 
@@ -189,14 +189,14 @@ class MemorySummary(UUIDPrimaryKeyMixin, Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
         nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )
 

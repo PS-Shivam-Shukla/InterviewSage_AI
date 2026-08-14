@@ -3,9 +3,13 @@ Unit tests for Seniority Evaluation Engine (Section 10.3).
 Verifies deterministic calculations, rubric scoring, guardrails, interval merging, and 5-run reproducibility.
 """
 
-import pytest
 import datetime
-from app.services.seniority_engine import SeniorityEngine, merge_employment_intervals, parse_month_year
+
+from app.services.seniority_engine import (
+    SeniorityEngine,
+    merge_employment_intervals,
+    parse_month_year,
+)
 
 REF_DATE = datetime.date(2026, 8, 10)
 

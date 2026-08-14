@@ -9,11 +9,10 @@ Default provider: Ollama (Qwen 3 Instruct) as specified in Phase 1 Architecture.
 from __future__ import annotations
 
 import time
-from typing import Any, Optional, Type, TypeVar
+from typing import Any, TypeVar
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel
 
 from app.core.config import settings
@@ -89,9 +88,9 @@ class LLMClient:
 
     def __init__(
         self,
-        model_name: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        model_name: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
     ) -> None:
         self._model_name = model_name or settings.llm_model_name
         self._temperature = temperature if temperature is not None else settings.llm_temperature
@@ -128,8 +127,8 @@ class LLMClient:
     def invoke_structured(
         self,
         messages: list[BaseMessage],
-        output_schema: Type[T],
-        retry_feedback: Optional[str] = None,
+        output_schema: type[T],
+        retry_feedback: str | None = None,
     ) -> T:
         """
         Call the model and parse the response into a Pydantic model.
@@ -155,7 +154,7 @@ class LLMClient:
     def build_messages(
         system_prompt: str,
         user_content: str,
-        developer_prompt: Optional[str] = None,
+        developer_prompt: str | None = None,
     ) -> list[BaseMessage]:
         """
         Assemble a message list following the 4-layer prompt architecture:
@@ -178,7 +177,7 @@ class FakeLLMClient(LLMClient):
     real API call. Used across all unit and workflow tests.
     """
 
-    def __init__(self, responses: Optional[list[Any]] = None) -> None:
+    def __init__(self, responses: list[Any] | None = None) -> None:
         self._responses: list[Any] = responses or []
         self._call_index = 0
         self._consecutive_failures = 0
@@ -195,8 +194,8 @@ class FakeLLMClient(LLMClient):
     def invoke_structured(
         self,
         messages: list[BaseMessage],
-        output_schema: Type[T],
-        retry_feedback: Optional[str] = None,
+        output_schema: type[T],
+        retry_feedback: str | None = None,
     ) -> T:
         self._calls.append(messages)
         if self._call_index < len(self._responses):

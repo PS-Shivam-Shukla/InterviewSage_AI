@@ -3,8 +3,7 @@ Unit Tests for ModelRouter Subsystem.
 Verifies task-based model selection, provider overrides, and fallback resolution.
 """
 
-import pytest
-from app.ai.router import ModelRouter, ModelSpec
+from app.ai.router import ModelRouter
 
 
 def test_model_router_task_selection():

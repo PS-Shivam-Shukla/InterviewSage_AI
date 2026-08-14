@@ -3,9 +3,8 @@ Unit Tests for PromptRegistry & JSONValidator Subsystems.
 Verifies prompt versioning, rendering, variable substitution, and JSON validation & repair.
 """
 
-import pytest
 from app.ai.validator import JSONValidator
-from app.prompts.registry import PromptRegistry, PromptTemplateSpec
+from app.prompts.registry import PromptRegistry
 
 
 def test_prompt_registry_get_and_render():

@@ -6,9 +6,12 @@ Verifies:
 2. Unsupported claims without transcript evidence (e.g. hallucinated Kubernetes skills) are flagged as 'unsupported' and corrected/removed in corrected_executive_summary.
 """
 
-import pytest
-from app.graph.report_verification_node import ReportVerificationNode, VerifiedReportOutput, ClaimVerification
 from app.core.llm_client import FakeLLMClient
+from app.graph.report_verification_node import (
+    ClaimVerification,
+    ReportVerificationNode,
+    VerifiedReportOutput,
+)
 
 
 def test_report_verification_supported_claims():

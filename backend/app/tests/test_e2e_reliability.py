@@ -5,12 +5,13 @@ tenant ownership isolation, and completed interview state protection.
 """
 
 import uuid
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
-from app.models import User, Interview, Resume, JobDescription
+from app.models import Interview, JobDescription, Resume, User
 from app.services import AuthService
 from app.services.interview_service import InterviewService
 

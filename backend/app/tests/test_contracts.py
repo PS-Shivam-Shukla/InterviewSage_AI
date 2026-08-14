@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import pytest
 from app.core.contracts import (
-    NegativeConstraintContract,
+    ATSScoreContract,
     BlueprintConstraintContract,
     EvaluationConfidenceContract,
-    ATSScoreContract,
+    NegativeConstraintContract,
 )
 
 

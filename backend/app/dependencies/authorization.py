@@ -8,11 +8,11 @@ from __future__ import annotations
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.models import Interview, Resume, JobDescription
+from app.models import Interview, JobDescription, Resume
 from app.repositories import (
     InterviewRepository,
-    ResumeRepository,
     JobDescriptionRepository,
+    ResumeRepository,
 )
 
 

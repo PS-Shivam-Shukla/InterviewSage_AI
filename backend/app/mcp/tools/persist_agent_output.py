@@ -5,7 +5,7 @@ AgentLogRepository. Every agent calls this after each node execution.
 """
 
 import json
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 def persist_agent_output(
@@ -13,12 +13,12 @@ def persist_agent_output(
     interview_id: str,
     agent_name: str,
     node_status: str,
-    input_snapshot: Dict[str, Any],
-    output_snapshot: Dict[str, Any],
+    input_snapshot: dict[str, Any],
+    output_snapshot: dict[str, Any],
     latency_ms: int = 0,
     retry_count: int = 0,
-    prompt_version: Optional[str] = None,
-) -> Dict[str, Any]:
+    prompt_version: str | None = None,
+) -> dict[str, Any]:
     """
     Persist one agent execution log entry.
 

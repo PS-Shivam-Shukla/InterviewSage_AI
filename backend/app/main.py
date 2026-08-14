@@ -100,7 +100,7 @@ async def health_check():
             db.execute(text("SELECT 1"))
             db_healthy = True
     except Exception as e:
-        logger.error(f"Health check database connection failed: {str(e)}")
+        logger.error(f"Health check database connection failed: {e!s}")
 
     try:
         from app.mcp.server import mcp_server

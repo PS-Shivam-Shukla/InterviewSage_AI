@@ -5,7 +5,8 @@ Produces formatted Markdown scorecards and regression summary reports.
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
+
 from app.evaluation.regression import RegressionComparisonResult
 
 
@@ -13,7 +14,7 @@ class EvaluationReportGenerator:
     """Generates human-readable evaluation scorecards and regression comparison reports."""
 
     @staticmethod
-    def generate_markdown_scorecard(eval_summary: Dict[str, Any]) -> str:
+    def generate_markdown_scorecard(eval_summary: dict[str, Any]) -> str:
         """Generate a formatted Markdown evaluation scorecard."""
         md = f"""# AI Evaluation Scorecard — {eval_summary.get('run_name', 'Run')}
 

@@ -6,7 +6,8 @@ response latency, consecutive streaks, and candidate background.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
+
 from sqlalchemy.orm import Session
 
 from app.models.career import AdaptiveSession, DifficultyHistory
@@ -35,7 +36,7 @@ class AdaptiveDifficultyEngine:
 
     def process_answer_and_adjust(
         self, session_id: str, performance_score: float, response_latency_seconds: float = 0.0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         session = self.db.query(AdaptiveSession).filter(AdaptiveSession.id == session_id).first()
         if not session:
             raise ValueError(f"Adaptive session {session_id} not found.")

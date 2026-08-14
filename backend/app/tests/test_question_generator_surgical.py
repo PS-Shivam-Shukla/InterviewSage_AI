@@ -10,10 +10,12 @@ Verifies:
 7. Existing GeneratedQuestion schema contract compatibility.
 """
 
-import pytest
-from app.agents.question_generator_agent import QuestionGeneratorAgent, GeneratedQuestion
-from app.services.question_relevance_service import QuestionRelevanceService, QuestionRelevanceResult
+from app.agents.question_generator_agent import GeneratedQuestion, QuestionGeneratorAgent
 from app.services.difficulty_policy import QuestionDifficultyPolicy
+from app.services.question_relevance_service import (
+    QuestionRelevanceResult,
+    QuestionRelevanceService,
+)
 
 
 def test_question_generator_schema_contract_compatibility():

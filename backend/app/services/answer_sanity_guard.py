@@ -11,9 +11,8 @@ Rules:
 """
 
 import re
-from typing import Dict, Any, Optional
-from pydantic import BaseModel, Field
 
+from pydantic import BaseModel, Field
 
 # Phrase set for explicit candidate non-answers
 NON_ANSWER_PHRASES = {
@@ -37,7 +36,7 @@ class SanityGuardResult(BaseModel):
 class AnswerSanityGuard:
 
     @classmethod
-    def evaluate(cls, answer_text: Optional[str], round_type: Optional[str] = None) -> SanityGuardResult:
+    def evaluate(cls, answer_text: str | None, round_type: str | None = None) -> SanityGuardResult:
         """
         Deterministically evaluates answer sanity before any LLM processing.
         Allows category-aware evaluation for APTITUDE / numeric / boolean / symbolic answers.

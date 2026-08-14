@@ -4,7 +4,6 @@ Memory Service — High-level business service layer for Candidate Memory & Pers
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.memory.manager import MemoryManager
@@ -32,13 +31,13 @@ class MemoryService:
     def save_memory(self, candidate_id: str, payload: CandidateMemoryCreate) -> CandidateMemoryResponse:
         return self.manager.save_memory(candidate_id, payload)
 
-    def get_timeline(self, candidate_id: str) -> List[CandidateTimelineItem]:
+    def get_timeline(self, candidate_id: str) -> list[CandidateTimelineItem]:
         return self.manager.get_candidate_timeline(candidate_id)
 
-    def get_skills(self, candidate_id: str) -> List[SkillProgressResponse]:
+    def get_skills(self, candidate_id: str) -> list[SkillProgressResponse]:
         return self.manager.get_skill_progression(candidate_id)
 
-    def get_recommendations(self, candidate_id: str) -> List[LearningRecommendationResponse]:
+    def get_recommendations(self, candidate_id: str) -> list[LearningRecommendationResponse]:
         return self.manager.get_recommendations(candidate_id)
 
     def compress_memories(self, candidate_id: str) -> MemorySummaryResponse:

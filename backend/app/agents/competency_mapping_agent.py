@@ -6,14 +6,13 @@ Hard constraint: weights MUST sum to exactly 100.
 
 from __future__ import annotations
 
-from typing import List, Optional
 from pydantic import BaseModel, Field, model_validator
 
 from app.agents.base import BaseAgent
 from app.core.llm_client import LLMClient
 from app.graph.state import InterviewState
 from app.mcp import mcp_server
-from app.prompts.loader import get_system_prompt, get_developer_prompt
+from app.prompts.loader import get_developer_prompt, get_system_prompt
 
 # ── Default fallback matrix ───────────────────────────────────
 DEFAULT_MATRIX = [
@@ -35,10 +34,10 @@ class CompetencyItem(BaseModel):
 
 
 class CompetencyMatrixOutput(BaseModel):
-    competencies: List[CompetencyItem]
+    competencies: list[CompetencyItem]
 
     @model_validator(mode="after")
-    def weights_sum_to_100(self) -> "CompetencyMatrixOutput":
+    def weights_sum_to_100(self) -> CompetencyMatrixOutput:
         total = sum(c.weight for c in self.competencies)
         if abs(total - 100) > 1:          # ±1 rounding tolerance
             raise ValueError(
@@ -57,7 +56,7 @@ class CompetencyMappingAgent(BaseAgent):
     def _temperature(self) -> float:
         return 0.1
 
-    def _run(self, state: InterviewState, retry_feedback: Optional[str] = None) -> dict:
+    def _run(self, state: InterviewState, retry_feedback: str | None = None) -> dict:
         jd_data       = state.get("jd_data") or {}
         resume_data   = state.get("resume_data") or {}
         profile       = state.get("profile_summary") or {}

@@ -4,7 +4,6 @@ Review Service — Manages Human Review Queue workflows and Recruiter Feedback p
 
 from __future__ import annotations
 
-from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from app.models.review_queue import RecruiterFeedback, ReviewQueue
@@ -23,7 +22,7 @@ class ReviewService:
         interview_id: str,
         confidence: float,
         reason: str = "Low confidence evaluation score",
-        response_id: Optional[str] = None,
+        response_id: str | None = None,
     ) -> ReviewQueue:
         """Flag response for human review."""
         return self.repo.create_review_item(
@@ -33,11 +32,11 @@ class ReviewService:
             response_id=response_id,
         )
 
-    def get_queue(self, status: Optional[str] = None) -> List[ReviewQueue]:
+    def get_queue(self, status: str | None = None) -> list[ReviewQueue]:
         """Get items in review queue."""
         return self.repo.list_review_queue(status=status)
 
-    def process_review(self, review_id: str, status: str, admin_id: Optional[str] = None) -> Optional[ReviewQueue]:
+    def process_review(self, review_id: str, status: str, admin_id: str | None = None) -> ReviewQueue | None:
         """Update review item status (APPROVED | REJECTED | IN_REVIEW)."""
         return self.repo.update_review_status(review_id=review_id, status=status, admin_id=admin_id)
 
@@ -46,8 +45,8 @@ class ReviewService:
         interview_id: str,
         recruiter_id: str,
         rating_action: str,
-        question_id: Optional[str] = None,
-        comment: Optional[str] = None,
+        question_id: str | None = None,
+        comment: str | None = None,
     ) -> RecruiterFeedback:
         """Record recruiter feedback."""
         return self.repo.add_recruiter_feedback(

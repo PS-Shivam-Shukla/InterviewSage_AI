@@ -2,7 +2,6 @@
 Unit and Integration Tests for Text-to-Speech (TTS) Service.
 """
 
-import pytest
 from app.speech.tts import KokoroTTSService
 
 

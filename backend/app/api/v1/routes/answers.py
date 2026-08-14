@@ -10,16 +10,16 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.logging import get_logger
-from app.dependencies import get_current_user, check_interview_ownership
+from app.dependencies import check_interview_ownership, get_current_user
 from app.models import User
 
 logger = get_logger(__name__)
@@ -62,8 +62,9 @@ async def _stream_turn(
         })
         await asyncio.sleep(0)
 
-        from app.services.interview_service import InterviewService
         from fastapi import HTTPException
+
+        from app.services.interview_service import InterviewService
 
         svc = InterviewService(db)
         result = svc.submit_answer(interview_id, answer_text)

@@ -5,13 +5,12 @@ Converts raw job description text → structured JDAnalysis including negative s
 
 from __future__ import annotations
 
-from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 from app.agents.base import BaseAgent
 from app.core.llm_client import LLMClient
 from app.graph.state import InterviewState
-from app.prompts.loader import get_system_prompt, get_developer_prompt
+from app.prompts.loader import get_developer_prompt, get_system_prompt
 
 # Static domain exclusion map for RID-02
 _DOMAIN_EXCLUSIONS = {
@@ -22,14 +21,14 @@ _DOMAIN_EXCLUSIONS = {
 
 
 class JDAnalysis(BaseModel):
-    required_skills: List[str] = Field(default_factory=list)
-    preferred_skills: List[str] = Field(default_factory=list)
-    negative_skills: List[str] = Field(default_factory=list)
-    responsibilities: List[str] = Field(default_factory=list)
+    required_skills: list[str] = Field(default_factory=list)
+    preferred_skills: list[str] = Field(default_factory=list)
+    negative_skills: list[str] = Field(default_factory=list)
+    responsibilities: list[str] = Field(default_factory=list)
     seniority_level: str = "NOT_SPECIFIED"
     target_role: str = ""
     industry: str = "NOT_SPECIFIED"
-    company_values: List[str] = Field(default_factory=list)
+    company_values: list[str] = Field(default_factory=list)
 
     @field_validator("seniority_level")
     @classmethod
@@ -45,7 +44,7 @@ class JDAgent(BaseAgent):
     def _temperature(self) -> float:
         return 0.1
 
-    def _infer_negative_skills(self, role: str, required_skills: List[str]) -> List[str]:
+    def _infer_negative_skills(self, role: str, required_skills: list[str]) -> list[str]:
         """Auto-infers negative skill domain exclusions based on target role."""
         role_lower = role.lower()
         skills_str = " ".join(s.lower() for s in required_skills)
@@ -62,7 +61,7 @@ class JDAgent(BaseAgent):
 
         return list(negative)
 
-    def _run(self, state: InterviewState, retry_feedback: Optional[str] = None) -> dict:
+    def _run(self, state: InterviewState, retry_feedback: str | None = None) -> dict:
         raw_text = state.get("jd_raw_text", "")
         if not raw_text:
             raise ValueError("jd_raw_text is missing from state")

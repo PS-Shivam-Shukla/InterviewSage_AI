@@ -6,7 +6,7 @@ Supports Ollama, NVIDIA NIM, OpenAI, Claude (Anthropic), and Gemini (Google) wit
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+
 from app.core.config import settings
 from app.core.logging import get_logger
 
@@ -23,7 +23,7 @@ class ModelSpec:
     fallback_model: str
 
 
-TASK_MODEL_MAPPING: Dict[str, Dict[str, ModelSpec]] = {
+TASK_MODEL_MAPPING: dict[str, dict[str, ModelSpec]] = {
     "FAST_EXTRACTION": {
         "ollama": ModelSpec("ollama", "qwen2.5:3b", 8192, 800, "ollama", "qwen2.5:7b"),
         "openai": ModelSpec("openai", "gpt-3.5-turbo", 16384, 600, "ollama", "qwen2.5:3b"),
@@ -61,14 +61,14 @@ class ModelRouter:
     Selects optimal model provider and executes provider fallback resolution.
     """
 
-    def __init__(self, default_provider: Optional[str] = None) -> None:
+    def __init__(self, default_provider: str | None = None) -> None:
         self.default_provider = (default_provider or settings.llm_provider).lower()
 
     def select_model(
         self,
         task_type: str,
-        provider_override: Optional[str] = None,
-        model_override: Optional[str] = None,
+        provider_override: str | None = None,
+        model_override: str | None = None,
     ) -> ModelSpec:
         """
         Select ModelSpec based on task_type and optional overrides.

@@ -2,12 +2,11 @@
 Unit and Integration Tests for Admin Dashboard Operations (OP-1 through OP-6, OP-10).
 """
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.admin.dashboard import AdminDashboardManager
-from app.models import User, Interview, Resume, JobDescription
+from app.models import Interview, JobDescription, Resume, User
 
 
 def test_admin_dashboard_manager_overview(db_session: Session):

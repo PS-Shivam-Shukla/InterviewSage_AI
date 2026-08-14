@@ -4,8 +4,7 @@ Exposes endpoints for hiring prediction, benchmark percentiles, company intervie
 adaptive difficulty engine, skill gap analysis, roadmaps, interview replay annotations, and recruiter insights.
 """
 
-from typing import Any, Dict
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.career.schemas import (

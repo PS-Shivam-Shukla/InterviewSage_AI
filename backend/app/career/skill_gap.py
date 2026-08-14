@@ -5,12 +5,10 @@ Identifies missing concepts for candidate weak topics (e.g. Redis Persistence, R
 
 from __future__ import annotations
 
-import json
-from typing import Any, Dict, List
 from sqlalchemy.orm import Session
 
 from app.career.schemas import SkillGapItem, SkillGapResponse
-from app.models.candidate_memory import CandidateProfile, SkillProgress
+from app.models.candidate_memory import SkillProgress
 
 
 class SkillGapAnalyzer:

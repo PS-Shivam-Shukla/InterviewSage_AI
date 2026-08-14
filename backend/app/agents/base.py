@@ -15,11 +15,11 @@ from __future__ import annotations
 
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Type, TypeVar
+from typing import TypeVar
 
 from pydantic import BaseModel, ValidationError
 
-from app.core.llm_client import FakeLLMClient, LLMClient
+from app.core.llm_client import LLMClient
 from app.core.logging import get_logger
 from app.graph.state import InterviewState
 
@@ -41,7 +41,7 @@ class BaseAgent(ABC):
     agent_name: str = "BaseAgent"
     prompt_version: str = "v1"
 
-    def __init__(self, llm_client: Optional[LLMClient] = None) -> None:
+    def __init__(self, llm_client: LLMClient | None = None) -> None:
         self.llm = llm_client  # None → real client built lazily; injected for tests
 
     @property
@@ -60,7 +60,7 @@ class BaseAgent(ABC):
     def __call__(self, state: InterviewState) -> dict:
         """LangGraph node entry point — wraps _run with retries and real-time console tracking."""
         t0 = time.monotonic()
-        last_error: Optional[str] = None
+        last_error: str | None = None
         interview_id = state.get("interview_id", "N/A")
 
         logger.info(
@@ -98,7 +98,7 @@ class BaseAgent(ABC):
     # ── Subclass contract ─────────────────────────────────────
 
     @abstractmethod
-    def _run(self, state: InterviewState, retry_feedback: Optional[str] = None) -> dict:
+    def _run(self, state: InterviewState, retry_feedback: str | None = None) -> dict:
         """
         Core agent logic. Must return a dict of state keys to update.
         If output fails validation, raise ValueError or ValidationError
@@ -125,8 +125,8 @@ class BaseAgent(ABC):
     def _invoke_structured(
         self,
         messages: list,
-        schema: Type[T],
-        retry_feedback: Optional[str] = None,
+        schema: type[T],
+        retry_feedback: str | None = None,
     ) -> T:
         """
         Call the LLM and parse output into `schema`.
@@ -152,7 +152,7 @@ class BaseAgent(ABC):
         output: dict,
         latency_ms: int,
         retry_count: int,
-        error: Optional[str] = None,
+        error: str | None = None,
     ) -> None:
         """Write real-time console tracking and persist to AGENT_LOG if a db session is available."""
         # 1. Print formatted real-time telemetry block to console/stdout

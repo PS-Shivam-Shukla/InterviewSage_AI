@@ -6,21 +6,19 @@ a holistic candidate profile used to calibrate question difficulty.
 
 from __future__ import annotations
 
-from typing import List, Optional
 from pydantic import BaseModel, Field
 
 from app.agents.base import BaseAgent
 from app.core.llm_client import LLMClient
 from app.graph.state import InterviewState
 from app.mcp import mcp_server
-from app.prompts.loader import get_system_prompt, get_developer_prompt
-
+from app.prompts.loader import get_developer_prompt, get_system_prompt
 
 # ── Output schema ─────────────────────────────────────────────
 
 class ProfileSummary(BaseModel):
-    strengths: List[str] = Field(default_factory=list)
-    growth_edges: List[str] = Field(default_factory=list)
+    strengths: list[str] = Field(default_factory=list)
+    growth_edges: list[str] = Field(default_factory=list)
     calibrated_seniority: str = "MID"
     industry_positioning: str = ""
     difficulty_recommendation: str = "MEDIUM"
@@ -40,7 +38,7 @@ class ProfileIntelligenceAgent(BaseAgent):
     def _temperature(self) -> float:
         return 0.2
 
-    def _run(self, state: InterviewState, retry_feedback: Optional[str] = None) -> dict:
+    def _run(self, state: InterviewState, retry_feedback: str | None = None) -> dict:
         resume_data = state.get("resume_data") or {}
         jd_data = state.get("jd_data") or {}
         ats_analysis = state.get("ats_analysis") or {}

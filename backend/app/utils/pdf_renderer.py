@@ -1,14 +1,14 @@
 """PDF rendering utilities using ReportLab."""
 from io import BytesIO
-from typing import Dict, Any
+from typing import Any
 
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 
-def render_report_pdf(report_data: Dict[str, Any]) -> bytes:
+def render_report_pdf(report_data: dict[str, Any]) -> bytes:
     """Render a nicely formatted PDF for the interview report.
 
     Includes candidate skill competency matrix, overall score, question transcript,
@@ -89,7 +89,7 @@ def render_report_pdf(report_data: Dict[str, Any]) -> bytes:
     gen_at = report_data.get("generated_at", "")
     overall_score = report_data.get("overall_score")
 
-    story.append(Paragraph(f"AI Interview Evaluation Report", title_style))
+    story.append(Paragraph("AI Interview Evaluation Report", title_style))
     story.append(Spacer(1, 4))
     story.append(Paragraph(f"<b>Target Role:</b> {role} | <b>Session ID:</b> {interview_id}", subtitle_style))
     if gen_at:

@@ -6,10 +6,10 @@ Verifies official MCP protocol client and server capabilities:
 3. Schema integrity and parameter validation.
 """
 
+
 import pytest
-import asyncio
+
 from app.mcp.client import mcp_protocol_client
-from app.mcp.server import mcp_server
 
 
 @pytest.mark.asyncio

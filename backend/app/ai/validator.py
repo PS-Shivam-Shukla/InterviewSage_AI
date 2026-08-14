@@ -7,7 +7,8 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
+
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -55,7 +56,7 @@ class JSONValidator:
         return repaired
 
     @staticmethod
-    def extract_embedded_json(text: str) -> Optional[str]:
+    def extract_embedded_json(text: str) -> str | None:
         """Extract first valid embedded JSON object or array string from text."""
         match = re.search(r"(\{.*\}|\[.*\])", text, re.DOTALL)
         if match:
@@ -63,7 +64,7 @@ class JSONValidator:
         return None
 
     @classmethod
-    def validate_and_repair(cls, raw_output: str) -> Tuple[bool, Optional[Dict[str, Any]], bool]:
+    def validate_and_repair(cls, raw_output: str) -> tuple[bool, dict[str, Any] | None, bool]:
         """
         Validate and repair raw LLM output.
         Returns (is_valid, parsed_dict, repair_performed).

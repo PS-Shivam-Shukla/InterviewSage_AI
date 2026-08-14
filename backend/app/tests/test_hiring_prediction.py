@@ -2,11 +2,10 @@
 Unit and Integration Tests for HiringPredictionEngine.
 """
 
-import pytest
 from sqlalchemy.orm import Session
 
 from app.career.prediction import HiringPredictionEngine
-from app.models import User, SkillProgress
+from app.models import SkillProgress, User
 
 
 def test_hiring_prediction_engine(db_session: Session, sample_user: User):

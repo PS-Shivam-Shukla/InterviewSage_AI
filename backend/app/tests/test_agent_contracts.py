@@ -4,6 +4,7 @@ Verifies validation rules, serialization, error envelope behavior, and schema ge
 """
 
 import json
+
 import pytest
 from pydantic import ValidationError
 
@@ -12,13 +13,9 @@ from app.schemas.agent_contracts import (
     AgentErrorCode,
     AgentResult,
     AnswerEvaluation,
-    AnswerEvaluationInput,
     GeneratedQuestion,
     InterviewContext,
-    InterviewPlan,
-    InterviewReport,
     JDAnalysis,
-    QuestionGenerationInput,
     ResumeAgentInput,
     ResumeAnalysis,
 )

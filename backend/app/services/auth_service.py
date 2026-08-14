@@ -2,16 +2,14 @@
 Authentication service — user registration, login, token validation.
 """
 
-from datetime import datetime, timedelta
-from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from app.core.security import (
-    hash_password,
-    verify_password,
     create_access_token,
     decode_token,
+    hash_password,
+    verify_password,
 )
 from app.models import User
 from app.repositories import UserRepository
@@ -27,7 +25,7 @@ class AuthService:
 
     def register_user(
         self, email: str, password: str, full_name: str
-    ) -> Optional[User]:
+    ) -> User | None:
         """
         Register a new user.
         
@@ -56,7 +54,7 @@ class AuthService:
 
     def authenticate_user(
         self, email: str, password: str
-    ) -> Optional[User]:
+    ) -> User | None:
         """
         Authenticate a user by email and password.
         
@@ -93,7 +91,7 @@ class AuthService:
 
         return create_access_token(token_data)
 
-    def verify_token(self, token: str) -> Optional[str]:
+    def verify_token(self, token: str) -> str | None:
         """
         Verify a JWT token and extract user ID.
         
@@ -110,7 +108,7 @@ class AuthService:
         user_id = payload.get("sub")
         return user_id
 
-    def get_current_user(self, token: str) -> Optional[User]:
+    def get_current_user(self, token: str) -> User | None:
         """
         Get the current user from a token.
         

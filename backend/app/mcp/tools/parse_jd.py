@@ -14,7 +14,6 @@ from typing import Any
 
 import ftfy  # text normalization — pip install ftfy
 
-
 _REQUIREMENTS_KW = [
     "requirements", "qualifications", "required", "must have",
     "you must", "mandatory", "essential",

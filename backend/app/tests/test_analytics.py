@@ -5,13 +5,11 @@ aggregation logic without touching the real database.
 """
 
 import json
-import pytest
 from datetime import datetime
 
-from app.models import User, Resume, JobDescription, Interview
-from app.models.interview import InterviewReport, AgentLog
+from app.models import Interview
+from app.models.interview import AgentLog, InterviewReport
 from app.services.analytics_service import AnalyticsService
-
 
 # ── Helpers ───────────────────────────────────────────────────
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 import io
 import time
 from abc import ABC, abstractmethod
-from typing import Generator, Optional
+from collections.abc import Generator
 
 from app.core.config import settings
 from app.core.logging import get_logger
@@ -25,7 +25,7 @@ class TTSProvider(ABC):
         pass
 
     @abstractmethod
-    def synthesize(self, text: str, voice: Optional[str] = None, speed: Optional[float] = None) -> bytes:
+    def synthesize(self, text: str, voice: str | None = None, speed: float | None = None) -> bytes:
         """Synthesize text with explicit voice and speed parameters."""
         pass
 
@@ -41,7 +41,7 @@ class KokoroTTSService(TTSProvider):
     """
 
     def __init__(
-        self, provider: Optional[str] = None, voice: Optional[str] = None, speed: Optional[float] = None
+        self, provider: str | None = None, voice: str | None = None, speed: float | None = None
     ) -> None:
         self.provider = provider or settings.tts_provider
         self.voice = voice or settings.voice
@@ -61,7 +61,7 @@ class KokoroTTSService(TTSProvider):
     def speak(self, text: str) -> bytes:
         return self.synthesize(text, voice=self.voice, speed=self.speed)
 
-    def synthesize(self, text: str, voice: Optional[str] = None, speed: Optional[float] = None) -> bytes:
+    def synthesize(self, text: str, voice: str | None = None, speed: float | None = None) -> bytes:
         start = time.perf_counter()
         v = voice or self.voice
         sp = speed or self.speed

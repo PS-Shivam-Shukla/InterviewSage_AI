@@ -11,7 +11,8 @@ Design contract:
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
+
 from pydantic import BaseModel, Field, model_validator
 
 from app.core.llm_client import LLMClient
@@ -29,26 +30,26 @@ class ToolCallDecision(BaseModel):
     """LLM decision to invoke a specific registered MCP tool."""
     action: Literal["tool_call"] = "tool_call"
     tool: str = Field(description="Name of the registered MCP tool to invoke.")
-    arguments: Dict[str, Any] = Field(default_factory=dict, description="Tool arguments matching tool parameters schema.")
+    arguments: dict[str, Any] = Field(default_factory=dict, description="Tool arguments matching tool parameters schema.")
     reasoning: str = Field(default="", description="Chain-of-thought rationale for selecting this tool.")
 
 
 class FinishDecision(BaseModel):
     """LLM decision that tool execution loop is complete."""
     action: Literal["finish"] = "finish"
-    result: Dict[str, Any] = Field(default_factory=dict, description="Final decision result or summary.")
+    result: dict[str, Any] = Field(default_factory=dict, description="Final decision result or summary.")
     reasoning: str = Field(default="", description="Rationale for finishing policy execution.")
 
 
 class PolicyDecision(BaseModel):
     """Discriminated union container for PolicyNode decision."""
     action: Literal["tool_call", "finish"]
-    tool_call: Optional[ToolCallDecision] = None
-    finish: Optional[FinishDecision] = None
+    tool_call: ToolCallDecision | None = None
+    finish: FinishDecision | None = None
     reasoning: str = ""
 
     @model_validator(mode="after")
-    def validate_action_payload(self) -> "PolicyDecision":
+    def validate_action_payload(self) -> PolicyDecision:
         if self.action == "tool_call" and not self.tool_call:
             raise ValueError("Action 'tool_call' requires a valid tool_call payload.")
         if self.action == "finish" and not self.finish:
@@ -64,7 +65,7 @@ class PolicyNode:
     Model-mediated policy decision engine for LangGraph execution.
     """
 
-    def __init__(self, llm_client: Optional[LLMClient] = None) -> None:
+    def __init__(self, llm_client: LLMClient | None = None) -> None:
         self.llm = llm_client or LLMClient(temperature=0.1)
 
     def __call__(self, state: InterviewState) -> dict:

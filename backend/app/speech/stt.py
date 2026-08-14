@@ -9,7 +9,7 @@ import io
 import os
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generator, Optional
+from collections.abc import Generator
 
 from app.core.config import settings
 from app.core.logging import get_logger
@@ -42,7 +42,7 @@ class FasterWhisperSTTService(STTProvider):
     Supports CPU / CUDA execution.
     """
 
-    def __init__(self, model_name: Optional[str] = None, device: Optional[str] = None) -> None:
+    def __init__(self, model_name: str | None = None, device: str | None = None) -> None:
         self.model_name = model_name or settings.whisper_model
         self.device = device or settings.whisper_device
         self._model = None

@@ -5,8 +5,6 @@ Constructs memory retrieval payloads for LangGraph agents & LLM prompt builders.
 
 from __future__ import annotations
 
-import json
-from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.memory.repository import MemoryRepository
@@ -72,7 +70,7 @@ class MemoryRetriever:
             latest_summary=latest_summ.compressed_summary if latest_summ else profile.summary,
         )
 
-    def search_semantic_memory(self, candidate_id: str, query_topic: str) -> List[CandidateMemoryResponse]:
+    def search_semantic_memory(self, candidate_id: str, query_topic: str) -> list[CandidateMemoryResponse]:
         """
         Search candidate memories for a given query topic.
         """

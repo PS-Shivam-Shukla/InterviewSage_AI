@@ -2,8 +2,8 @@
 Security utilities: JWT creation/validation, password hashing, token management.
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict, Any
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import bcrypt
 from jose import JWTError, jwt
@@ -28,8 +28,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(
-    data: Dict[str, Any],
-    expires_delta: Optional[timedelta] = None,
+    data: dict[str, Any],
+    expires_delta: timedelta | None = None,
 ) -> str:
     """
     Create a JWT access token.
@@ -44,9 +44,9 @@ def create_access_token(
     to_encode = data.copy()
     
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(
+        expire = datetime.now(UTC) + timedelta(
             minutes=settings.access_token_expire_minutes
         )
     
@@ -61,7 +61,7 @@ def create_access_token(
     return encoded_jwt
 
 
-def decode_token(token: str) -> Optional[Dict[str, Any]]:
+def decode_token(token: str) -> dict[str, Any] | None:
     """
     Decode and validate a JWT token.
     
@@ -82,7 +82,7 @@ def decode_token(token: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def extract_token_from_header(authorization_header: str) -> Optional[str]:
+def extract_token_from_header(authorization_header: str) -> str | None:
     """
     Extract bearer token from Authorization header.
     

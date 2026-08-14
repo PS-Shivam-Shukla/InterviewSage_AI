@@ -4,7 +4,6 @@ Exposes endpoints for AI Admin Dashboard, Live Monitoring, Conversation Replay, 
 Costs, Quality, Human Review Queue, Recruiter Feedback, and Analytics.
 """
 
-from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -48,7 +47,7 @@ async def get_dashboard_summary(
 
 
 # ── OP-2: Live Interview Monitoring ──────────────────────────────
-@router.get("/interviews/live", response_model=List[LiveInterviewItem], summary="Live Interview Monitoring")
+@router.get("/interviews/live", response_model=list[LiveInterviewItem], summary="Live Interview Monitoring")
 async def get_live_interviews(
     db: Session = Depends(get_db),
     admin: User = Depends(_verify_admin_access),
@@ -69,7 +68,7 @@ async def get_interview_timeline(
 
 
 # ── OP-4: Prompt History Explorer ──────────────────────────────
-@router.get("/prompts/history", response_model=List[PromptHistoryItem], summary="Prompt Version History Explorer")
+@router.get("/prompts/history", response_model=list[PromptHistoryItem], summary="Prompt Version History Explorer")
 async def get_prompt_history(
     db: Session = Depends(get_db),
     admin: User = Depends(_verify_admin_access),
@@ -134,9 +133,9 @@ async def get_agent_analytics(
 
 
 # ── OP-7: Human Review Queue ──────────────────────────────
-@router.get("/review/queue", response_model=List[ReviewQueueItemResponse], summary="Get Human Review Queue")
+@router.get("/review/queue", response_model=list[ReviewQueueItemResponse], summary="Get Human Review Queue")
 async def get_review_queue(
-    status_filter: Optional[str] = Query(None, alias="status"),
+    status_filter: str | None = Query(None, alias="status"),
     db: Session = Depends(get_db),
     admin: User = Depends(_verify_admin_access),
 ):

@@ -11,9 +11,9 @@ from app.memory.summarizer import MemorySummarizer
 
 __all__ = [
     "MemoryManager",
-    "MemoryService",
     "MemoryRepository",
     "MemoryRetriever",
+    "MemoryService",
     "MemorySummarizer",
     "PersonalizationEngine",
 ]

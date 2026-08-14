@@ -3,8 +3,7 @@ Transcripts API Router.
 Exposes endpoints for fetching and downloading interview transcripts.
 """
 
-from typing import Any, Dict
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db

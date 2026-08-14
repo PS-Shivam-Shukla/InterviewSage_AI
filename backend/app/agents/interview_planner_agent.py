@@ -5,13 +5,12 @@ Uses the Dynamic Interview Strategy Engine (DISE) to classify candidates and gen
 
 from __future__ import annotations
 
-from typing import List, Optional
 from pydantic import BaseModel, Field, model_validator
 
 from app.agents.base import BaseAgent
 from app.graph.state import InterviewState
-from app.strategy.classifier import CandidateClassifier
 from app.strategy.blueprint_generator import BlueprintGenerator, InterviewBlueprint
+from app.strategy.classifier import CandidateClassifier
 
 # Initialize DISE singleton engines
 classifier = CandidateClassifier()
@@ -28,10 +27,10 @@ class InterviewPlanOutput(BaseModel):
     hr_question_count: int = Field(ge=2, le=8)
     technical_question_count: int = Field(ge=3, le=12)
     estimated_duration_minutes: int = Field(ge=20, le=120)
-    round_structure: List[RoundDetail] = Field(default_factory=list)
+    round_structure: list[RoundDetail] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def total_in_range(self) -> "InterviewPlanOutput":
+    def total_in_range(self) -> InterviewPlanOutput:
         total = self.hr_question_count + self.technical_question_count
         if not 8 <= total <= 16:
             raise ValueError(
@@ -44,7 +43,7 @@ class InterviewPlannerAgent(BaseAgent):
     agent_name = "InterviewPlannerAgent"
     prompt_version = "v1"
 
-    def _run(self, state: InterviewState, retry_feedback: Optional[str] = None) -> dict:
+    def _run(self, state: InterviewState, retry_feedback: str | None = None) -> dict:
         resume_data = state.get("resume_data") or state.get("resume_json") or {}
         jd_data = state.get("jd_data") or state.get("jd_json") or {}
         skill_graph = state.get("skill_graph") or {}

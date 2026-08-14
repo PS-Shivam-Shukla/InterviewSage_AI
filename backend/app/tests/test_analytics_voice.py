@@ -3,12 +3,12 @@ Unit and Integration Tests for Candidate Voice Summary & GET /api/v1/analytics/v
 """
 
 import uuid
-import pytest
+
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
-from app.models import User, LiveSession, VoiceMetrics
+from app.models import User, VoiceMetrics
 from app.services import AuthService
 
 

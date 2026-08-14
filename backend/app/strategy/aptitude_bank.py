@@ -5,9 +5,9 @@ Selects 5 randomized questions per fresher interview session without replacement
 """
 
 import random
-from typing import List, Dict, Any, Optional
+from typing import Any
 
-APTITUDE_20_BANK: List[Dict[str, Any]] = [
+APTITUDE_20_BANK: list[dict[str, Any]] = [
     {
         "id": "apt-1",
         "category": "Percentage",
@@ -191,7 +191,7 @@ APTITUDE_20_BANK: List[Dict[str, Any]] = [
 ]
 
 
-def select_aptitude_questions(count: int = 5, session_seed: Optional[str] = None) -> List[Dict[str, Any]]:
+def select_aptitude_questions(count: int = 5, session_seed: str | None = None) -> list[dict[str, Any]]:
     """
     Select `count` (default 5) randomized aptitude questions from the fixed 20-question bank.
     If session_seed is provided, the selection is deterministic for that specific session.

@@ -5,7 +5,6 @@ querying interview history timelines, inspecting skill progressions, fetching le
 and triggering memory compression summaries.
 """
 
-from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -61,7 +60,7 @@ async def save_candidate_memory(
     return service.save_memory(candidate_id, payload)
 
 
-@router.get("/{candidate_id}/timeline", response_model=List[CandidateTimelineItem], summary="Get interview memory timeline")
+@router.get("/{candidate_id}/timeline", response_model=list[CandidateTimelineItem], summary="Get interview memory timeline")
 async def get_candidate_timeline(
     candidate_id: str,
     db: Session = Depends(get_db),
@@ -72,7 +71,7 @@ async def get_candidate_timeline(
     return service.get_timeline(candidate_id)
 
 
-@router.get("/{candidate_id}/skills", response_model=List[SkillProgressResponse], summary="Get skill progression graph")
+@router.get("/{candidate_id}/skills", response_model=list[SkillProgressResponse], summary="Get skill progression graph")
 async def get_skill_progression(
     candidate_id: str,
     db: Session = Depends(get_db),
@@ -83,7 +82,7 @@ async def get_skill_progression(
     return service.get_skills(candidate_id)
 
 
-@router.get("/{candidate_id}/recommendations", response_model=List[LearningRecommendationResponse], summary="Get personalized learning roadmap")
+@router.get("/{candidate_id}/recommendations", response_model=list[LearningRecommendationResponse], summary="Get personalized learning roadmap")
 async def get_learning_recommendations(
     candidate_id: str,
     db: Session = Depends(get_db),

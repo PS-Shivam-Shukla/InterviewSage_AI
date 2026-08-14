@@ -1,13 +1,12 @@
-from typing import List
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status, BackgroundTasks
+
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 
-from fastapi.concurrency import run_in_threadpool
-
 from app.core.database import get_db
-from app.dependencies import get_current_user, check_resume_ownership
+from app.dependencies import check_resume_ownership, get_current_user
 from app.models import User
-from app.schemas.resume import ResumeResponse, ResumeAnalysisResponse
+from app.schemas.resume import ResumeAnalysisResponse, ResumeResponse
 from app.services import ResumeService
 from app.utils.upload_validator import validate_upload_file
 
@@ -36,7 +35,7 @@ async def upload_resume(
 
 @router.get(
     "/",
-    response_model=List[ResumeResponse],
+    response_model=list[ResumeResponse],
     summary="List all user resumes",
 )
 async def list_resumes(

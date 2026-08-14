@@ -4,13 +4,22 @@ Step 3.5.2 — Backend WebSocket Voice Turn Processing & Persistence Verificatio
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models import User, Resume, JobDescription, Interview, InterviewQuestion, InterviewAnswer, Evaluation
+from app.models import (
+    Evaluation,
+    Interview,
+    InterviewAnswer,
+    InterviewQuestion,
+    JobDescription,
+    Resume,
+    User,
+)
 from app.models.voice import ConversationTurn, VoiceMetrics
 from app.services import AuthService
 
@@ -18,7 +27,6 @@ from app.services import AuthService
 @pytest.fixture(autouse=True)
 def mock_mcp_tool():
     """Mock MCP tool, STT, and TTS for fast deterministic test execution."""
-    import app.services.interview_service
     from app.speech.stt import FasterWhisperSTTService
     from app.speech.tts import KokoroTTSService
 
@@ -80,7 +88,7 @@ def _create_test_interview(user: User, db: Session) -> Interview:
         status="IN_PROGRESS",
         current_round="TECHNICAL",
         overall_score=None,
-        started_at=datetime.now(timezone.utc),
+        started_at=datetime.now(UTC),
     )
     db.add(interview)
 
@@ -92,7 +100,7 @@ def _create_test_interview(user: User, db: Session) -> Interview:
         difficulty="MEDIUM",
         question_text="Explain Python concurrency and database connection pooling.",
         sequence_number=1,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     q2 = InterviewQuestion(
         id=f"q-2-{interview_id}",
@@ -102,7 +110,7 @@ def _create_test_interview(user: User, db: Session) -> Interview:
         difficulty="MEDIUM",
         question_text="How do you handle horizontal scaling and distributed caching?",
         sequence_number=2,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     db.add(q1)
     db.add(q2)

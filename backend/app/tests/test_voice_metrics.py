@@ -2,11 +2,10 @@
 Unit and Integration Tests for VoiceAnalyticsService & GET /api/v1/voice/{session_id}.
 """
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models import User, Interview
+from app.models import Interview, User
 from app.services import AuthService
 from app.speech.analytics import VoiceAnalyticsService
 from app.transcript.service import TranscriptService

@@ -6,7 +6,7 @@ benchmarks, company profiles, skill gap analysis, roadmaps, replay annotations, 
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional
+
 from sqlalchemy.orm import Session
 
 from app.career.adaptive import AdaptiveDifficultyEngine
@@ -22,7 +22,6 @@ from app.career.schemas import (
     AdaptiveNextQuestionResponse,
     AdaptiveStartRequest,
     AdaptiveStartResponse,
-    BenchmarkCategoryDetail,
     CareerRoadmapResponse,
     CompanyProfileResponse,
     HiringPredictionResponse,

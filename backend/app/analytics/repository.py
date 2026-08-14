@@ -4,13 +4,14 @@ Analytics Repository — Executes aggregation queries across PostgreSQL tables.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.models.interview import Interview, InterviewQuestion, InterviewAnswer, Evaluation, AgentLog
+from app.models.evaluation import EvaluationRun
+from app.models.interview import Interview
 from app.models.llm_audit import LLMRequest, TokenUsage
-from app.models.evaluation import EvaluationRun, EvaluationResult
 
 
 class AnalyticsRepository:
@@ -19,7 +20,7 @@ class AnalyticsRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def get_interview_counts(self) -> Dict[str, int]:
+    def get_interview_counts(self) -> dict[str, int]:
         """Aggregate total, completed, in-progress, and failed interview counts."""
         total = self.db.query(func.count(Interview.id)).scalar() or 0
         completed = self.db.query(func.count(Interview.id)).filter(Interview.status == "COMPLETED").scalar() or 0
@@ -33,7 +34,7 @@ class AnalyticsRepository:
             "failed": failed,
         }
 
-    def get_llm_request_metrics(self) -> Dict[str, Any]:
+    def get_llm_request_metrics(self) -> dict[str, Any]:
         """Aggregate total LLM requests, average latency, and average tokens."""
         total_reqs = self.db.query(func.count(LLMRequest.id)).scalar() or 0
         avg_lat = self.db.query(func.avg(LLMRequest.latency_ms)).scalar() or 0.0
@@ -47,7 +48,7 @@ class AnalyticsRepository:
             "total_cost_usd": round(float(total_cost), 6),
         }
 
-    def get_evaluation_quality_metrics(self) -> Dict[str, float]:
+    def get_evaluation_quality_metrics(self) -> dict[str, float]:
         """Aggregate correctness, faithfulness, hallucination, and pass rates from EvaluationRun."""
         avg_correctness = self.db.query(func.avg(EvaluationRun.avg_correctness)).scalar() or 82.5
         avg_faithfulness = self.db.query(func.avg(EvaluationRun.avg_faithfulness)).scalar() or 88.0

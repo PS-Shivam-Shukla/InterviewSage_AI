@@ -5,7 +5,6 @@ Tracks speaking speed (WPM), answer latency, silence duration, and live scores.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.models.voice import ConversationTurn, LiveSession, VoiceMetrics

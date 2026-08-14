@@ -2,9 +2,11 @@
 Interview repository tests.
 """
 
+from datetime import UTC, datetime
+
 import pytest
-from datetime import datetime, timezone
-from app.models import Interview, InterviewQuestion, InterviewAnswer, Evaluation, AgentLog
+
+from app.models import AgentLog, Evaluation, Interview, InterviewAnswer, InterviewQuestion
 
 
 @pytest.mark.unit
@@ -18,7 +20,7 @@ class TestInterviewRepository:
             resume_id=sample_resume.id,
             jd_id=sample_jd.id,
             status="PLANNING",
-            started_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
         )
         created = interview_repo.create(interview)
         assert created.id is not None
@@ -46,7 +48,7 @@ class TestInterviewRepository:
             resume_id=sample_resume.id,
             jd_id=sample_jd.id,
             status="COMPLETED",
-            started_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
         )
         db_session.add(interview2)
         db_session.commit()
@@ -65,8 +67,8 @@ class TestInterviewRepository:
             resume_id=sample_resume.id,
             jd_id=sample_jd.id,
             status="COMPLETED",
-            started_at=datetime.now(timezone.utc),
-            completed_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
+            completed_at=datetime.now(UTC),
         )
         db_session.add(completed)
         db_session.commit()
@@ -163,7 +165,7 @@ class TestEvaluationRepository:
 
     def test_create_evaluation(self, evaluation_repo, db_session, sample_interview):
         """Test creating an evaluation."""
-        from app.models import CompetencyMatrix, InterviewQuestion, InterviewAnswer
+        from app.models import InterviewQuestion
         # Setup: create question, answer
         question = InterviewQuestion(
             interview_id=sample_interview.id,
@@ -200,7 +202,7 @@ class TestEvaluationRepository:
         self, evaluation_repo, db_session, sample_interview
     ):
         """Test retrieving evaluation by answer."""
-        from app.models import InterviewQuestion, InterviewAnswer, Evaluation
+        from app.models import Evaluation, InterviewQuestion
         # Setup
         question = InterviewQuestion(
             interview_id=sample_interview.id,

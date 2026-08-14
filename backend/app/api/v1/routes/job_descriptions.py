@@ -1,12 +1,20 @@
-from typing import List
-from fastapi import APIRouter, Depends, status, HTTPException
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.dependencies import get_current_user, check_job_description_ownership, check_resume_ownership
+from app.dependencies import (
+    check_job_description_ownership,
+    check_resume_ownership,
+    get_current_user,
+)
 from app.models import User
-from app.schemas import JobDescriptionCreateRequest, JobDescriptionResponse, JobDescriptionMatchResponse
+from app.schemas import (
+    JobDescriptionCreateRequest,
+    JobDescriptionMatchResponse,
+    JobDescriptionResponse,
+)
 from app.services import JobDescriptionService
 
 router = APIRouter(prefix="/job-descriptions", tags=["Job Descriptions"])
@@ -37,7 +45,7 @@ async def create_job_description(
 
 @router.get(
     "/",
-    response_model=List[JobDescriptionResponse],
+    response_model=list[JobDescriptionResponse],
     summary="List all user job descriptions",
 )
 async def list_job_descriptions(

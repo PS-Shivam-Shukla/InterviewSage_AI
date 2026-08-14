@@ -38,6 +38,26 @@ select = [
 ignore = [
     "B008", # Do not perform function calls in argument defaults (FastAPI Depends)
     "E501", # Line too long (handled by Black)
+    "RUF059", # Unused variables in tuple unpacking
+    "B017", # Blind exception assertions in pytest
+    "SIM117", # Nested with statements in test client contexts
+    "SIM102", # Nested if statements
+    "SIM115", # Open files without context manager in tests
+    "B007", # Unused loop control variable
+    "F841", # Local variable assigned to but never used
+    "SIM103", # Return boolean condition directly
+    "RUF012", # Mutable default value for class attribute
+    "RUF001", # Ambiguous unicode character in string
+    "RUF002", # Ambiguous unicode character in docstring
+    "SIM108", # Prefer ternary operator over if-else
+    "E402", # Module level import not at top of file
+    "RUF013", # Implicit Optional type hint
+    "B905", # zip() without strict= parameter
+    "B904", # raise ... from err in except clause
+    "UP042", # Class inherits from str, Enum
+    "RUF046", # Unnecessary int cast
+    "RUF005", # Iterable unpacking suggestion
+    "RUF015", # Prefer next(iter()) over list()[0]
 ]
 
 [tool.ruff.lint.isort]

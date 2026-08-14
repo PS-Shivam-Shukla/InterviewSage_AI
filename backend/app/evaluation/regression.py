@@ -6,7 +6,8 @@ Compares two evaluation runs (baseline vs target) to detect prompt, model, or qu
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any
+
 from app.core.logging import get_logger
 from app.evaluation.evaluator import AIEvaluator
 
@@ -33,7 +34,7 @@ class RegressionTester:
 
     def __init__(
         self,
-        evaluator: Optional[AIEvaluator] = None,
+        evaluator: AIEvaluator | None = None,
         max_accuracy_drop: float = 5.0,        # Max allowed accuracy drop in %
         max_hallucination_increase: float = 5.0,# Max allowed hallucination increase in %
         max_latency_increase_ms: float = 1000.0,# Max allowed latency increase in ms
@@ -45,8 +46,8 @@ class RegressionTester:
 
     def compare_runs(
         self,
-        baseline_summary: Dict[str, Any],
-        target_summary: Dict[str, Any],
+        baseline_summary: dict[str, Any],
+        target_summary: dict[str, Any],
     ) -> RegressionComparisonResult:
         """
         Compare two evaluation run summaries and assert regression criteria.
@@ -89,7 +90,7 @@ class RegressionTester:
         self,
         prompt_version_baseline: str = "v1",
         prompt_version_candidate: str = "v2",
-        model_name: Optional[str] = None,
+        model_name: str | None = None,
     ) -> RegressionComparisonResult:
         """
         Run side-by-side prompt regression test (e.g. Prompt v1 vs Prompt v2).

@@ -4,13 +4,12 @@ Verifies skill classification, tech entity normalization, paraphrase duplicate d
 hard difficulty gates, and 5-run determinism.
 """
 
-import pytest
+from app.services.difficulty_policy import QuestionDifficultyPolicy
 from app.services.question_relevance_service import (
+    LexicalSimilarityEngine,
     QuestionRelevanceService,
     TechEntityNormalizer,
-    LexicalSimilarityEngine,
 )
-from app.services.difficulty_policy import QuestionDifficultyPolicy
 
 
 def test_1_fastapi_experience_classified_as_strong_match():

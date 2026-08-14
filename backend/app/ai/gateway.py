@@ -8,15 +8,14 @@ from __future__ import annotations
 import json
 import time
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+
 from sqlalchemy.orm import Session
 
-from app.ai.cost_tracker import CostTracker
 from app.ai.request import AIGatewayRequest
 from app.ai.response import AIGatewayResponse
 from app.ai.retry import RetryEngine
-from app.ai.router import ModelRouter, ModelSpec
+from app.ai.router import ModelRouter
 from app.ai.token_tracker import TokenTracker
 from app.ai.validator import JSONValidator
 from app.core.logging import get_logger
@@ -38,9 +37,9 @@ class AIGateway:
 
     def __init__(
         self,
-        router: Optional[ModelRouter] = None,
-        registry: Optional[PromptRegistry] = None,
-        retry_engine: Optional[RetryEngine] = None,
+        router: ModelRouter | None = None,
+        registry: PromptRegistry | None = None,
+        retry_engine: RetryEngine | None = None,
     ) -> None:
         self.router = router or ModelRouter()
         self.registry = registry or PromptRegistry()
@@ -61,6 +60,7 @@ class AIGateway:
         if provider == "ollama":
             try:
                 import httpx
+
                 from app.core.config import settings
 
                 url = f"{settings.ollama_base_url.rstrip('/')}/api/generate"
@@ -89,7 +89,7 @@ class AIGateway:
     def execute(
         self,
         request: AIGatewayRequest,
-        db: Optional[Session] = None,
+        db: Session | None = None,
     ) -> AIGatewayResponse:
         """
         Execute an AI Gateway Request with full resiliency, validation, metrics, and token accounting.
@@ -193,7 +193,7 @@ class AIGateway:
                     cost_usd=accounting["cost_usd"],
                     success=success,
                     error_message=error_msg,
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
                 )
                 db.add(llm_req)
                 db.flush()
@@ -205,7 +205,7 @@ class AIGateway:
                     parsed_output=json.dumps(parsed_json) if parsed_json else None,
                     retry_count=retry_count,
                     repair_performed=repair_performed,
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
                 )
                 db.add(llm_res)
                 db.commit()

@@ -4,10 +4,9 @@ Persists evaluation runs, sample evaluation results, benchmark metrics, prompt q
 """
 
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, String, Text, DateTime
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
@@ -33,7 +32,7 @@ class EvaluationRun(Base):
     avg_cost_usd = Column(Float, default=0.0)
     avg_latency_ms = Column(Float, default=0.0)
     pass_rate = Column(Float, default=0.0)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
     results = relationship("EvaluationResult", back_populates="run", cascade="all, delete-orphan")
 
@@ -55,7 +54,7 @@ class EvaluationResult(Base):
     relevancy_score = Column(Float, default=0.0)
     passed = Column(Boolean, default=True)
     error_details = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
     run = relationship("EvaluationRun", back_populates="results")
 
@@ -72,7 +71,7 @@ class BenchmarkResult(Base):
     overall_score = Column(Float, default=0.0)
     latency_p95_ms = Column(Float, default=0.0)
     total_cost_usd = Column(Float, default=0.0)
-    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    timestamp = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
 
 class PromptScore(Base):
@@ -87,7 +86,7 @@ class PromptScore(Base):
     average_latency_ms = Column(Float, default=0.0)
     average_cost_usd = Column(Float, default=0.0)
     total_evaluations = Column(Integer, default=0)
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
 
 
 class ModelScore(Base):
@@ -102,4 +101,4 @@ class ModelScore(Base):
     latency_p95_ms = Column(Float, default=0.0)
     cost_per_1k_tokens = Column(Float, default=0.0)
     quality_rating = Column(String(20), default="STRONG")
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)

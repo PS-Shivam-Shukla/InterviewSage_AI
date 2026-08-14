@@ -9,10 +9,15 @@ Verifies:
 5. Complete loop sequence (Policy -> tool_call -> Observation -> Policy -> finish).
 """
 
-import pytest
-from app.graph.policy_node import PolicyNode, PolicyDecision, ToolCallDecision, FinishDecision, MAX_POLICY_ITERATIONS
-from app.tools.executor import ToolExecutor, Observation
 from app.core.llm_client import FakeLLMClient
+from app.graph.policy_node import (
+    MAX_POLICY_ITERATIONS,
+    FinishDecision,
+    PolicyDecision,
+    PolicyNode,
+    ToolCallDecision,
+)
+from app.tools.executor import Observation, ToolExecutor
 
 
 def test_policy_decision_schemas():

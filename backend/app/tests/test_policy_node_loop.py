@@ -3,12 +3,16 @@ Comprehensive Policy Node & Model-Mediated Tool Loop Test Suite.
 Verifies all 9 policy loop test requirements (Tests A through I).
 """
 
-import pytest
-from typing import Any, Dict, List, Optional
-from app.graph.policy_node import PolicyNode, PolicyDecision, ToolCallDecision, FinishDecision, MAX_POLICY_ITERATIONS
-from app.tools.executor import tool_executor, Observation
-from app.mcp.server import mcp_server, ToolCallResult
 from app.core.llm_client import FakeLLMClient
+from app.graph.policy_node import (
+    MAX_POLICY_ITERATIONS,
+    FinishDecision,
+    PolicyDecision,
+    PolicyNode,
+    ToolCallDecision,
+)
+from app.mcp.server import mcp_server
+from app.tools.executor import tool_executor
 
 
 def make_test_state(observations=None, iteration=0):

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import datetime
-from typing import Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
 from app.agents.base import BaseAgent
@@ -15,7 +15,6 @@ from app.core.llm_client import LLMClient
 from app.graph.state import InterviewState
 from app.mcp import mcp_server
 from app.prompts.loader import get_system_prompt
-
 
 # ── Output schema ─────────────────────────────────────────────
 
@@ -37,9 +36,9 @@ class TranscriptTurn(BaseModel):
 
 class ReportOutput(BaseModel):
     overall_score: float = Field(ge=0.0, le=100.0)
-    competency_scorecard: List[CompetencyScore]
-    improvement_plan: List[dict]
-    transcript_snapshot: List[TranscriptTurn]
+    competency_scorecard: list[CompetencyScore]
+    improvement_plan: list[dict]
+    transcript_snapshot: list[TranscriptTurn]
     executive_summary: str
     generated_at: str
 
@@ -48,7 +47,7 @@ class ReportOutput(BaseModel):
 
 def _build_scorecard(
     evaluations: list[dict], matrix: list[dict]
-) -> tuple[List[CompetencyScore], float]:
+) -> tuple[list[CompetencyScore], float]:
     """Compute per-competency weighted scores and overall score on 0-100 canonical scale."""
     comp_scores: dict[str, list[float]] = defaultdict(list)
     for e in evaluations:
@@ -87,7 +86,7 @@ class ReportGeneratorAgent(BaseAgent):
     def _temperature(self) -> float:
         return 0.3
 
-    def _run(self, state: InterviewState, retry_feedback: Optional[str] = None) -> dict:
+    def _run(self, state: InterviewState, retry_feedback: str | None = None) -> dict:
         evaluations   = state.get("evaluations") or []
         questions     = state.get("questions_asked") or []
         answers       = state.get("answers") or []

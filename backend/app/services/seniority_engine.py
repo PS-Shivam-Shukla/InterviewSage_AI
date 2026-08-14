@@ -15,11 +15,11 @@ Features:
 - Explainable evidence and limitations bullet lists
 """
 
-import re
 import datetime
-from typing import List, Dict, Any, Tuple, Optional
-from pydantic import BaseModel, Field
+import re
+from typing import Any
 
+from pydantic import BaseModel, Field
 
 # ── Data Models ──────────────────────────────────────────────────
 
@@ -41,8 +41,8 @@ class SeniorityEvaluationResult(BaseModel):
     seniority_score: int = Field(..., ge=0, le=100)
     experience_metrics: ExperienceMetrics
     seniority_breakdown: SeniorityBreakdown
-    seniority_evidence: List[str] = Field(default_factory=list)
-    seniority_limitations: List[str] = Field(default_factory=list)
+    seniority_evidence: list[str] = Field(default_factory=list)
+    seniority_limitations: list[str] = Field(default_factory=list)
 
 
 # ── Helper Functions ──────────────────────────────────────────────
@@ -63,7 +63,7 @@ MONTH_MAP = {
 }
 
 
-def parse_month_year(date_str: str, default_to_present: bool = False, ref_date: Optional[datetime.date] = None) -> Optional[datetime.date]:
+def parse_month_year(date_str: str, default_to_present: bool = False, ref_date: datetime.date | None = None) -> datetime.date | None:
     """Parse string representations of dates like 'Jan 2022', '2022-01', '01/2022', '2022', 'Present'."""
     if not date_str or not isinstance(date_str, str):
         return ref_date if (default_to_present and ref_date) else None
@@ -102,7 +102,7 @@ def parse_month_year(date_str: str, default_to_present: bool = False, ref_date: 
     return ref_date if (default_to_present and ref_date) else None
 
 
-def merge_employment_intervals(intervals: List[Tuple[datetime.date, datetime.date]]) -> int:
+def merge_employment_intervals(intervals: list[tuple[datetime.date, datetime.date]]) -> int:
     """Merge overlapping (start_date, end_date) tuples and calculate total non-overlapping months."""
     if not intervals:
         return 0
@@ -154,7 +154,7 @@ NON_TECHNICAL_TITLE_KEYWORDS = {
 }
 
 
-def is_technical_role(title: str, description: str = "", technologies: List[str] = None) -> bool:
+def is_technical_role(title: str, description: str = "", technologies: list[str] = None) -> bool:
     """Determine if a job experience entry is technical/software engineering relevant."""
     title_clean = (title or "").lower()
 
@@ -181,10 +181,10 @@ class SeniorityEngine:
     @classmethod
     def evaluate(
         cls,
-        resume_data: Dict[str, Any],
-        target_role: Optional[str] = None,
-        ref_date: Optional[datetime.date] = None,
-    ) -> Dict[str, Any]:
+        resume_data: dict[str, Any],
+        target_role: str | None = None,
+        ref_date: datetime.date | None = None,
+    ) -> dict[str, Any]:
         """
         Main entry point. Takes parsed resume JSON dict and computes deterministic seniority evaluation.
         """
@@ -192,8 +192,8 @@ class SeniorityEngine:
 
         # 1. Experience Interval Calculations
         raw_experience = resume_data.get("experience") or []
-        all_intervals: List[Tuple[datetime.date, datetime.date]] = []
-        relevant_intervals: List[Tuple[datetime.date, datetime.date]] = []
+        all_intervals: list[tuple[datetime.date, datetime.date]] = []
+        relevant_intervals: list[tuple[datetime.date, datetime.date]] = []
 
         dedup_entries = []
         seen_keys = set()
@@ -316,7 +316,7 @@ class SeniorityEngine:
             return 40
 
     @staticmethod
-    def _score_ownership(entries: List[Dict[str, Any]]) -> Tuple[int, List[str]]:
+    def _score_ownership(entries: list[dict[str, Any]]) -> tuple[int, list[str]]:
         score = 0
         evidence = []
         combined_text = " ".join([
@@ -340,7 +340,7 @@ class SeniorityEngine:
         return score, evidence
 
     @staticmethod
-    def _score_architecture(entries: List[Dict[str, Any]]) -> Tuple[int, List[str]]:
+    def _score_architecture(entries: list[dict[str, Any]]) -> tuple[int, list[str]]:
         score = 0
         evidence = []
         combined_text = " ".join([
@@ -361,7 +361,7 @@ class SeniorityEngine:
         return score, evidence
 
     @staticmethod
-    def _score_leadership(entries: List[Dict[str, Any]]) -> Tuple[int, List[str]]:
+    def _score_leadership(entries: list[dict[str, Any]]) -> tuple[int, list[str]]:
         score = 0
         evidence = []
         combined_text = " ".join([
@@ -382,7 +382,7 @@ class SeniorityEngine:
         return score, evidence
 
     @staticmethod
-    def _score_complexity(entries: List[Dict[str, Any]], resume_data: Dict[str, Any]) -> Tuple[int, List[str]]:
+    def _score_complexity(entries: list[dict[str, Any]], resume_data: dict[str, Any]) -> tuple[int, list[str]]:
         score = 2
         evidence = []
         tech_skills = resume_data.get("technical_skills") or []
@@ -413,7 +413,7 @@ class SeniorityEngine:
         ownership_score: int,
         architecture_score: int,
         leadership_score: int,
-    ) -> Tuple[str, int, List[str]]:
+    ) -> tuple[str, int, list[str]]:
         """Apply strict guardrail rules for STAFF and SENIOR classification."""
         limitations = []
 

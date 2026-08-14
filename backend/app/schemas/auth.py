@@ -4,8 +4,7 @@ Pydantic schemas for authentication request/response bodies.
 
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field
-from pydantic import ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserRegisterRequest(BaseModel):

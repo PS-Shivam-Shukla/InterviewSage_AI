@@ -6,13 +6,14 @@ Configures tracing for FastAPI, SQLAlchemy, and LangGraph workflows with gracefu
 from __future__ import annotations
 
 import os
-from typing import Any, Optional
+from typing import Any
+
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
 
-def setup_telemetry(app: Optional[Any] = None) -> None:
+def setup_telemetry(app: Any | None = None) -> None:
     """
     Initialize OpenTelemetry and LangSmith tracing if enabled in environment.
     """
@@ -24,7 +25,6 @@ def setup_telemetry(app: Optional[Any] = None) -> None:
 
     # OpenTelemetry Tracing Setup
     try:
-        from opentelemetry import trace
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
         if app is not None:

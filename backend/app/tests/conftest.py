@@ -2,36 +2,38 @@
 Pytest configuration and shared fixtures.
 """
 
+from datetime import UTC
+
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.models import Base
-from app.repositories import (
-    UserRepository,
-    ResumeRepository,
-    JobDescriptionRepository,
-    InterviewRepository,
-    CompetencyMatrixRepository,
-    InterviewPlanRepository,
-    InterviewQuestionRepository,
-    InterviewAnswerRepository,
-    EvaluationRepository,
-    InterviewReportRepository,
-    AgentLogRepository,
-)
-from fastapi.testclient import TestClient
 from app.core.database import get_db
 from app.main import app
+from app.models import Base
+from app.repositories import (
+    AgentLogRepository,
+    CompetencyMatrixRepository,
+    EvaluationRepository,
+    InterviewAnswerRepository,
+    InterviewPlanRepository,
+    InterviewQuestionRepository,
+    InterviewReportRepository,
+    InterviewRepository,
+    JobDescriptionRepository,
+    ResumeRepository,
+    UserRepository,
+)
 
 
 @pytest.fixture(autouse=True)
 def mock_llm_agents(monkeypatch):
     """Mock LLM agents in pytest environment so tests run offline deterministically."""
     try:
-        from app.agents.question_generator_agent import QuestionGeneratorAgent
         from app.agents.evaluation_agent import EvaluationAgent
+        from app.agents.question_generator_agent import QuestionGeneratorAgent
 
         orig_eval_call = EvaluationAgent.__call__
         orig_gen_call = QuestionGeneratorAgent.__call__
@@ -253,7 +255,8 @@ def sample_jd(db_session, sample_user):
 @pytest.fixture(scope="function")
 def sample_interview(db_session, sample_user, sample_resume, sample_jd):
     """Create a sample interview."""
-    from datetime import datetime, timezone
+    from datetime import datetime
+
     from app.models import Interview
     interview = Interview(
         user_id=sample_user.id,
@@ -262,7 +265,7 @@ def sample_interview(db_session, sample_user, sample_resume, sample_jd):
         status="PLANNING",
         current_round=None,
         overall_score=None,
-        started_at=datetime.now(timezone.utc),
+        started_at=datetime.now(UTC),
         completed_at=None,
     )
     db_session.add(interview)

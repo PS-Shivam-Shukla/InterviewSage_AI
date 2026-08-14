@@ -4,7 +4,9 @@ Adds `target_role` and `target_company` columns to `interviews` table.
 """
 
 from sqlalchemy import text
+
 from app.core.database import engine
+
 
 def migrate():
     print("[MIGRATION] Starting PostgreSQL Interview role columns migration...")

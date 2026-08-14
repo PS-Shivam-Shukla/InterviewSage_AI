@@ -5,6 +5,7 @@ Phase 1 - Sprint 1 Security Audit Compliance.
 
 import pytest
 from pydantic import ValidationError
+
 from app.core.config import Settings
 
 

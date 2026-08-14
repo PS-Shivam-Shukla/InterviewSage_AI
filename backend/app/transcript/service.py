@@ -5,15 +5,14 @@ and generating downloads.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from sqlalchemy.orm import Session
 
 from app.transcript.repository import TranscriptRepository
 from app.transcript.schemas import (
     ConversationTurnResponse,
-    LiveSessionResponse,
     TranscriptExportResponse,
-    VoiceMetricsResponse,
 )
 
 
@@ -78,7 +77,7 @@ class TranscriptService:
             created_at=export.created_at.isoformat(),
         )
 
-    def get_transcript_for_download(self, identifier: str) -> Dict[str, Any]:
+    def get_transcript_for_download(self, identifier: str) -> dict[str, Any]:
         """
         Get transcript by interview_id or session_id for file download.
         """

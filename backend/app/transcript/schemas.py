@@ -4,7 +4,6 @@ Pydantic Schemas for Transcript & Voice Interview Engine.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -40,7 +39,7 @@ class VoiceMetricsResponse(BaseModel):
     total_silence_duration_seconds: float
     answer_latency_avg_seconds: float
     total_words_spoken: int
-    technical_score: Optional[float] = None
+    technical_score: float | None = None
     communication_score: float
     confidence_estimate: float
     updated_at: str
@@ -56,7 +55,7 @@ class LiveSessionResponse(BaseModel):
     status: str
     active_worker_id: str
     started_at: str
-    ended_at: Optional[str] = None
+    ended_at: str | None = None
     turns_count: int = 0
 
     class Config:
@@ -69,7 +68,7 @@ class TranscriptExportResponse(BaseModel):
     session_id: str
     full_text: str
     turn_count: int
-    file_path: Optional[str] = None
+    file_path: str | None = None
     created_at: str
 
     class Config:

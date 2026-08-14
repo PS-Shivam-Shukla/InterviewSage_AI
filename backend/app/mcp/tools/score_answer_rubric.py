@@ -4,14 +4,14 @@ Selects and returns the correct rubric template for a given
 question type, or evaluates an answer dynamically against the rubric when answer_text is provided.
 """
 
-from typing import Dict, Any, Optional, Literal
+from typing import Any, Literal
 
 QuestionType = Literal["behavioral", "fundamentals", "advanced", "system_design"]
 
 
 # ── Rubric templates ──────────────────────────────────────────────────────────
 
-_RUBRICS: Dict[str, Dict[str, Any]] = {
+_RUBRICS: dict[str, dict[str, Any]] = {
     "behavioral": {
         "dimensions": [
             {
@@ -242,11 +242,11 @@ _RUBRICS: Dict[str, Dict[str, Any]] = {
 def score_answer_rubric(
     question_type: str = "fundamentals",
     seniority_level: str = "MID",
-    answer_text: Optional[str] = None,
-    question_text: Optional[str] = None,
-    competency_targeted: Optional[str] = None,
-    difficulty: Optional[str] = None,
-) -> Dict[str, Any]:
+    answer_text: str | None = None,
+    question_text: str | None = None,
+    competency_targeted: str | None = None,
+    difficulty: str | None = None,
+) -> dict[str, Any]:
     """
     Return the scoring rubric for a given question type and seniority level.
     Rubric templates are consumed by EvaluationAgent for LLM structured evaluation.

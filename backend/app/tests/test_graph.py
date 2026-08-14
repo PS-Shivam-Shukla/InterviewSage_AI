@@ -8,15 +8,13 @@ Validates:
   - State accumulation reducers (questions_asked, answers)
 """
 
-import pytest
-from app.graph.state import InterviewState
 from app.graph.graph_builder import (
     build_graph,
-    route_after_planner,
     route_after_hr_evaluation,
+    route_after_planner,
     route_after_tech_evaluation,
 )
-
+from app.graph.state import InterviewState
 
 # ─────────────────────────────────────────────────────────────
 # Helpers
@@ -154,7 +152,6 @@ class TestRoutingFunctions:
 class TestStateAccumulation:
     def test_questions_asked_appends(self):
         """questions_asked reducer should concatenate lists."""
-        from app.graph.state import InterviewState
         # Simulate two agent updates
         existing = [_make_question("HR")]
         new_q = [_make_question("TECHNICAL")]

@@ -6,8 +6,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.services import AuthService
-from app.models import User
-from app.schemas.auth import UserRegisterRequest, UserLoginRequest
 
 
 def test_auth_service_register_and_login(db_session: Session):

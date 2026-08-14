@@ -5,7 +5,6 @@ and generates multi-week learning roadmaps based on longitudinal memory.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.memory.repository import MemoryRepository
@@ -23,8 +22,8 @@ class PersonalizationEngine:
         self.repo = MemoryRepository(db)
 
     def record_interview_skills_eval(
-        self, candidate_id: str, skill_evaluations: Dict[str, float]
-    ) -> List[SkillProgressResponse]:
+        self, candidate_id: str, skill_evaluations: dict[str, float]
+    ) -> list[SkillProgressResponse]:
         """
         Record evaluation scores for candidate skills and compute longitudinal progression & trends.
         """
@@ -79,8 +78,8 @@ class PersonalizationEngine:
         )
 
     def generate_learning_roadmap(
-        self, candidate_id: str, interview_id: Optional[str] = None
-    ) -> List[LearningRecommendationResponse]:
+        self, candidate_id: str, interview_id: str | None = None
+    ) -> list[LearningRecommendationResponse]:
         """
         Generate a 4-week personalized learning roadmap for candidate based on skill progress.
         """

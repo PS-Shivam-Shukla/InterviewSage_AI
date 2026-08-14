@@ -2,11 +2,9 @@
 Unit and Integration Tests for Human Review Queue & Recruiter Feedback (OP-7, OP-8).
 """
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models.review_queue import ReviewQueue, RecruiterFeedback
 from app.review.service import ReviewService
 
 

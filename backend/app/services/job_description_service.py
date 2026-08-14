@@ -3,14 +3,14 @@
 import json
 import logging
 import time
-from typing import List, Dict, Any, Optional
-from sqlalchemy.orm import Session
-from fastapi import HTTPException, status
 
-from app.models import JobDescription, Resume
-from app.repositories import JobDescriptionRepository, ResumeRepository
+from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
+
 from app.agents.jd_agent import JDAgent
 from app.mcp.tools.compute_ats_score import compute_ats_score
+from app.models import JobDescription
+from app.repositories import JobDescriptionRepository, ResumeRepository
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ class JobDescriptionService:
             return None
         return self._format_jd(jd)
 
-    def list_job_descriptions(self, user_id: str) -> List[dict]:
+    def list_job_descriptions(self, user_id: str) -> list[dict]:
         jds = self.jd_repo.list_by_user(user_id)
         return [self._format_jd(jd) for jd in jds]
 
@@ -125,7 +125,7 @@ class JobDescriptionService:
             "jd_skill_count": match_metrics.get("jd_skill_count", len(jd_required_skills)),
         }
 
-    def _format_jd(self, jd: JobDescription, extra_analysis: Optional[dict] = None) -> dict:
+    def _format_jd(self, jd: JobDescription, extra_analysis: dict | None = None) -> dict:
         try:
             skills = json.loads(jd.required_skills or "[]")
         except Exception:

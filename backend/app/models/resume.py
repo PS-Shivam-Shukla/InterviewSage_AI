@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+
 from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
-    from app.models.user import User
     from app.models.interview import Interview
+    from app.models.user import User
 
 
 class Resume(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -30,8 +31,8 @@ class Resume(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     seniority_breakdown: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
 
     # Relationships
-    user: Mapped["User"] = relationship("User", back_populates="resumes")  # noqa: F821
-    interviews: Mapped[list["Interview"]] = relationship(  # noqa: F821
+    user: Mapped[User] = relationship("User", back_populates="resumes")
+    interviews: Mapped[list[Interview]] = relationship(
         "Interview", back_populates="resume"
     )
 

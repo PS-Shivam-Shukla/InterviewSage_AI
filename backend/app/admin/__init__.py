@@ -7,7 +7,7 @@ from app.admin.dashboard import AdminDashboardManager
 from app.admin.review import AdminReviewManager
 
 __all__ = [
-    "AdminDashboardManager",
     "AdminAnalyticsManager",
+    "AdminDashboardManager",
     "AdminReviewManager",
 ]

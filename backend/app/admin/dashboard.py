@@ -5,12 +5,13 @@ Powers live interview monitoring, conversation replay timeline reconstruction, p
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from sqlalchemy.orm import Session
 
 from app.analytics.service import AnalyticsService
-from app.models.interview import Interview, InterviewQuestion, InterviewAnswer, Evaluation, AgentLog
-from app.prompts.registry import PromptRegistry, DEFAULT_REGISTRY_TEMPLATES
+from app.models.interview import AgentLog, Evaluation, Interview, InterviewAnswer, InterviewQuestion
+from app.prompts.registry import DEFAULT_REGISTRY_TEMPLATES, PromptRegistry
 
 
 class AdminDashboardManager:
@@ -21,11 +22,11 @@ class AdminDashboardManager:
         self.analytics_service = AnalyticsService(db)
         self.prompt_registry = PromptRegistry()
 
-    def get_dashboard_overview(self) -> Dict[str, Any]:
+    def get_dashboard_overview(self) -> dict[str, Any]:
         """OP-1: Return full high-level AI Admin Dashboard Overview."""
         return self.analytics_service.get_admin_overview()
 
-    def get_live_interviews(self) -> List[Dict[str, Any]]:
+    def get_live_interviews(self) -> list[dict[str, Any]]:
         """OP-2: Return list of currently active live interviews with thread and worker IDs."""
         active_interviews = (
             self.db.query(Interview)
@@ -64,7 +65,7 @@ class AdminDashboardManager:
 
         return items
 
-    def reconstruct_timeline(self, interview_id: str) -> Dict[str, Any]:
+    def reconstruct_timeline(self, interview_id: str) -> dict[str, Any]:
         """
         OP-3: Reconstruct complete conversation replay timeline from PostgreSQL & LangGraph Checkpoints.
         """
@@ -154,7 +155,7 @@ class AdminDashboardManager:
             "timeline": timeline_steps,
         }
 
-    def get_prompt_history_explorer(self) -> List[Dict[str, Any]]:
+    def get_prompt_history_explorer(self) -> list[dict[str, Any]]:
         """OP-4: Return prompt history and version explorer items."""
         items = []
         for prompt_key, version_map in DEFAULT_REGISTRY_TEMPLATES.items():

@@ -9,15 +9,15 @@ persistent DB connections for the duration of the WebSocket.
 from __future__ import annotations
 
 import json
-from typing import Dict, Optional, Tuple
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, status
+
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal, get_db
 from app.core.logging import get_logger
 from app.core.security import extract_token_from_header
-from app.services import AuthService
 from app.repositories import InterviewRepository
+from app.services import AuthService
 from app.speech.streaming import AudioStreamingService
 
 logger = get_logger(__name__)
@@ -26,7 +26,7 @@ router = APIRouter(prefix="/ws", tags=["websocket"])
 _processing_sessions: set[str] = set()
 
 
-def _acquire_db_session() -> Tuple[Session, bool]:
+def _acquire_db_session() -> tuple[Session, bool]:
     """
     Helper to acquire a database session.
     Returns (session, should_close).
@@ -43,7 +43,7 @@ def _acquire_db_session() -> Tuple[Session, bool]:
 
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: Dict[str, list[WebSocket]] = {}
+        self.active_connections: dict[str, list[WebSocket]] = {}
 
     async def connect(self, interview_id: str, websocket: WebSocket):
         await websocket.accept()
@@ -76,7 +76,7 @@ manager = ConnectionManager()
 async def websocket_interview_session(
     websocket: WebSocket,
     interview_id: str,
-    token: Optional[str] = Query(None),
+    token: str | None = Query(None),
 ):
     """
     WebSocket route streaming turn state, agent logs, and live audio/text events.
@@ -134,7 +134,7 @@ async def websocket_interview_session(
             if message.get("type") == "websocket.disconnect":
                 break
 
-            if "bytes" in message and message["bytes"]:
+            if message.get("bytes"):
                 chunk = message["bytes"]
                 if len(chunk) > 0:
                     streaming_service.buffer_audio_chunk(interview_id, chunk)
@@ -144,7 +144,7 @@ async def websocket_interview_session(
                         "interview_id": interview_id,
                         "size_bytes": len(chunk),
                     })
-            elif "text" in message and message["text"]:
+            elif message.get("text"):
                 try:
                     data = json.loads(message["text"])
                     event_type = data.get("type") or data.get("event") or "PING"

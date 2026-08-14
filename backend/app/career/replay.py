@@ -5,7 +5,6 @@ Annotates interview transcript timelines with AI insights (timestamp, annotation
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
 from sqlalchemy.orm import Session
 
 from app.career.schemas import InterviewAnnotationItem, InterviewReplayResponse

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from typing import Any, List, Tuple
 
 
 class Guardrails:
@@ -84,8 +83,8 @@ class Guardrails:
         return is_contaminated, sanitized
 
     def validate_negative_constraints(
-        self, text: str, negative_skills: List[str]
-    ) -> Tuple[bool, List[str]]:
+        self, text: str, negative_skills: list[str]
+    ) -> tuple[bool, list[str]]:
         """
         Validates text against negative domain constraints.
         Returns (is_valid, list_of_violated_keywords).
@@ -94,7 +93,7 @@ class Guardrails:
         if not text or not negative_skills:
             return True, []
 
-        violations: List[str] = []
+        violations: list[str] = []
         for kw in negative_skills:
             if not kw or len(kw.strip()) == 0:
                 continue

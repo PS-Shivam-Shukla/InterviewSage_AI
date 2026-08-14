@@ -7,8 +7,9 @@ from __future__ import annotations
 
 import time
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
+
 from sqlalchemy.orm import Session
 
 from app.ai.gateway import AIGateway, ai_gateway
@@ -28,8 +29,8 @@ class AIEvaluator:
 
     def __init__(
         self,
-        gateway: Optional[AIGateway] = None,
-        dataset_manager: Optional[GoldenDatasetManager] = None,
+        gateway: AIGateway | None = None,
+        dataset_manager: GoldenDatasetManager | None = None,
     ) -> None:
         self.gateway = gateway or ai_gateway
         self.dataset_manager = dataset_manager or GoldenDatasetManager()
@@ -38,9 +39,9 @@ class AIEvaluator:
         self,
         sample: EvaluationSample,
         prompt_version: str = "v1",
-        model_name: Optional[str] = None,
-        provider: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        model_name: str | None = None,
+        provider: str | None = None,
+    ) -> dict[str, Any]:
         """Evaluate a single evaluation sample using AIGateway."""
         start_t = time.perf_counter()
 
@@ -87,10 +88,10 @@ class AIEvaluator:
         self,
         run_name: str = "suite_run",
         prompt_version: str = "v1",
-        model_name: Optional[str] = None,
-        provider: Optional[str] = None,
-        db: Optional[Session] = None,
-    ) -> Dict[str, Any]:
+        model_name: str | None = None,
+        provider: str | None = None,
+        db: Session | None = None,
+    ) -> dict[str, Any]:
         """
         Execute full evaluation suite across golden dataset and record summary run.
         """
@@ -161,7 +162,7 @@ class AIEvaluator:
                     avg_cost_usd=avg_cost,
                     avg_latency_ms=avg_latency,
                     pass_rate=pass_rate,
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
                 )
                 db.add(run_record)
                 db.flush()
@@ -180,7 +181,7 @@ class AIEvaluator:
                         hallucination_score=m.hallucination_score,
                         relevancy_score=m.relevancy,
                         passed=m.passed,
-                        created_at=datetime.now(timezone.utc),
+                        created_at=datetime.now(UTC),
                     )
                     db.add(res_record)
 

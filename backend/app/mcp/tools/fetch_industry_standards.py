@@ -5,13 +5,13 @@ In v1 this is a curated static dictionary; it will later connect to a
 live external knowledge source.
 """
 
-from typing import Dict, Any
+from typing import Any
 
 # ── Static knowledge base ─────────────────────────────────────────────────────
 # Each entry represents expected skills / competencies for a role category.
 # Keyed by normalised role slug.
 
-_STANDARDS: Dict[str, Dict[str, Any]] = {
+_STANDARDS: dict[str, dict[str, Any]] = {
     "backend-engineer": {
         "core_skills": ["Python", "REST APIs", "SQL", "Data Modelling", "Testing", "Git"],
         "advanced_skills": ["System Design", "Distributed Systems", "Caching", "Message Queues"],
@@ -112,7 +112,7 @@ _STANDARDS: Dict[str, Dict[str, Any]] = {
 }
 
 
-def fetch_industry_standards(role: str) -> Dict[str, Any]:
+def fetch_industry_standards(role: str) -> dict[str, Any]:
     """
     Return industry standards for a given role.
 

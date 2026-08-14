@@ -8,8 +8,9 @@ Tables:
 - transcripts: Consolidated transcript exports
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Optional
+
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -33,22 +34,22 @@ class LiveSession(UUIDPrimaryKeyMixin, Base):
 
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
         nullable=False,
     )
-    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
         nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )
 
@@ -77,14 +78,14 @@ class ConversationTurn(UUIDPrimaryKeyMixin, Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
         nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )
 
@@ -110,20 +111,20 @@ class VoiceMetrics(UUIDPrimaryKeyMixin, Base):
     total_silence_duration_seconds: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     answer_latency_avg_seconds: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     total_words_spoken: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    technical_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=None)
+    technical_score: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
     communication_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     confidence_estimate: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
         nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )
 
@@ -139,12 +140,12 @@ class SpeechEvent(UUIDPrimaryKeyMixin, Base):
     )
     # CHUNK_RECEIVED | TRANSCRIPTION_COMPLETE | TTS_SYNTHESIZED | WEBSOCKET_DISCONNECT
     event_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    payload_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    payload_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     latency_ms: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
         nullable=False,
     )
@@ -165,17 +166,17 @@ class TranscriptExport(UUIDPrimaryKeyMixin, Base):
     )
     full_text: Mapped[str] = mapped_column(Text, nullable=False)
     turn_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    file_path: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    file_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
         nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )

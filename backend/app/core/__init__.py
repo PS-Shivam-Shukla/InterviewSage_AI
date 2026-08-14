@@ -3,6 +3,6 @@ Core application modules.
 """
 
 from app.core.config import settings
-from app.core.logging import setup_logging, get_logger
+from app.core.logging import get_logger, setup_logging
 
-__all__ = ["settings", "setup_logging", "get_logger"]
+__all__ = ["get_logger", "settings", "setup_logging"]

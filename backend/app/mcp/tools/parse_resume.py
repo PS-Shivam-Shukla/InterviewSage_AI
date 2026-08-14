@@ -14,9 +14,9 @@ import re
 from pathlib import Path
 from typing import Any
 
-import fitz   # PyMuPDF  — pip install pymupdf
-import docx   # python-docx — pip install python-docx
-import ftfy   # text normalization — pip install ftfy
+import docx  # python-docx — pip install python-docx
+import fitz  # PyMuPDF  — pip install pymupdf
+import ftfy  # text normalization — pip install ftfy
 
 
 def parse_resume_pdf(file_path: str) -> dict[str, Any]:

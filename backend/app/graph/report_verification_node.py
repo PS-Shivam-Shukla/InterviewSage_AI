@@ -14,7 +14,8 @@ Design contract:
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from app.core.llm_client import LLMClient
@@ -32,7 +33,7 @@ class ClaimVerification(BaseModel):
     status: Literal["supported", "unsupported", "uncertain"] = Field(
         description="Supported: explicit transcript evidence exists. Unsupported: no evidence in transcript. Uncertain: ambiguous."
     )
-    evidence_ids: List[str] = Field(
+    evidence_ids: list[str] = Field(
         default_factory=list, description="IDs or turn numbers of transcript evidence supporting this claim."
     )
     reasoning: str = Field(description="Explanation of factual verification finding.")
@@ -41,7 +42,7 @@ class ClaimVerification(BaseModel):
 class VerifiedReportOutput(BaseModel):
     """Final verified report output schema."""
     verified: bool = Field(description="True if all claims are supported or successfully corrected.")
-    claims: List[ClaimVerification] = Field(default_factory=list)
+    claims: list[ClaimVerification] = Field(default_factory=list)
     corrected_executive_summary: str = Field(description="Executive summary with unsupported claims removed or corrected.")
     unsupported_claims_count: int = Field(default=0)
 
@@ -53,7 +54,7 @@ class ReportVerificationNode:
     Evidence-grounded reflection node that validates report summaries against candidate transcript turns.
     """
 
-    def __init__(self, llm_client: Optional[LLMClient] = None) -> None:
+    def __init__(self, llm_client: LLMClient | None = None) -> None:
         self.llm = llm_client or LLMClient(temperature=0.1)
 
     def __call__(self, state: InterviewState) -> dict:
@@ -86,9 +87,9 @@ class ReportVerificationNode:
             }
 
         logger.info(
-            f"\n================================================================================\n"
-            f"🔍 [REFLECTION NODE STARTED] Verifying Report Executive Summary against Transcript Evidence\n"
-            f"────────────────────────────────────────────────────────────────────────────────"
+            "\n================================================================================\n"
+            "🔍 [REFLECTION NODE STARTED] Verifying Report Executive Summary against Transcript Evidence\n"
+            "────────────────────────────────────────────────────────────────────────────────"
         )
 
         # ── 2. LLM Evidence-Grounded Verification Prompt ──────────────────────

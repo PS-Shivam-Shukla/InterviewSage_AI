@@ -3,10 +3,9 @@ Comprehensive Test Suite for Bounded Generation Strategy & Pre-Generation Divers
 Covers all 12 test requirements specified in the optimization specification.
 """
 
-import pytest
-from app.agents.question_generator_agent import QuestionGeneratorAgent, GeneratedQuestion
+from app.agents.question_generator_agent import GeneratedQuestion, QuestionGeneratorAgent
 from app.core.llm_client import FakeLLMClient
-from app.services.question_relevance_service import QuestionRelevanceService, LexicalSimilarityEngine
+from app.services.question_relevance_service import QuestionRelevanceService
 
 
 def make_state(questions_asked=None, competency_matrix=None):

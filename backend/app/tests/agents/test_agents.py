@@ -8,23 +8,31 @@ Each test verifies:
 """
 
 import pytest
+
+from app.agents import (
+    ATSAgent,
+    CareerCoachAgent,
+    CoachingPlanOutput,
+    CompetencyMappingAgent,
+    CompetencyMatrixOutput,
+    EvaluationAgent,
+    EvaluationOutput,
+    GeneratedQuestion,
+    HRInterviewAgent,
+    InterviewPlannerAgent,
+    InterviewPlanOutput,
+    JDAgent,
+    JDAnalysis,
+    ProfileIntelligenceAgent,
+    ProfileSummary,
+    QuestionGeneratorAgent,
+    ReportGeneratorAgent,
+    ResumeAgent,
+    ResumeAnalysis,
+    TechnicalInterviewAgent,
+)
 from app.core.llm_client import FakeLLMClient
 from app.graph.state import InterviewState
-from app.agents import (
-    ResumeAgent, ResumeAnalysis,
-    JDAgent, JDAnalysis,
-    ATSAgent,
-    ProfileIntelligenceAgent, ProfileSummary,
-    CompetencyMappingAgent, CompetencyMatrixOutput,
-    InterviewPlannerAgent, InterviewPlanOutput,
-    QuestionGeneratorAgent, GeneratedQuestion,
-    HRInterviewAgent,
-    TechnicalInterviewAgent,
-    EvaluationAgent, EvaluationOutput,
-    CareerCoachAgent, CoachingPlanOutput,
-    ReportGeneratorAgent,
-)
-
 
 # ── Fixtures ──────────────────────────────────────────────────
 
@@ -164,7 +172,6 @@ class TestATSAgent:
         def model_dump(self): return {"suggestions": ["Add PostgreSQL to skills section"]}
 
     def test_ats_returns_overlap_score(self):
-        from app.agents.ats_agent import ATSAnalysis
         fake_suggestion = type("S", (), {"suggestions": ["Add Redis to skills"]})()
         agent = ATSAgent(llm_client=FakeLLMClient(responses=[
             type("S", (), {
@@ -173,10 +180,10 @@ class TestATSAgent:
             })()
         ]))
         # Inject correct structured response
+
         from pydantic import BaseModel
-        from typing import List
         class Sug(BaseModel):
-            suggestions: List[str] = []
+            suggestions: list[str] = []
         agent2 = ATSAgent(llm_client=FakeLLMClient(responses=[Sug(suggestions=["Add Redis"])]))
         result = agent2(_base_state())
         assert "ats_analysis" in result
@@ -464,7 +471,6 @@ class TestCareerCoachAgent:
 
 class TestReportGeneratorAgent:
     def test_compiles_report(self):
-        from app.agents.report_generator_agent import ReportOutput
         fake_summary = type("S", (), {})()
         from pydantic import BaseModel
         class SummaryOut(BaseModel):

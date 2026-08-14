@@ -6,13 +6,14 @@ Executes benchmarking suites across multiple model providers and prompt versions
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
+
 from sqlalchemy.orm import Session
 
 from app.core.logging import get_logger
 from app.evaluation.evaluator import AIEvaluator
-from app.models.evaluation import BenchmarkResult, ModelScore, PromptScore
+from app.models.evaluation import BenchmarkResult, ModelScore
 
 logger = get_logger(__name__)
 
@@ -22,16 +23,16 @@ class BenchmarkRunner:
     Executes automated model benchmarking and prompt comparison runs.
     """
 
-    def __init__(self, evaluator: Optional[AIEvaluator] = None) -> None:
+    def __init__(self, evaluator: AIEvaluator | None = None) -> None:
         self.evaluator = evaluator or AIEvaluator()
 
     def benchmark_models(
         self,
         benchmark_name: str = "model_benchmark",
         prompt_version: str = "v1",
-        providers_and_models: Optional[List[tuple[str, str]]] = None,
-        db: Optional[Session] = None,
-    ) -> List[Dict[str, Any]]:
+        providers_and_models: list[tuple[str, str]] | None = None,
+        db: Session | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Benchmark multiple model providers/models against the golden dataset.
         """
@@ -65,7 +66,7 @@ class BenchmarkRunner:
                         overall_score=eval_summary["pass_rate"],
                         latency_p95_ms=eval_summary["avg_latency_ms"],
                         total_cost_usd=eval_summary["avg_cost_usd"],
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                     db.add(bm_rec)
 
@@ -80,13 +81,13 @@ class BenchmarkRunner:
                             latency_p95_ms=eval_summary["avg_latency_ms"],
                             cost_per_1k_tokens=eval_summary["avg_cost_usd"],
                             quality_rating="STRONG" if eval_summary["pass_rate"] >= 80 else "MODERATE",
-                            updated_at=datetime.now(timezone.utc),
+                            updated_at=datetime.now(UTC),
                         )
                         db.add(model_score)
                     else:
                         model_score.accuracy_score = eval_summary["pass_rate"]
                         model_score.latency_p95_ms = eval_summary["avg_latency_ms"]
-                        model_score.updated_at = datetime.now(timezone.utc)
+                        model_score.updated_at = datetime.now(UTC)
 
                     db.commit()
                 except Exception as exc:

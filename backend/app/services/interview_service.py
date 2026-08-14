@@ -11,12 +11,14 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.agents.evaluation_agent import EvaluationAgent
+from app.agents.question_generator_agent import QuestionGeneratorAgent
 from app.core.logging import get_logger
 from app.core.metrics import (
     ACTIVE_INTERVIEWS_GAUGE,
@@ -25,10 +27,6 @@ from app.core.metrics import (
 )
 from app.core.request_context import set_request_context
 from app.graph.workflow_master import build_master_workflow, get_checkpointer
-from app.agents.evaluation_agent import EvaluationAgent
-from app.agents.question_generator_agent import QuestionGeneratorAgent
-from app.strategy.aptitude_bank import select_aptitude_questions
-from app.strategy.difficulty_engine import DifficultyEngine
 from app.models import (
     AgentLog,
     Evaluation,
@@ -45,6 +43,8 @@ from app.repositories import (
     InterviewQuestionRepository,
     InterviewRepository,
 )
+from app.strategy.aptitude_bank import select_aptitude_questions
+from app.strategy.difficulty_engine import DifficultyEngine
 
 logger = get_logger(__name__)
 
@@ -55,7 +55,7 @@ difficulty_engine = DifficultyEngine()
 
 # ── Module-level helpers ──────────────────────────────────────────────────────
 
-def _parse_json_field(value: Optional[str], default=None) -> Any:
+def _parse_json_field(value: str | None, default=None) -> Any:
     """Safely parse a JSON string field from a database model."""
     if not value:
         return default if default is not None else []
@@ -103,7 +103,7 @@ def _build_competency_matrix(role: str, jd_skills: list, resume_skills: list) ->
     Returns a list of {name, weight, description} dicts with weights summing to ~100.
     JD skills get higher priority; resume-only skills supplement.
     """
-    competencies: List[dict] = []
+    competencies: list[dict] = []
     seen: set = set()
 
     # JD skills: primary competencies (descending weight)
@@ -223,7 +223,7 @@ class InterviewService:
         competency_matrix: list,
         questions_asked: list,
         evaluations: list,
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """
         Generate one interview question via QuestionGeneratorAgent (LLM).
         Passes all required context via correct state keys.
@@ -274,7 +274,7 @@ class InterviewService:
         user_id: str,
         resume_id: str,
         jd_id: str,
-        payload: Optional[Dict[str, Any]] = None,
+        payload: dict[str, Any] | None = None,
     ) -> Interview:
         """
         Initialize a new interview session. Requires valid resume_id and jd_id.
@@ -310,7 +310,7 @@ class InterviewService:
             )
 
         # Deduplication Check: Return existing active interview for same (user, resume, jd) created within last 5 mins
-        recent_cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
+        recent_cutoff = datetime.now(UTC) - timedelta(minutes=5)
         existing_recent = (
             self.db.query(Interview)
             .filter(
@@ -350,7 +350,7 @@ class InterviewService:
             status="PLANNING",
             current_round="TECHNICAL",
             overall_score=None,
-            started_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
             completed_at=None,
         )
         created = self.interview_repo.create(interview)
@@ -360,7 +360,7 @@ class InterviewService:
     def generate_plan_background(
         self,
         interview_id: str,
-        context_override: Optional[Dict[str, Any]] = None,
+        context_override: dict[str, Any] | None = None,
     ) -> None:
         """
         Background task to execute get_interview_plan asynchronously.
@@ -388,7 +388,7 @@ class InterviewService:
         finally:
             db.close()
 
-    def get_interview(self, interview_id: str) -> Optional[Interview]:
+    def get_interview(self, interview_id: str) -> Interview | None:
         return self.interview_repo.get_by_id(interview_id)
 
     # ── get_interview_plan ────────────────────────────────────────────────────
@@ -396,8 +396,8 @@ class InterviewService:
     def get_interview_plan(
         self,
         interview_id: str,
-        context_override: Optional[Dict[str, Any]] = None,
-    ) -> Optional[Dict[str, Any]]:
+        context_override: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
         """
         Build or return the interview question plan.
 
@@ -447,8 +447,8 @@ class InterviewService:
         ).upper()
         resume_data["seniority_signal"] = seniority
 
-        jd_skills: List[str] = jd_data.get("required_skills", [])
-        resume_skills: List[str] = resume_data.get("skills", [])
+        jd_skills: list[str] = jd_data.get("required_skills", [])
+        resume_skills: list[str] = resume_data.get("skills", [])
         is_fresher_candidate = _is_fresher(seniority)
         competency_matrix = _build_competency_matrix(role_title, jd_skills, resume_skills)
 
@@ -496,12 +496,12 @@ class InterviewService:
             }
 
         # ── Generate question plan ────────────────────────────────────────────
-        db_questions_created: List[InterviewQuestion] = []
+        db_questions_created: list[InterviewQuestion] = []
 
         if is_fresher_candidate:
             # FRESHER: 4 Aptitude (fixed bank) + 3 Technical (LLM) + 2 HR (LLM) = 9 Total
             aptitude_qs = select_aptitude_questions(4, session_seed=interview_id)
-            history_so_far: List[dict] = []
+            history_so_far: list[dict] = []
             for idx, apt in enumerate(aptitude_qs, start=1):
                 db_q = InterviewQuestion(
                     id=str(uuid.uuid4()),
@@ -511,7 +511,7 @@ class InterviewService:
                     difficulty=apt["difficulty"],
                     question_text=apt["question_text"],
                     sequence_number=idx,
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
                 )
                 self.db.add(db_q)
                 db_questions_created.append(db_q)
@@ -539,7 +539,7 @@ class InterviewService:
                     difficulty=t_q.get("difficulty") or "EASY",
                     question_text=t_q["question_text"],
                     sequence_number=seq_num,
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
                 )
                 self.db.add(db_t)
                 db_questions_created.append(db_t)
@@ -567,7 +567,7 @@ class InterviewService:
                     difficulty=hr_q.get("difficulty") or "EASY",
                     question_text=hr_q["question_text"],
                     sequence_number=seq_num,
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
                 )
                 self.db.add(db_hr)
                 db_questions_created.append(db_hr)
@@ -599,7 +599,7 @@ class InterviewService:
                 difficulty=q1.get("difficulty") or "MEDIUM",
                 question_text=q1["question_text"],
                 sequence_number=1,
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
             self.db.add(db_q1)
             db_questions_created.append(db_q1)
@@ -621,7 +621,7 @@ class InterviewService:
                 difficulty=q2.get("difficulty") or "MEDIUM",
                 question_text=q2["question_text"],
                 sequence_number=2,
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
             self.db.add(db_q2)
             db_questions_created.append(db_q2)
@@ -643,7 +643,7 @@ class InterviewService:
                 difficulty=q3.get("difficulty") or "MEDIUM",
                 question_text=q3["question_text"],
                 sequence_number=3,
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
             self.db.add(db_q3)
             db_questions_created.append(db_q3)
@@ -665,7 +665,7 @@ class InterviewService:
                 difficulty=q4.get("difficulty") or "MEDIUM",
                 question_text=q4["question_text"],
                 sequence_number=4,
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
             self.db.add(db_q4)
             db_questions_created.append(db_q4)
@@ -687,7 +687,7 @@ class InterviewService:
                 difficulty=q5.get("difficulty") or "MEDIUM",
                 question_text=q5["question_text"],
                 sequence_number=5,
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
             self.db.add(db_q5)
             db_questions_created.append(db_q5)
@@ -748,8 +748,8 @@ class InterviewService:
     async def get_interview_plan_async(
         self,
         interview_id: str,
-        context_override: Optional[Dict[str, Any]] = None,
-    ) -> Optional[Dict[str, Any]]:
+        context_override: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
         """Async variant that offloads to a worker thread."""
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
@@ -759,8 +759,8 @@ class InterviewService:
     def approve_blueprint(
         self,
         interview_id: str,
-        overrides: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        overrides: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         plan_response = self.get_interview_plan(interview_id)
         if not plan_response:
             return {"error": f"Interview session {interview_id} not found."}
@@ -785,7 +785,7 @@ class InterviewService:
         answer: str,
         question_id: str = "",
         question_text: str = "",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Evaluate candidate answer via EvaluationAgent (LLM PRIMARY), generate
         next question via QuestionGeneratorAgent (LLM), persist atomically.
@@ -836,7 +836,7 @@ class InterviewService:
         current_seq_from_count = len(existing_answered) + 1
 
         # ── 2. Resolve actual DB question ─────────────────────────────────────
-        db_question: Optional[InterviewQuestion] = None
+        db_question: InterviewQuestion | None = None
         question_needs_creating = False
 
         # Try by UUID (frontend sends actual DB ID now)
@@ -907,7 +907,7 @@ class InterviewService:
         total_questions = len(all_configured_questions) if all_configured_questions else (7 if is_fresher_candidate else 5)
 
         # ── 4. Build previous evaluations list for adaptive difficulty ─────────
-        previous_evaluations: List[dict] = []
+        previous_evaluations: list[dict] = []
         for item in existing_answered:
             eval_d = item.get("evaluation", {})
             if eval_d and isinstance(eval_d, dict):
@@ -1048,7 +1048,7 @@ class InterviewService:
                     difficulty=difficulty,
                     question_text=q_text,
                     sequence_number=current_seq,
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
                 )
                 self.db.add(db_question)
                 self.db.flush()
@@ -1059,7 +1059,7 @@ class InterviewService:
                 question_id=db_question.id,
                 answer_text=ans_str,
                 response_time_seconds=30,
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
             self.db.add(db_answer)
             self.db.flush()
@@ -1090,7 +1090,7 @@ class InterviewService:
                 latency_ms=0,
                 retry_count=0,
                 prompt_version="1.0",
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
             self.db.add(db_log)
 
@@ -1106,7 +1106,7 @@ class InterviewService:
             if is_last:
                 is_completed = True
                 interview_obj.status = "COMPLETED"
-                interview_obj.completed_at = datetime.now(timezone.utc)
+                interview_obj.completed_at = datetime.now(UTC)
 
                 # Compute overall score from all evaluations + current
                 all_scores = [
@@ -1181,7 +1181,7 @@ class InterviewService:
                         difficulty=next_q.get("difficulty") or next_difficulty_str,
                         question_text=next_q["question_text"],
                         sequence_number=next_seq,
-                        created_at=datetime.now(timezone.utc),
+                        created_at=datetime.now(UTC),
                     )
                     self.db.add(next_db_q)
                     self.db.flush()
@@ -1242,22 +1242,22 @@ class InterviewService:
 
     # ── Lifecycle methods ─────────────────────────────────────────────────────
 
-    def pause_interview(self, interview_id: str) -> Optional[Interview]:
+    def pause_interview(self, interview_id: str) -> Interview | None:
         return self._update_status(interview_id, "PAUSED")
 
-    def resume_interview(self, interview_id: str) -> Optional[Interview]:
+    def resume_interview(self, interview_id: str) -> Interview | None:
         return self._update_status(interview_id, "IN_PROGRESS")
 
     def complete_interview(
-        self, interview_id: str, overall_score: Optional[float] = None
-    ) -> Optional[Interview]:
+        self, interview_id: str, overall_score: float | None = None
+    ) -> Interview | None:
         interview = self.get_interview(interview_id)
         if not interview:
             return None
 
         if interview.status != "COMPLETED":
             interview.status = "COMPLETED"
-            interview.completed_at = datetime.now(timezone.utc)
+            interview.completed_at = datetime.now(UTC)
 
             if overall_score is not None:
                 interview.overall_score = int(overall_score)
@@ -1285,7 +1285,7 @@ class InterviewService:
 
         return interview
 
-    def _update_status(self, interview_id: str, status: str) -> Optional[Interview]:
+    def _update_status(self, interview_id: str, status: str) -> Interview | None:
         interview = self.get_interview(interview_id)
         if not interview:
             return None

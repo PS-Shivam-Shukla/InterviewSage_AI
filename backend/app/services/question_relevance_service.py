@@ -12,12 +12,12 @@ Responsibilities:
 
 import math
 import re
-from typing import Dict, Any, List, Optional, Set, Tuple
+from typing import Any
+
 from pydantic import BaseModel, Field
 
-
 # Controlled technology alias dictionary for deterministic normalization
-TECH_ALIASES: Dict[str, str] = {
+TECH_ALIASES: dict[str, str] = {
     "postgres": "PostgreSQL",
     "postgresql db": "PostgreSQL",
     "postgres db": "PostgreSQL",
@@ -72,7 +72,7 @@ class TechEntityNormalizer:
         return clean
 
     @classmethod
-    def extract_and_normalize_entities(cls, text: str) -> Set[str]:
+    def extract_and_normalize_entities(cls, text: str) -> set[str]:
         """Extracts technology entities from text and normalizes them."""
         if not text:
             return set()
@@ -105,8 +105,8 @@ class QuestionRelevanceResult(BaseModel):
     accepted: bool
     reason: str
     skill_tier: str  # STRONG_MATCH | POSSIBLE_MATCH | JD_GAP | UNRELATED
-    matched_entities: List[str] = Field(default_factory=list)
-    unmatched_entities: List[str] = Field(default_factory=list)
+    matched_entities: list[str] = Field(default_factory=list)
+    unmatched_entities: list[str] = Field(default_factory=list)
     lexical_score: float = 0.0
     keyword_score: float = 0.0
     experience_evidence_score: float = 0.0
@@ -163,8 +163,8 @@ class LexicalSimilarityEngine:
         if not words1 or not words2:
             return 0.0
 
-        freq1: Dict[str, int] = {}
-        freq2: Dict[str, int] = {}
+        freq1: dict[str, int] = {}
+        freq2: dict[str, int] = {}
         for w in words1:
             freq1[w] = freq1.get(w, 0) + 1
         for w in words2:
@@ -205,7 +205,7 @@ class LexicalSimilarityEngine:
         return intersection / float(union) if union > 0 else 0.0
 
     @classmethod
-    def compute_hybrid_duplicate_score(cls, new_question: str, existing_questions: List[Dict[str, Any]]) -> Tuple[float, Optional[str]]:
+    def compute_hybrid_duplicate_score(cls, new_question: str, existing_questions: list[dict[str, Any]]) -> tuple[float, str | None]:
         """
         Computes maximum lexical duplicate score across past questions.
         Returns (max_score, matching_question_text).
@@ -235,14 +235,14 @@ class QuestionRelevanceService:
     @classmethod
     def classify_skills(
         cls,
-        candidate_skills: List[str],
-        work_experience_bullets: List[str],
-        jd_required_skills: List[str],
-    ) -> Dict[str, SkillClassification]:
+        candidate_skills: list[str],
+        work_experience_bullets: list[str],
+        jd_required_skills: list[str],
+    ) -> dict[str, SkillClassification]:
         """
         Classifies skills into STRONG_MATCH, POSSIBLE_MATCH, JD_GAP, or UNRELATED.
         """
-        classified: Dict[str, SkillClassification] = {}
+        classified: dict[str, SkillClassification] = {}
         exp_text_combined = " ".join(work_experience_bullets).lower()
 
         # Normalize lists
@@ -281,12 +281,12 @@ class QuestionRelevanceService:
         question_difficulty: str,
         relevant_experience_months: int,
         seniority_level: str,
-        candidate_skills: List[str],
-        work_experience_bullets: List[str],
-        jd_required_skills: List[str],
-        questions_asked: List[Dict[str, Any]],
+        candidate_skills: list[str],
+        work_experience_bullets: list[str],
+        jd_required_skills: list[str],
+        questions_asked: list[dict[str, Any]],
         round_type: str = "technical",
-        competency_targeted: Optional[str] = None,
+        competency_targeted: str | None = None,
     ) -> QuestionRelevanceResult:
         """
         Executes multi-gate validation pipeline.

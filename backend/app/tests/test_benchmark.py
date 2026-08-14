@@ -3,7 +3,6 @@ Unit Tests for BenchmarkRunner Subsystem.
 Verifies model benchmarking comparison runs and BenchmarkResult DB persistence.
 """
 
-import pytest
 from sqlalchemy.orm import Session
 
 from app.evaluation.benchmark import BenchmarkRunner

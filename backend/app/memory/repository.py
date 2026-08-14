@@ -5,17 +5,15 @@ Memory Repository — Database access layer for candidate profiles, memories, sk
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
-from sqlalchemy import func
+
 from sqlalchemy.orm import Session
 
 from app.models.candidate_memory import (
-    CandidateProfile,
     CandidateMemory,
-    SkillProgress,
+    CandidateProfile,
     LearningRecommendation,
     MemorySummary,
+    SkillProgress,
 )
 
 
@@ -27,7 +25,7 @@ class MemoryRepository:
 
     # ── Candidate Profile ─────────────────────────────────────
 
-    def get_profile(self, candidate_id: str) -> Optional[CandidateProfile]:
+    def get_profile(self, candidate_id: str) -> CandidateProfile | None:
         return (
             self.db.query(CandidateProfile)
             .filter(CandidateProfile.candidate_id == candidate_id)
@@ -54,12 +52,12 @@ class MemoryRepository:
     def update_profile(
         self,
         candidate_id: str,
-        experience_years: Optional[int] = None,
-        skills: Optional[List[str]] = None,
-        level: Optional[str] = None,
-        strengths: Optional[List[str]] = None,
-        weaknesses: Optional[List[str]] = None,
-        summary: Optional[str] = None,
+        experience_years: int | None = None,
+        skills: list[str] | None = None,
+        level: str | None = None,
+        strengths: list[str] | None = None,
+        weaknesses: list[str] | None = None,
+        summary: str | None = None,
     ) -> CandidateProfile:
         profile = self.get_or_create_profile(candidate_id)
         if experience_years is not None:
@@ -84,10 +82,10 @@ class MemoryRepository:
         self,
         candidate_id: str,
         summary: str,
-        interview_id: Optional[str] = None,
+        interview_id: str | None = None,
         memory_type: str = "EPISODIC",
-        key_topics: Optional[List[str]] = None,
-        embedding: Optional[List[float]] = None,
+        key_topics: list[str] | None = None,
+        embedding: list[float] | None = None,
     ) -> CandidateMemory:
         mem = CandidateMemory(
             candidate_id=candidate_id,
@@ -103,8 +101,8 @@ class MemoryRepository:
         return mem
 
     def list_memories(
-        self, candidate_id: str, memory_type: Optional[str] = None, limit: int = 20
-    ) -> List[CandidateMemory]:
+        self, candidate_id: str, memory_type: str | None = None, limit: int = 20
+    ) -> list[CandidateMemory]:
         q = self.db.query(CandidateMemory).filter(CandidateMemory.candidate_id == candidate_id)
         if memory_type:
             q = q.filter(CandidateMemory.memory_type == memory_type)
@@ -112,14 +110,14 @@ class MemoryRepository:
 
     # ── Skill Progress ───────────────────────────────────────
 
-    def get_skill_progress(self, candidate_id: str, skill_name: str) -> Optional[SkillProgress]:
+    def get_skill_progress(self, candidate_id: str, skill_name: str) -> SkillProgress | None:
         return (
             self.db.query(SkillProgress)
             .filter(SkillProgress.candidate_id == candidate_id, SkillProgress.skill_name == skill_name)
             .first()
         )
 
-    def list_skill_progress(self, candidate_id: str) -> List[SkillProgress]:
+    def list_skill_progress(self, candidate_id: str) -> list[SkillProgress]:
         return (
             self.db.query(SkillProgress)
             .filter(SkillProgress.candidate_id == candidate_id)
@@ -172,7 +170,7 @@ class MemoryRepository:
         candidate_id: str,
         target_topic: str,
         suggested_action: str,
-        interview_id: Optional[str] = None,
+        interview_id: str | None = None,
         priority: str = "MEDIUM",
         week_number: int = 1,
     ) -> LearningRecommendation:
@@ -189,7 +187,7 @@ class MemoryRepository:
         self.db.refresh(rec)
         return rec
 
-    def list_recommendations(self, candidate_id: str) -> List[LearningRecommendation]:
+    def list_recommendations(self, candidate_id: str) -> list[LearningRecommendation]:
         return (
             self.db.query(LearningRecommendation)
             .filter(LearningRecommendation.candidate_id == candidate_id)
@@ -204,8 +202,8 @@ class MemoryRepository:
         candidate_id: str,
         compressed_summary: str,
         interview_count_covered: int,
-        key_strengths: Optional[List[str]] = None,
-        key_weaknesses: Optional[List[str]] = None,
+        key_strengths: list[str] | None = None,
+        key_weaknesses: list[str] | None = None,
     ) -> MemorySummary:
         summ = MemorySummary(
             candidate_id=candidate_id,
@@ -219,7 +217,7 @@ class MemoryRepository:
         self.db.refresh(summ)
         return summ
 
-    def get_latest_summary(self, candidate_id: str) -> Optional[MemorySummary]:
+    def get_latest_summary(self, candidate_id: str) -> MemorySummary | None:
         return (
             self.db.query(MemorySummary)
             .filter(MemorySummary.candidate_id == candidate_id)

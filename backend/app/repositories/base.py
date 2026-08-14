@@ -2,10 +2,10 @@
 Abstract repository base class defining the repository pattern interface.
 """
 
+import builtins
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar, List, Optional, Dict, Any
+from typing import Any, Generic, TypeVar
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 T = TypeVar("T")  # Generic type for model
@@ -19,7 +19,7 @@ class AbstractRepository(ABC, Generic[T]):
         self.model = model
 
     @abstractmethod
-    def get_by_id(self, id: str) -> Optional[T]:
+    def get_by_id(self, id: str) -> T | None:
         """Get entity by primary key."""
         pass
 
@@ -29,7 +29,7 @@ class AbstractRepository(ABC, Generic[T]):
         pass
 
     @abstractmethod
-    def update(self, id: str, update_data: Dict[str, Any]) -> Optional[T]:
+    def update(self, id: str, update_data: dict[str, Any]) -> T | None:
         """Update an existing entity by ID."""
         pass
 
@@ -39,12 +39,12 @@ class AbstractRepository(ABC, Generic[T]):
         pass
 
     @abstractmethod
-    def list(self, skip: int = 0, limit: int = 100) -> List[T]:
+    def list(self, skip: int = 0, limit: int = 100) -> list[T]:
         """List all entities with pagination."""
         pass
 
     @abstractmethod
-    def list_by_filter(self, filters: Dict[str, Any], skip: int = 0, limit: int = 100) -> List[T]:
+    def list_by_filter(self, filters: dict[str, Any], skip: int = 0, limit: int = 100) -> builtins.list[T]:
         """List entities matching filter criteria."""
         pass
 
@@ -52,7 +52,7 @@ class AbstractRepository(ABC, Generic[T]):
 class Repository(AbstractRepository[T]):
     """Concrete repository implementation using SQLAlchemy."""
 
-    def get_by_id(self, id: str) -> Optional[T]:
+    def get_by_id(self, id: str) -> T | None:
         """Get entity by primary key."""
         return self.db.query(self.model).filter(self.model.id == id).first()
 
@@ -63,7 +63,7 @@ class Repository(AbstractRepository[T]):
         self.db.refresh(obj)
         return obj
 
-    def update(self, id: str, update_data: Dict[str, Any]) -> Optional[T]:
+    def update(self, id: str, update_data: dict[str, Any]) -> T | None:
         """Update an existing entity by ID."""
         entity = self.get_by_id(id)
         if not entity:
@@ -84,11 +84,11 @@ class Repository(AbstractRepository[T]):
         self.db.commit()
         return True
 
-    def list(self, skip: int = 0, limit: int = 100) -> List[T]:
+    def list(self, skip: int = 0, limit: int = 100) -> list[T]:
         """List all entities with pagination."""
         return self.db.query(self.model).offset(skip).limit(limit).all()
 
-    def list_by_filter(self, filters: Dict[str, Any], skip: int = 0, limit: int = 100) -> List[T]:
+    def list_by_filter(self, filters: dict[str, Any], skip: int = 0, limit: int = 100) -> builtins.list[T]:
         """List entities matching filter criteria."""
         query = self.db.query(self.model)
         for key, value in filters.items():

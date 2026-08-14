@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.dependencies import get_current_user, check_interview_ownership
+from app.dependencies import check_interview_ownership, get_current_user
 from app.models import User
 from app.schemas import InterviewReportResponse, ReportHistoryItem
 from app.services import ReportService

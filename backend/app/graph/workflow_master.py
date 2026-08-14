@@ -6,23 +6,24 @@ Integrates DISE, AI Kernel, PostgreSQL Checkpointer, and Node Tracing & Observab
 from __future__ import annotations
 
 import time
-from typing import Any, Optional
-from langgraph.graph import StateGraph, END
+from typing import Any
+
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, StateGraph
 
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.metrics import GRAPH_EXECUTION_SECONDS
 from app.graph.state import GraphState, InterviewState
-from app.strategy.classifier import CandidateClassifier
-from app.strategy.blueprint_generator import BlueprintGenerator
-from app.strategy.difficulty_engine import DifficultyEngine
-from app.kernel.prompt_manager import PromptManager
 from app.kernel.context_builder import ContextBuilder
 from app.kernel.guardrails import Guardrails
 from app.kernel.model_router import ModelRouter
+from app.kernel.prompt_manager import PromptManager
 from app.kernel.structured_output import StructuredOutputParser
+from app.strategy.blueprint_generator import BlueprintGenerator
+from app.strategy.classifier import CandidateClassifier
+from app.strategy.difficulty_engine import DifficultyEngine
 
 logger = get_logger(__name__)
 
@@ -37,7 +38,7 @@ model_router = ModelRouter()
 structured_output_parser = StructuredOutputParser()
 
 
-def get_checkpointer(database_url: Optional[str] = None) -> BaseCheckpointSaver:
+def get_checkpointer(database_url: str | None = None) -> BaseCheckpointSaver:
     """
     Factory function providing persistent checkpointer instance:
     PostgresSaver for PostgreSQL database using ConnectionPool,
@@ -271,7 +272,7 @@ def route_next_step(state: GraphState) -> str:
 # Master Graph Builder
 # ─────────────────────────────────────────────────────────────
 
-def build_master_workflow(checkpointer: Optional[BaseCheckpointSaver] = None) -> Any:
+def build_master_workflow(checkpointer: BaseCheckpointSaver | None = None) -> Any:
     """Assembles master execution graph combining DISE, AI Kernel, Checkpointer, and Observability."""
     graph = StateGraph(InterviewState)
 

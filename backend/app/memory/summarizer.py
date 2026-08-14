@@ -5,8 +5,6 @@ Reduces token overhead for historical candidate context.
 
 from __future__ import annotations
 
-import json
-from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.memory.repository import MemoryRepository

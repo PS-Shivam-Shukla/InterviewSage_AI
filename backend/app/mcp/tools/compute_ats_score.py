@@ -7,15 +7,15 @@ Hybrid ATS alignment scorer:
 """
 
 import re
-from typing import Dict, Any, List
+from typing import Any
 
 
 def compute_ats_score(
-    resume_skills: List[str],
-    jd_required_skills: List[str],
+    resume_skills: list[str],
+    jd_required_skills: list[str],
     resume_text: str = "",
     jd_text: str = "",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Compute keyword / skill overlap between a resume and a JD.
 
@@ -34,7 +34,7 @@ def compute_ats_score(
           "jd_skill_count": int,
         }
     """
-    def normalise(skills: List[str]) -> set:
+    def normalise(skills: list[str]) -> set:
         return {s.lower().strip() for s in skills if s.strip()}
 
     resume_set = normalise(resume_skills)

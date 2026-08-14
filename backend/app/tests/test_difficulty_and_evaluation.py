@@ -3,9 +3,8 @@ Unit tests for Question Difficulty Policy & Answer Sanity Guard (Section 10.4 & 
 Verifies experience-based difficulty ceilings, non-answer rejection, 0/10 (0%) formatting, and 5-run determinism.
 """
 
-import pytest
-from app.services.difficulty_policy import QuestionDifficultyPolicy
 from app.services.answer_sanity_guard import AnswerSanityGuard
+from app.services.difficulty_policy import QuestionDifficultyPolicy
 
 
 def test_1_two_month_candidate_has_basic_ceiling():

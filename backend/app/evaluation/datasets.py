@@ -8,7 +8,8 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -20,8 +21,8 @@ GOLDEN_DATASET_DIR = os.path.join(os.path.dirname(__file__), "golden_dataset")
 class EvaluationSample:
     id: str
     question: str
-    expected_answer: Optional[str] = None
-    target_concepts: Optional[List[str]] = None
+    expected_answer: str | None = None
+    target_concepts: list[str] | None = None
     domain: str = "General"
     seniority: str = "Mid"
     sample_type: str = "standard"
@@ -30,22 +31,22 @@ class EvaluationSample:
 class GoldenDatasetManager:
     """Manages golden evaluation datasets stored in golden_dataset/ directory."""
 
-    def __init__(self, dataset_dir: Optional[str] = None) -> None:
+    def __init__(self, dataset_dir: str | None = None) -> None:
         self.dataset_dir = dataset_dir or GOLDEN_DATASET_DIR
 
-    def _read_json(self, filename: str) -> List[Dict[str, Any]]:
+    def _read_json(self, filename: str) -> list[dict[str, Any]]:
         file_path = os.path.join(self.dataset_dir, filename)
         if not os.path.exists(file_path):
             logger.warning(f"Golden dataset file not found: {file_path}")
             return []
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 return json.load(f)
         except Exception as exc:
             logger.error(f"Failed to load golden dataset {filename}: {exc}", exc_info=True)
             return []
 
-    def get_interview_questions(self) -> List[EvaluationSample]:
+    def get_interview_questions(self) -> list[EvaluationSample]:
         """Load baseline interview questions and expected concepts."""
         raw_questions = self._read_json("interview_questions.json")
         raw_answers = {item["id"]: item.get("expected_answer") for item in self._read_json("expected_answers.json")}
@@ -66,7 +67,7 @@ class GoldenDatasetManager:
             )
         return samples
 
-    def get_edge_cases(self) -> List[EvaluationSample]:
+    def get_edge_cases(self) -> list[EvaluationSample]:
         """Load edge cases (short answers, hallucinated claims, prompt injections)."""
         raw_cases = self._read_json("edge_cases.json")
         samples = []
@@ -81,6 +82,6 @@ class GoldenDatasetManager:
             )
         return samples
 
-    def load_full_benchmark_dataset(self) -> List[EvaluationSample]:
+    def load_full_benchmark_dataset(self) -> list[EvaluationSample]:
         """Combine standard questions and edge cases into complete evaluation suite."""
         return self.get_interview_questions() + self.get_edge_cases()

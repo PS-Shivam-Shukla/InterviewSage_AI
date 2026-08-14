@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import uuid
 from contextvars import ContextVar
-from typing import Optional
+
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
@@ -19,9 +19,9 @@ _interview_id_ctx: ContextVar[str] = ContextVar("interview_id", default="")
 
 
 def set_request_context(
-    request_id: Optional[str] = None,
-    user_id: Optional[str] = None,
-    interview_id: Optional[str] = None,
+    request_id: str | None = None,
+    user_id: str | None = None,
+    interview_id: str | None = None,
 ) -> None:
     """Set request context variables for the current thread/task execution scope."""
     if request_id is not None:

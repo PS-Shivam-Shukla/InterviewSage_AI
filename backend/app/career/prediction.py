@@ -7,7 +7,7 @@ and key reasons/drawbacks based on evaluations, memory profile, and voice metric
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List
+
 from sqlalchemy.orm import Session
 
 from app.models.candidate_memory import SkillProgress

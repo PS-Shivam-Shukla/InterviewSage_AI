@@ -12,13 +12,10 @@ Design contract:
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-import mcp.types as types
 from mcp.client.session import ClientSession
-from mcp.client.stdio import stdio_client
 from mcp.server import Server
-from mcp.server.stdio import stdio_server
 
 from app.core.logging import get_logger
 
@@ -31,20 +28,20 @@ class MCPProtocolClient:
     Discovers tool definitions via tools/list and executes tools via tools/call over stdio/HTTP transport.
     """
 
-    def __init__(self, mcp_server_instance: Optional[Server] = None) -> None:
+    def __init__(self, mcp_server_instance: Server | None = None) -> None:
         self.server = mcp_server_instance
-        self._session: Optional[ClientSession] = None
+        self._session: ClientSession | None = None
 
-    async def list_tools_protocol(self) -> List[Dict[str, Any]]:
+    async def list_tools_protocol(self) -> list[dict[str, Any]]:
         """
         Execute official MCP tools/list protocol request.
         Returns discoverable tool definitions with JSON schema parameters.
         """
         t0 = time.monotonic()
         logger.info(
-            f"\n================================================================================\n"
-            f"🔌 [MCP CLIENT DISCOVERY] Method: tools/list | Transport: stdio/HTTP\n"
-            f"────────────────────────────────────────────────────────────────────────────────"
+            "\n================================================================================\n"
+            "🔌 [MCP CLIENT DISCOVERY] Method: tools/list | Transport: stdio/HTTP\n"
+            "────────────────────────────────────────────────────────────────────────────────"
         )
         from app.mcp.server import mcp_server
         raw_tools = mcp_server.list_tools()
@@ -64,7 +61,7 @@ class MCPProtocolClient:
         )
         return result
 
-    async def call_tool_protocol(self, name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    async def call_tool_protocol(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """
         Execute official MCP tools/call protocol request.
         """

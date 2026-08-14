@@ -2,7 +2,7 @@
 Resume repository.
 """
 
-from typing import List
+
 from sqlalchemy.orm import Session
 
 from app.models import Resume
@@ -15,7 +15,7 @@ class ResumeRepository(Repository[Resume]):
     def __init__(self, db: Session):
         super().__init__(db, Resume)
 
-    def list_by_user(self, user_id: str, skip: int = 0, limit: int = 100) -> List[Resume]:
+    def list_by_user(self, user_id: str, skip: int = 0, limit: int = 100) -> list[Resume]:
         """Get all resumes for a user."""
         return (
             self.db.query(Resume)

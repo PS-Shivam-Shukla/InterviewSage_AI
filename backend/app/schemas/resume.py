@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -8,8 +9,8 @@ class ResumeResponse(BaseModel):
     user_id: str
     file_path: str
     raw_text: str
-    parsed_skills: List[str]
-    parsed_experience: List[Any]
+    parsed_skills: list[str]
+    parsed_experience: list[Any]
     seniority_signal: str
     status: str = "PROCESSING"
     created_at: datetime
@@ -18,10 +19,10 @@ class ResumeResponse(BaseModel):
 
 
 class SkillBreakdown(BaseModel):
-    technical: List[str]
-    soft: List[str]
-    missing: List[str]
-    all: List[str]
+    technical: list[str]
+    soft: list[str]
+    missing: list[str]
+    all: list[str]
 
 
 class ExperienceItem(BaseModel):
@@ -30,8 +31,8 @@ class ExperienceItem(BaseModel):
     company: str
     period: str
     description: str
-    highlights: List[str]
-    technologies: List[str]
+    highlights: list[str]
+    technologies: list[str]
 
 
 class EducationItem(BaseModel):
@@ -40,16 +41,16 @@ class EducationItem(BaseModel):
     institution: str
     field_of_study: str
     graduation_year: str
-    gpa: Optional[str] = None
+    gpa: str | None = None
 
 
 class ProjectItem(BaseModel):
     id: str
     title: str
     description: str
-    technologies: List[str]
-    link: Optional[str] = None
-    role: Optional[str] = None
+    technologies: list[str]
+    link: str | None = None
+    role: str | None = None
 
 
 class CertificationItem(BaseModel):
@@ -62,21 +63,21 @@ class CertificationItem(BaseModel):
 class ResumeAnalysisResponse(BaseModel):
     resume_id: str
     file_name: str
-    status: Optional[str] = "COMPLETED"
+    status: str | None = "COMPLETED"
     resume_quality_score: int
     seniority_signal: str
-    seniority_score: Optional[int] = 0
-    experience_metrics: Optional[Dict[str, int]] = None
-    seniority_breakdown: Optional[Dict[str, int]] = None
-    seniority_evidence: Optional[List[str]] = Field(default_factory=list)
-    seniority_limitations: Optional[List[str]] = Field(default_factory=list)
+    seniority_score: int | None = 0
+    experience_metrics: dict[str, int] | None = None
+    seniority_breakdown: dict[str, int] | None = None
+    seniority_evidence: list[str] | None = Field(default_factory=list)
+    seniority_limitations: list[str] | None = Field(default_factory=list)
     skills: SkillBreakdown
-    experience: List[ExperienceItem]
-    education: List[EducationItem]
-    projects: List[ProjectItem]
-    certifications: List[CertificationItem]
+    experience: list[ExperienceItem]
+    education: list[EducationItem]
+    projects: list[ProjectItem]
+    certifications: list[CertificationItem]
     summary: str
-    strengths: List[str]
-    weaknesses: List[str]
-    suggestions: List[str]
-    section_completeness: Dict[str, int]
+    strengths: list[str]
+    weaknesses: list[str]
+    suggestions: list[str]
+    section_completeness: dict[str, int]

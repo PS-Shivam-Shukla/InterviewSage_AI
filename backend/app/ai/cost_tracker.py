@@ -5,10 +5,8 @@ Estimates token cost in USD based on provider pricing tables per 1K tokens.
 
 from __future__ import annotations
 
-from typing import Dict, Tuple
-
 # Pricing Table: (prompt_cost_per_1k, completion_cost_per_1k)
-MODEL_PRICING_TABLE: Dict[str, Tuple[float, float]] = {
+MODEL_PRICING_TABLE: dict[str, tuple[float, float]] = {
     # Free local models
     "ollama": (0.0, 0.0),
     "qwen2.5:7b": (0.0, 0.0),

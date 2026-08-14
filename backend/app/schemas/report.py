@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -43,7 +43,7 @@ class ReportHistoryItem(BaseModel):
     status: str
     overall_score: float
     generated_at: datetime
-    completed_at: Optional[datetime] = None
+    completed_at: datetime | None = None
     total_questions: int = 0
 
     model_config = ConfigDict(from_attributes=True)

@@ -2,7 +2,12 @@
 
 from sqlalchemy.orm import Session
 
-from app.repositories import UserRepository, ResumeRepository, JobDescriptionRepository, InterviewRepository
+from app.repositories import (
+    InterviewRepository,
+    JobDescriptionRepository,
+    ResumeRepository,
+    UserRepository,
+)
 
 
 class UserService:

@@ -2,11 +2,10 @@
 Unit and Integration Tests for AI Career Intelligence API Routes (/api/v1/career/*).
 """
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models import User, Interview
+from app.models import Interview, User
 from app.services import AuthService
 
 

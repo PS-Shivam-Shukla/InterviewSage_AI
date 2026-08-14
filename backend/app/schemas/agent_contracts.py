@@ -5,10 +5,10 @@ Defines typed boundary contracts for Multi-Agent input/output and shared context
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from enum import Enum
-from typing import Any, Dict, Generic, List, Optional, TypeVar
 import uuid
+from datetime import UTC, datetime
+from enum import Enum
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -33,51 +33,51 @@ class AgentError(BaseModel):
     message: str
     retryable: bool = True
     agent_name: str
-    details: Optional[Dict[str, Any]] = None
+    details: dict[str, Any] | None = None
 
 
 class AgentResult(BaseModel, Generic[T]):
     success: bool
     agent_name: str
     execution_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    data: Optional[T] = None
-    error: Optional[AgentError] = None
+    data: T | None = None
+    error: AgentError | None = None
     execution_time_ms: int = 0
-    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
 # ── Sub-Entities ───────────────────────────────────────────────
 
 class ExperienceEntry(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     title: str = ""
     company: str = ""
     period: str = ""
     description: str = ""
-    highlights: List[str] = Field(default_factory=list)
-    technologies: List[str] = Field(default_factory=list)
+    highlights: list[str] = Field(default_factory=list)
+    technologies: list[str] = Field(default_factory=list)
 
 
 class EducationEntry(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     degree: str = ""
     institution: str = ""
     field_of_study: str = ""
     graduation_year: str = ""
-    gpa: Optional[str] = None
+    gpa: str | None = None
 
 
 class ProjectEntry(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     title: str = ""
     description: str = ""
-    technologies: List[str] = Field(default_factory=list)
-    link: Optional[str] = None
-    role: Optional[str] = None
+    technologies: list[str] = Field(default_factory=list)
+    link: str | None = None
+    role: str | None = None
 
 
 class CertificationEntry(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     name: str = ""
     issuer: str = ""
     issue_date: str = ""
@@ -87,21 +87,21 @@ class CertificationEntry(BaseModel):
 
 class ResumeAgentInput(BaseModel):
     resume_raw_text: str = Field(..., min_length=1, description="Extracted raw text from resume PDF")
-    candidate_id: Optional[str] = None
-    file_name: Optional[str] = None
+    candidate_id: str | None = None
+    file_name: str | None = None
 
 
 class ResumeAnalysis(BaseModel):
     summary: str = Field(default="", description="Executive candidate summary extracted from resume")
-    technical_skills: List[str] = Field(default_factory=list, description="Technical skills and technologies")
-    soft_skills: List[str] = Field(default_factory=list, description="Soft skills and domain competencies")
-    experience: List[ExperienceEntry] = Field(default_factory=list)
-    education: List[EducationEntry] = Field(default_factory=list)
-    projects: List[ProjectEntry] = Field(default_factory=list)
-    certifications: List[CertificationEntry] = Field(default_factory=list)
-    languages: List[str] = Field(default_factory=list)
-    strengths: List[str] = Field(default_factory=list)
-    weaknesses: List[str] = Field(default_factory=list)
+    technical_skills: list[str] = Field(default_factory=list, description="Technical skills and technologies")
+    soft_skills: list[str] = Field(default_factory=list, description="Soft skills and domain competencies")
+    experience: list[ExperienceEntry] = Field(default_factory=list)
+    education: list[EducationEntry] = Field(default_factory=list)
+    projects: list[ProjectEntry] = Field(default_factory=list)
+    certifications: list[CertificationEntry] = Field(default_factory=list)
+    languages: list[str] = Field(default_factory=list)
+    strengths: list[str] = Field(default_factory=list)
+    weaknesses: list[str] = Field(default_factory=list)
     career_level: str = Field(default="MID", description="Seniority signal: JUNIOR, MID, SENIOR, STAFF, UNKNOWN")
     resume_quality_score: int = Field(default=85, ge=0, le=100)
 
@@ -116,16 +116,16 @@ class ResumeAnalysis(BaseModel):
 
 class JDAnalysisInput(BaseModel):
     jd_raw_text: str = Field(..., min_length=1, description="Raw job description text")
-    job_title: Optional[str] = None
+    job_title: str | None = None
 
 
 class JDAnalysis(BaseModel):
     target_role: str = Field(default="Software Engineer", description="Target role title")
     seniority_required: str = Field(default="MID", description="Required seniority: JUNIOR, MID, SENIOR, STAFF")
-    required_skills: List[str] = Field(default_factory=list)
-    preferred_skills: List[str] = Field(default_factory=list)
-    core_responsibilities: List[str] = Field(default_factory=list)
-    domain_knowledge: List[str] = Field(default_factory=list)
+    required_skills: list[str] = Field(default_factory=list)
+    preferred_skills: list[str] = Field(default_factory=list)
+    core_responsibilities: list[str] = Field(default_factory=list)
+    domain_knowledge: list[str] = Field(default_factory=list)
 
     @field_validator("seniority_required")
     @classmethod
@@ -139,8 +139,8 @@ class JDAnalysis(BaseModel):
 class InterviewPlanInput(BaseModel):
     seniority_signal: str = Field(default="MID")
     interview_type: str = Field(default="HYBRID")
-    resume_skills: List[str] = Field(default_factory=list)
-    required_jd_skills: List[str] = Field(default_factory=list)
+    resume_skills: list[str] = Field(default_factory=list)
+    required_jd_skills: list[str] = Field(default_factory=list)
 
 
 class CompetencyWeight(BaseModel):
@@ -154,8 +154,8 @@ class InterviewPlan(BaseModel):
     total_questions: int = Field(default=5, ge=1, le=20)
     hr_question_count: int = Field(default=2, ge=0)
     technical_question_count: int = Field(default=3, ge=0)
-    competencies: List[CompetencyWeight] = Field(default_factory=list)
-    difficulty_progression: List[str] = Field(default_factory=list)
+    competencies: list[CompetencyWeight] = Field(default_factory=list)
+    difficulty_progression: list[str] = Field(default_factory=list)
 
 
 # ── QuestionGeneratorAgent Contracts ─────────────────────────
@@ -166,8 +166,8 @@ class QuestionGenerationInput(BaseModel):
     competency_targeted: str = "General"
     difficulty: str = "MEDIUM"
     question_type: str = "fundamentals"
-    candidate_skills: List[str] = Field(default_factory=list)
-    previous_questions_text: List[str] = Field(default_factory=list)
+    candidate_skills: list[str] = Field(default_factory=list)
+    previous_questions_text: list[str] = Field(default_factory=list)
 
 
 class GeneratedQuestion(BaseModel):
@@ -176,8 +176,8 @@ class GeneratedQuestion(BaseModel):
     difficulty: str = "MEDIUM"
     question_type: str = "fundamentals"
     personalisation_note: str = ""
-    expected_answer: Optional[str] = None
-    evaluation_rubric: List[str] = Field(default_factory=list)
+    expected_answer: str | None = None
+    evaluation_rubric: list[str] = Field(default_factory=list)
 
     @field_validator("difficulty")
     @classmethod
@@ -193,22 +193,22 @@ class AnswerEvaluationInput(BaseModel):
     competency_targeted: str = "General"
     question_type: str = "fundamentals"
     seniority: str = "MID"
-    expected_rubric: Optional[List[str]] = None
+    expected_rubric: list[str] | None = None
 
 
 class AnswerEvaluation(BaseModel):
     score: int = Field(..., ge=1, le=10, description="Overall score on 1–10 scale")
-    rubric_breakdown: Dict[str, int] = Field(default_factory=dict, description="Sub-scores 1–5 per dimension")
+    rubric_breakdown: dict[str, int] = Field(default_factory=dict, description="Sub-scores 1–5 per dimension")
     feedback: str = Field(default="", description="Detailed qualitative feedback")
     ideal_answer_summary: str = Field(default="", description="Ideal reference summary")
     needs_human_review: bool = Field(default=False)
     technical_score: float = Field(default=0.0)
     communication_score: float = Field(default=0.0)
-    strengths: List[str] = Field(default_factory=list)
-    weaknesses: List[str] = Field(default_factory=list)
+    strengths: list[str] = Field(default_factory=list)
+    weaknesses: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def sub_scores_in_range(self) -> "AnswerEvaluation":
+    def sub_scores_in_range(self) -> AnswerEvaluation:
         for dim, val in self.rubric_breakdown.items():
             if not (1 <= val <= 5):
                 raise ValueError(f"Sub-score for '{dim}' is {val} — must be 1–5.")
@@ -220,7 +220,7 @@ class AnswerEvaluation(BaseModel):
 class ReportGenerationInput(BaseModel):
     interview_id: str
     candidate_id: str
-    evaluations: List[Dict[str, Any]] = Field(default_factory=list)
+    evaluations: list[dict[str, Any]] = Field(default_factory=list)
     total_questions: int = 5
 
 
@@ -228,11 +228,11 @@ class InterviewReport(BaseModel):
     overall_score: int = Field(default=75, ge=0, le=100)
     technical_score: int = Field(default=75, ge=0, le=100)
     communication_score: int = Field(default=75, ge=0, le=100)
-    strengths: List[str] = Field(default_factory=list)
-    weaknesses: List[str] = Field(default_factory=list)
-    skill_gaps: List[str] = Field(default_factory=list)
+    strengths: list[str] = Field(default_factory=list)
+    weaknesses: list[str] = Field(default_factory=list)
+    skill_gaps: list[str] = Field(default_factory=list)
     recommendation: str = Field(default="PASS")
-    improvement_roadmap: List[str] = Field(default_factory=list)
+    improvement_roadmap: list[str] = Field(default_factory=list)
 
 
 # ── Shared Interview Context ──────────────────────────────────
@@ -251,8 +251,8 @@ class InterviewContext(BaseModel):
     # 1. IMMUTABLE SOURCE DATA
     interview_id: str
     candidate_id: str
-    resume_id: Optional[str] = None
-    jd_id: Optional[str] = None
+    resume_id: str | None = None
+    jd_id: str | None = None
     raw_resume_text: str = ""
     raw_jd_text: str = ""
 
@@ -263,13 +263,13 @@ class InterviewContext(BaseModel):
     status: str = "PLANNING"
 
     # 3. GENERATED AGENT ARTIFACTS
-    resume_analysis: Optional[ResumeAnalysis] = None
-    jd_analysis: Optional[JDAnalysis] = None
-    interview_plan: Optional[InterviewPlan] = None
-    current_question: Optional[GeneratedQuestion] = None
+    resume_analysis: ResumeAnalysis | None = None
+    jd_analysis: JDAnalysis | None = None
+    interview_plan: InterviewPlan | None = None
+    current_question: GeneratedQuestion | None = None
 
     # 4. EVALUATION & ACCUMULATED DATA
-    questions_asked: List[Dict[str, Any]] = Field(default_factory=list)
-    answers_submitted: List[Dict[str, Any]] = Field(default_factory=list)
-    evaluations: List[AnswerEvaluation] = Field(default_factory=list)
-    final_report: Optional[InterviewReport] = None
+    questions_asked: list[dict[str, Any]] = Field(default_factory=list)
+    answers_submitted: list[dict[str, Any]] = Field(default_factory=list)
+    evaluations: list[AnswerEvaluation] = Field(default_factory=list)
+    final_report: InterviewReport | None = None

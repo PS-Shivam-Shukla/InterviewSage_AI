@@ -3,8 +3,7 @@ Unit Tests for GoldenDatasetManager Subsystem.
 Verifies dataset loading, sample parsing, and edge case retrieval.
 """
 
-import pytest
-from app.evaluation.datasets import GoldenDatasetManager, EvaluationSample
+from app.evaluation.datasets import GoldenDatasetManager
 
 
 def test_dataset_manager_load_questions():

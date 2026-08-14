@@ -4,7 +4,9 @@ Adds seniority_score, total_experience_months, relevant_experience_months, and s
 """
 
 from sqlalchemy import text
+
 from app.core.database import engine
+
 
 def migrate():
     print("[MIGRATION] Starting PostgreSQL Seniority columns migration...")

@@ -5,7 +5,6 @@ Provides recruiter analytics on candidate decisions, rejection factors, and high
 
 from __future__ import annotations
 
-from typing import Any, Dict
 from sqlalchemy.orm import Session
 
 from app.career.schemas import RecruiterInsightsResponse

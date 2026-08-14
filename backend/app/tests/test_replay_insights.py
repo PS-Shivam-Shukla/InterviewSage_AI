@@ -2,7 +2,6 @@
 Unit and Integration Tests for InterviewReplayEngine & RecruiterInsightsEngine.
 """
 
-import pytest
 from sqlalchemy.orm import Session
 
 from app.career.insights import RecruiterInsightsEngine

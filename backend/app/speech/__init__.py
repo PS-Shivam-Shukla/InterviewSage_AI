@@ -8,10 +8,10 @@ from app.speech.stt import FasterWhisperSTTService, STTProvider
 from app.speech.tts import KokoroTTSService, TTSProvider
 
 __all__ = [
-    "STTProvider",
-    "FasterWhisperSTTService",
-    "TTSProvider",
-    "KokoroTTSService",
     "AudioStreamingService",
+    "FasterWhisperSTTService",
+    "KokoroTTSService",
+    "STTProvider",
+    "TTSProvider",
     "VoiceAnalyticsService",
 ]

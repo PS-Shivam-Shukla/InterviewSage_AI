@@ -14,8 +14,9 @@ Seniority level acts as a strict guardrail.
 High previous evaluation scores can escalate difficulty up to the ceiling, but can NEVER exceed it.
 """
 
-from typing import Dict, Any, List, Optional, Tuple
-from pydantic import BaseModel, Field
+from typing import Any
+
+from pydantic import BaseModel
 
 # Difficulty values ordered by ascending complexity
 DIFFICULTY_RANK = {
@@ -89,7 +90,7 @@ class QuestionDifficultyPolicy:
         cls,
         relevant_experience_months: int,
         seniority_level: str = "MID",
-        previous_evaluations: Optional[List[Dict[str, Any]]] = None,
+        previous_evaluations: list[dict[str, Any]] | None = None,
         current_difficulty: str = "BASIC",
     ) -> DifficultyPolicyResult:
         """
@@ -150,7 +151,7 @@ class QuestionDifficultyPolicy:
         question_difficulty: str,
         relevant_experience_months: int,
         seniority_level: str = "MID",
-    ) -> Tuple[bool, str]:
+    ) -> tuple[bool, str]:
         """
         Validates if a generated question's difficulty exceeds candidate ceiling.
         Returns (is_valid, reason).

@@ -3,7 +3,6 @@ Unit Tests for RetryEngine & CircuitBreaker Subsystems.
 Verifies retry backoff, circuit breaker trip/recovery states, and fallback execution.
 """
 
-import pytest
 from app.ai.retry import CircuitBreaker, CircuitState, RetryEngine
 
 

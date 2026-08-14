@@ -3,9 +3,10 @@ Database engine, session factory, and dependency provider.
 Configured with production-ready connection pooling and SQLite compatibility (Audit H-5).
 """
 
-from typing import Generator
+from collections.abc import Generator
+
 from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
 

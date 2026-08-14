@@ -3,9 +3,8 @@ Unit Tests for EvaluationMetrics & Rubric Subsystems.
 Verifies correctness, faithfulness, hallucination, relevancy, toxicity, and rubric scoring.
 """
 
-import pytest
-from app.evaluation.metrics import EvaluationMetrics, EvaluationMetricsResult
-from app.evaluation.rubric import TECHNICAL_RUBRIC, BEHAVIORAL_RUBRIC, EXECUTIVE_RUBRIC
+from app.evaluation.metrics import EvaluationMetrics
+from app.evaluation.rubric import TECHNICAL_RUBRIC
 
 
 def test_metrics_correctness_and_faithfulness():

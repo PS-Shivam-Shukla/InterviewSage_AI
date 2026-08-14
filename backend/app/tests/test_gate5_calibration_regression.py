@@ -4,9 +4,14 @@ Verifies exact duplicate rejection, paraphrase rejection, borderline acceptance 
 """
 
 import pytest
-from app.services.question_relevance_service import LexicalSimilarityEngine, QuestionRelevanceService
-from app.agents.question_generator_agent import QuestionGeneratorAgent, GeneratedQuestion
+
+from app.agents.question_generator_agent import GeneratedQuestion, QuestionGeneratorAgent
 from app.graph.state import InterviewState
+from app.services.question_relevance_service import (
+    LexicalSimilarityEngine,
+    QuestionRelevanceService,
+)
+
 
 # Base context fixture
 @pytest.fixture

@@ -28,9 +28,9 @@ Graph topology:
 
 from __future__ import annotations
 
-from typing import Callable, Literal
+from collections.abc import Callable
 
-from langgraph.graph import StateGraph, END
+from langgraph.graph import END, StateGraph
 
 from app.agents.supervisor_agent import SupervisorAgent
 from app.graph.state import InterviewState
@@ -160,10 +160,18 @@ def build_graph(
     When allow_stubs=True (Test/Stub Mode), missing agent callables default to pass-through stubs.
     """
     from app.agents import (
-        ResumeAgent, JDAgent, ATSAgent, ProfileIntelligenceAgent,
-        CompetencyMappingAgent, InterviewPlannerAgent, QuestionGeneratorAgent,
-        HRInterviewAgent, TechnicalInterviewAgent, EvaluationAgent,
-        CareerCoachAgent, ReportGeneratorAgent,
+        ATSAgent,
+        CareerCoachAgent,
+        CompetencyMappingAgent,
+        EvaluationAgent,
+        HRInterviewAgent,
+        InterviewPlannerAgent,
+        JDAgent,
+        ProfileIntelligenceAgent,
+        QuestionGeneratorAgent,
+        ReportGeneratorAgent,
+        ResumeAgent,
+        TechnicalInterviewAgent,
     )
     from app.graph.policy_node import policy_node
     from app.graph.report_verification_node import report_verification_node

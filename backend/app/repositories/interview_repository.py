@@ -3,13 +3,20 @@ Interview and related repositories.
 """
 
 import json
-from typing import List, Optional, Dict, Any
-from sqlalchemy.orm import Session
+from typing import Any
+
 from sqlalchemy import and_
+from sqlalchemy.orm import Session
 
 from app.models import (
-    Interview, CompetencyMatrix, InterviewPlan, InterviewQuestion,
-    InterviewAnswer, Evaluation, InterviewReport, AgentLog
+    AgentLog,
+    CompetencyMatrix,
+    Evaluation,
+    Interview,
+    InterviewAnswer,
+    InterviewPlan,
+    InterviewQuestion,
+    InterviewReport,
 )
 from app.repositories.base import Repository
 
@@ -20,7 +27,7 @@ class InterviewRepository(Repository[Interview]):
     def __init__(self, db: Session):
         super().__init__(db, Interview)
 
-    def list_by_user(self, user_id: str, skip: int = 0, limit: int = 100) -> List[Interview]:
+    def list_by_user(self, user_id: str, skip: int = 0, limit: int = 100) -> list[Interview]:
         """Get all interviews for a user."""
         return (
             self.db.query(Interview)
@@ -33,7 +40,7 @@ class InterviewRepository(Repository[Interview]):
 
     def list_by_user_and_status(
         self, user_id: str, status: str, skip: int = 0, limit: int = 100
-    ) -> List[Interview]:
+    ) -> list[Interview]:
         """Get interviews for a user filtered by status."""
         return (
             self.db.query(Interview)
@@ -51,7 +58,7 @@ class CompetencyMatrixRepository(Repository[CompetencyMatrix]):
     def __init__(self, db: Session):
         super().__init__(db, CompetencyMatrix)
 
-    def get_by_interview(self, interview_id: str) -> Optional[CompetencyMatrix]:
+    def get_by_interview(self, interview_id: str) -> CompetencyMatrix | None:
         """Get competency matrix for an interview."""
         return (
             self.db.query(CompetencyMatrix)
@@ -66,7 +73,7 @@ class InterviewPlanRepository(Repository[InterviewPlan]):
     def __init__(self, db: Session):
         super().__init__(db, InterviewPlan)
 
-    def get_by_interview(self, interview_id: str) -> Optional[InterviewPlan]:
+    def get_by_interview(self, interview_id: str) -> InterviewPlan | None:
         """Get interview plan for an interview."""
         return (
             self.db.query(InterviewPlan)
@@ -83,7 +90,7 @@ class InterviewQuestionRepository(Repository[InterviewQuestion]):
 
     def list_by_interview(
         self, interview_id: str, skip: int = 0, limit: int = 100
-    ) -> List[InterviewQuestion]:
+    ) -> list[InterviewQuestion]:
         """Get all questions for an interview in sequence order."""
         return (
             self.db.query(InterviewQuestion)
@@ -96,7 +103,7 @@ class InterviewQuestionRepository(Repository[InterviewQuestion]):
 
     def get_by_interview_and_sequence(
         self, interview_id: str, sequence_number: int
-    ) -> Optional[InterviewQuestion]:
+    ) -> InterviewQuestion | None:
         """Get a specific question by interview and sequence."""
         return (
             self.db.query(InterviewQuestion)
@@ -116,7 +123,7 @@ class InterviewAnswerRepository(Repository[InterviewAnswer]):
     def __init__(self, db: Session):
         super().__init__(db, InterviewAnswer)
 
-    def get_by_question(self, question_id: str) -> Optional[InterviewAnswer]:
+    def get_by_question(self, question_id: str) -> InterviewAnswer | None:
         """Get answer for a question."""
         return (
             self.db.query(InterviewAnswer)
@@ -124,7 +131,7 @@ class InterviewAnswerRepository(Repository[InterviewAnswer]):
             .first()
         )
 
-    def list_answers_with_evaluations_by_interview(self, interview_id: str) -> List[Dict[str, Any]]:
+    def list_answers_with_evaluations_by_interview(self, interview_id: str) -> list[dict[str, Any]]:
         """Get joined questions, answers, and evaluations for an interview session directly from DB."""
         questions = (
             self.db.query(InterviewQuestion)
@@ -175,7 +182,7 @@ class EvaluationRepository(Repository[Evaluation]):
     def __init__(self, db: Session):
         super().__init__(db, Evaluation)
 
-    def get_by_answer(self, answer_id: str) -> Optional[Evaluation]:
+    def get_by_answer(self, answer_id: str) -> Evaluation | None:
         """Get evaluation for an answer."""
         return (
             self.db.query(Evaluation)
@@ -190,7 +197,7 @@ class InterviewReportRepository(Repository[InterviewReport]):
     def __init__(self, db: Session):
         super().__init__(db, InterviewReport)
 
-    def get_by_interview(self, interview_id: str) -> Optional[InterviewReport]:
+    def get_by_interview(self, interview_id: str) -> InterviewReport | None:
         """Get report for an interview."""
         return (
             self.db.query(InterviewReport)
@@ -207,7 +214,7 @@ class AgentLogRepository(Repository[AgentLog]):
 
     def list_by_interview(
         self, interview_id: str, skip: int = 0, limit: int = 100
-    ) -> List[AgentLog]:
+    ) -> list[AgentLog]:
         """Get all agent logs for an interview."""
         return (
             self.db.query(AgentLog)
@@ -220,7 +227,7 @@ class AgentLogRepository(Repository[AgentLog]):
 
     def list_by_interview_and_agent(
         self, interview_id: str, agent_name: str, skip: int = 0, limit: int = 100
-    ) -> List[AgentLog]:
+    ) -> list[AgentLog]:
         """Get logs for a specific agent in an interview."""
         return (
             self.db.query(AgentLog)

@@ -8,15 +8,13 @@ Zero regex parsing, zero manual heading splitting, zero hardcoded values.
 import json
 import logging
 import time
-from typing import List, Dict, Any, Optional
-from sqlalchemy.orm import Session
-from fastapi import HTTPException, status
 
-from app.core.config import settings
+from sqlalchemy.orm import Session
+
+from app.agents.resume_agent import ResumeAgent
 from app.models import Resume
 from app.repositories import ResumeRepository
 from app.utils.pdf_extractor import extract_text_from_pdf_bytes
-from app.agents.resume_agent import ResumeAgent
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +24,7 @@ class ResumeService:
         self.db = db
         self.resume_repo = ResumeRepository(db)
 
-    def upload_resume_fast(self, user_id: str, filename: str, file_bytes: Optional[bytes] = None) -> tuple[dict, str]:
+    def upload_resume_fast(self, user_id: str, filename: str, file_bytes: bytes | None = None) -> tuple[dict, str]:
         """Validate upload, extract raw text, persist initial DB record (<50ms), and return for background processing."""
         t_start = time.monotonic()
         logger.info(f"INFO Resume upload started: {filename} for user {user_id}")
@@ -120,7 +118,7 @@ class ResumeService:
             logger.error(f"Error fetching resume {resume_id}: {e}")
             return None
 
-    def list_resumes(self, user_id: str) -> List[dict]:
+    def list_resumes(self, user_id: str) -> list[dict]:
         try:
             resumes = self.resume_repo.list_by_user(user_id)
             return [self._format_resume(r) for r in resumes]
@@ -139,7 +137,7 @@ class ResumeService:
             logger.error(f"Error deleting resume {resume_id}: {e}")
             return False
 
-    def replace_resume(self, resume_id: str, filename: str, file_bytes: Optional[bytes] = None) -> dict | None:
+    def replace_resume(self, resume_id: str, filename: str, file_bytes: bytes | None = None) -> dict | None:
         resume = self.resume_repo.get_by_id(resume_id)
         if not resume:
             return None

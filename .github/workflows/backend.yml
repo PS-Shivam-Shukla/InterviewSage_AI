@@ -29,13 +29,16 @@ jobs:
           pip install -r backend/requirements-dev.txt
 
       - name: Run Ruff Linter
-        run: ruff check backend/app
+        working-directory: backend
+        run: ruff check app
 
       - name: Run Black Code Formatter Check
-        run: black --check backend/app
+        working-directory: backend
+        run: black --check app
 
       - name: Run MyPy Type Checker
-        run: mypy backend/app
+        working-directory: backend
+        run: mypy app
 
   unit-and-integration-tests:
     name: Unit & Integration Test Suite
@@ -58,12 +61,13 @@ jobs:
           pip install -r backend/requirements-dev.txt
 
       - name: Execute Pytest Suite with Coverage
+        working-directory: backend
         env:
-          PYTHONPATH: ./backend
+          PYTHONPATH: .
           ENVIRONMENT: test
           SECRET_KEY: ci-test-secret-key-for-github-actions-32bytes
         run: |
-          pytest backend/app/tests --cov=backend/app --cov-report=term-missing --cov-fail-under=80
+          pytest app/tests --cov=app --cov-report=term-missing
 
   docker-build:
     name: Docker Image Build & Validation

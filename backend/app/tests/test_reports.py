@@ -4,14 +4,13 @@ Comprehensive test suite for Candidate Report API endpoints and security contrac
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
-from app.models import Interview, InterviewReport, User, Resume, JobDescription
+from app.models import Interview, InterviewReport, JobDescription, Resume, User
 from app.services import AuthService
 
 
@@ -60,8 +59,8 @@ def _create_completed_interview_with_report(db: Session, user_id: str) -> tuple[
         jd_id=jd.id,
         status="COMPLETED",
         overall_score=88,
-        created_at=datetime.now(timezone.utc),
-        completed_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
+        completed_at=datetime.now(UTC),
     )
     db.add(interview)
 
@@ -93,7 +92,7 @@ def _create_completed_interview_with_report(db: Session, user_id: str) -> tuple[
         competency_scorecard=json.dumps(scorecard),
         improvement_plan=json.dumps(improvement_plan),
         transcript_snapshot=json.dumps(transcript),
-        generated_at=datetime.now(timezone.utc),
+        generated_at=datetime.now(UTC),
     )
     db.add(report)
     db.commit()
@@ -153,7 +152,7 @@ def test_get_report_incomplete_interview(client: TestClient, db_session: Session
         resume_id=resume.id,
         jd_id=jd.id,
         status="IN_PROGRESS",
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     db_session.add(interview)
     db_session.commit()

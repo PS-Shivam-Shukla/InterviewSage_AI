@@ -2,7 +2,6 @@
 Unit and Integration Tests for Speech-to-Text (STT) Service.
 """
 
-import pytest
 from app.speech.stt import FasterWhisperSTTService
 
 

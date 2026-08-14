@@ -16,9 +16,7 @@ Verifies:
 12. Unassessed competencies are not assigned arbitrary 50% scores
 """
 
-import pytest
 from app.agents.evaluation_agent import EvaluationAgent, EvaluationOutput
-from app.services.answer_sanity_guard import AnswerSanityGuard
 from app.core.llm_client import FakeLLMClient
 
 

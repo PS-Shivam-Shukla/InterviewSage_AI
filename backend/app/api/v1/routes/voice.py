@@ -3,15 +3,13 @@ Voice & Live Session API Router.
 Exposes endpoints for voice metrics analytics and live interview session monitoring.
 """
 
-from typing import Any, Dict, List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.dependencies import get_current_user
 from app.models import User
 from app.speech.analytics import VoiceAnalyticsService
-from app.transcript.repository import TranscriptRepository
 from app.transcript.schemas import VoiceMetricsResponse
 
 router = APIRouter(prefix="/voice", tags=["Voice Analytics"])

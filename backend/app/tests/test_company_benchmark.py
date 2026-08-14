@@ -2,7 +2,6 @@
 Unit and Integration Tests for CompanyProfileEngine & IndustryBenchmarkEngine.
 """
 
-import pytest
 from sqlalchemy.orm import Session
 
 from app.career.benchmark import IndustryBenchmarkEngine

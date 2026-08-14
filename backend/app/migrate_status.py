@@ -4,7 +4,9 @@ Applies data migration for existing rows.
 """
 
 from sqlalchemy import text
+
 from app.core.database import engine
+
 
 def migrate():
     print("[MIGRATION] Starting PostgreSQL status column migration...")

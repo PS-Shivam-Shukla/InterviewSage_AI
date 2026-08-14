@@ -3,8 +3,7 @@ Unit Tests for RegressionTester Subsystem.
 Verifies prompt regression detection, comparison metrics, and failure reason assertions.
 """
 
-import pytest
-from app.evaluation.regression import RegressionTester, RegressionComparisonResult
+from app.evaluation.regression import RegressionComparisonResult, RegressionTester
 
 
 def test_regression_tester_no_regression():

@@ -7,10 +7,10 @@ weasyprint/reportlab renderer can be swapped in later.
 
 import json
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 
-def generate_report_pdf(report_data: Dict[str, Any], output_dir: str = "./uploads") -> Dict[str, Any]:
+def generate_report_pdf(report_data: dict[str, Any], output_dir: str = "./uploads") -> dict[str, Any]:
     """
     Generate a PDF report from interview report data.
 

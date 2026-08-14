@@ -3,13 +3,13 @@ MCP Server and tool unit tests.
 """
 
 import pytest
+
 from app.mcp.server import MCPServer, _match_uri
 from app.mcp.tools.compute_ats_score import compute_ats_score
 from app.mcp.tools.fetch_industry_standards import fetch_industry_standards
+from app.mcp.tools.generate_report_pdf import generate_report_pdf
 from app.mcp.tools.parse_jd import parse_jd_text
 from app.mcp.tools.score_answer_rubric import score_answer_rubric
-from app.mcp.tools.generate_report_pdf import generate_report_pdf
-
 
 # ─────────────────────────────────────────────────────────────
 # MCPServer core

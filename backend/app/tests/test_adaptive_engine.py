@@ -2,7 +2,6 @@
 Unit and Integration Tests for AdaptiveDifficultyEngine.
 """
 
-import pytest
 from sqlalchemy.orm import Session
 
 from app.career.adaptive import AdaptiveDifficultyEngine

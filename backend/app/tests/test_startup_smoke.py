@@ -3,7 +3,6 @@ Startup & Import Smoke Tests (Phase 1).
 Verifies clean-clone import integrity, FastAPI initialization, critical settings, and workflow graph assembly.
 """
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import settings

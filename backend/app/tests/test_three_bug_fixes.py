@@ -6,14 +6,13 @@ Regression and Verification Tests for the 3 Targeted Bug Fixes (Phase 2):
 """
 
 import uuid
-from datetime import datetime, timezone
-import pytest
+
 from sqlalchemy.orm import Session
 
-from app.models import User, Resume, JobDescription, Interview, InterviewQuestion
+from app.agents import EvaluationAgent
+from app.models import Interview, JobDescription, Resume, User
 from app.services import InterviewService
 from app.services.answer_sanity_guard import AnswerSanityGuard
-from app.agents import EvaluationAgent
 
 
 def _create_test_fresher_interview(db: Session) -> tuple[User, Resume, JobDescription, Interview]:

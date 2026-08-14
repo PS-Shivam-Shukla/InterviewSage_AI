@@ -2,7 +2,6 @@
 Unit and Integration Tests for AudioStreamingService.
 """
 
-import pytest
 from sqlalchemy.orm import Session
 
 from app.speech.streaming import AudioStreamingService

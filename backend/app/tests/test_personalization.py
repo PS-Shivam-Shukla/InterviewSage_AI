@@ -2,12 +2,11 @@
 Unit and Integration Tests for PersonalizationEngine & Retriever.
 """
 
-import pytest
 from sqlalchemy.orm import Session
 
 from app.memory.personalization import PersonalizationEngine
 from app.memory.retriever import MemoryRetriever
-from app.models import User, Interview
+from app.models import Interview, User
 
 
 def test_personalization_question_recommendation(

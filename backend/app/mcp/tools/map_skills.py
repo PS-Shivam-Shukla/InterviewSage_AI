@@ -17,16 +17,16 @@ computes the comparison deterministically.
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Set
+from typing import Any
 
 
 def map_skills(
-    resume_skills: List[str],
-    jd_required_skills: List[str],
-    jd_preferred_skills: List[str] | None = None,
+    resume_skills: list[str],
+    jd_required_skills: list[str],
+    jd_preferred_skills: list[str] | None = None,
     resume_text: str = "",
     jd_text: str = "",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Compare candidate resume skills against job description requirements.
 
@@ -58,8 +58,8 @@ def map_skills(
     normalized_preferred = {_normalize(s) for s in jd_preferred}
 
     # ── Mandatory skill match ─────────────────────────────────
-    matched_norm: Set[str] = set()
-    missing_norm: Set[str] = set()
+    matched_norm: set[str] = set()
+    missing_norm: set[str] = set()
 
     for skill_norm in normalized_required:
         # Check exact match first, then substring containment
@@ -74,7 +74,7 @@ def map_skills(
                 missing_norm.add(skill_norm)
 
     # ── Preferred skill match ─────────────────────────────────
-    preferred_matched_norm: Set[str] = set()
+    preferred_matched_norm: set[str] = set()
     for skill_norm in normalized_preferred:
         if skill_norm in normalized_resume or _fuzzy_match(skill_norm, normalized_resume):
             preferred_matched_norm.add(skill_norm)
@@ -137,7 +137,7 @@ def _normalize(skill: str) -> str:
     return re.sub(r"[^\w]", "_", skill.lower().strip()).strip("_")
 
 
-def _fuzzy_match(skill_norm: str, candidate_norms: Set[str]) -> bool:
+def _fuzzy_match(skill_norm: str, candidate_norms: set[str]) -> bool:
     """
     Check if skill_norm is a substring of any candidate skill or vice versa.
     Handles cases like 'react' matching 'react_19' or 'reactjs'.
@@ -159,7 +159,7 @@ def _keyword_coverage_score(resume_text: str, jd_text: str) -> int:
         return 0
 
     # Extract meaningful tokens (3+ chars, alpha only, deduplicated)
-    def _tokens(text: str) -> Set[str]:
+    def _tokens(text: str) -> set[str]:
         return {
             w.lower() for w in re.findall(r"\b[a-z]{3,}\b", text.lower())
             if w not in _STOP_WORDS
@@ -173,7 +173,7 @@ def _keyword_coverage_score(resume_text: str, jd_text: str) -> int:
     return min(100, int(len(overlap) / len(jd_tokens) * 100))
 
 
-def _compute_confidence(resume_skills: List[str], jd_skills: List[str]) -> float:
+def _compute_confidence(resume_skills: list[str], jd_skills: list[str]) -> float:
     """Confidence score based on list completeness."""
     if not resume_skills and not jd_skills:
         return 0.3

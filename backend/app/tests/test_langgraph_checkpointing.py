@@ -4,12 +4,12 @@ Verifies thread configuration, state resumption across turns, recovery after res
 """
 
 import uuid
-import pytest
-from sqlalchemy.orm import Session
+
 from langgraph.checkpoint.memory import MemorySaver
+from sqlalchemy.orm import Session
 
 from app.graph.workflow_master import build_master_workflow, get_checkpointer
-from app.models import User, Resume, JobDescription, Interview
+from app.models import Interview, JobDescription, Resume, User
 from app.services.interview_service import InterviewService
 
 

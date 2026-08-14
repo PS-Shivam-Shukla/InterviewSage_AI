@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
+
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
-    from app.models.user import User
-    from app.models.resume import Resume
     from app.models.job_description import JobDescription
+    from app.models.resume import Resume
+    from app.models.user import User
 
 
 class Interview(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -35,30 +36,30 @@ class Interview(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
     )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
-    user: Mapped["User"] = relationship("User", back_populates="interviews")  # noqa: F821
-    resume: Mapped["Resume"] = relationship("Resume", back_populates="interviews")  # noqa: F821
-    job_description: Mapped["JobDescription"] = relationship(  # noqa: F821
+    user: Mapped[User] = relationship("User", back_populates="interviews")
+    resume: Mapped[Resume] = relationship("Resume", back_populates="interviews")
+    job_description: Mapped[JobDescription] = relationship(
         "JobDescription", back_populates="interviews"
     )
-    competency_matrix: Mapped["CompetencyMatrix | None"] = relationship(
+    competency_matrix: Mapped[CompetencyMatrix | None] = relationship(
         "CompetencyMatrix", back_populates="interview", uselist=False, cascade="all, delete-orphan"
     )
-    interview_plan: Mapped["InterviewPlan | None"] = relationship(
+    interview_plan: Mapped[InterviewPlan | None] = relationship(
         "InterviewPlan", back_populates="interview", uselist=False, cascade="all, delete-orphan"
     )
-    questions: Mapped[list["InterviewQuestion"]] = relationship(
+    questions: Mapped[list[InterviewQuestion]] = relationship(
         "InterviewQuestion", back_populates="interview",
         cascade="all, delete-orphan", order_by="InterviewQuestion.sequence_number"
     )
-    report: Mapped["InterviewReport | None"] = relationship(
+    report: Mapped[InterviewReport | None] = relationship(
         "InterviewReport", back_populates="interview", uselist=False, cascade="all, delete-orphan"
     )
-    agent_logs: Mapped[list["AgentLog"]] = relationship(
+    agent_logs: Mapped[list[AgentLog]] = relationship(
         "AgentLog", back_populates="interview",
         cascade="all, delete-orphan", order_by="AgentLog.created_at"
     )
@@ -88,7 +89,7 @@ class CompetencyMatrix(UUIDPrimaryKeyMixin, Base):
     # JSON list of {name, weight, description}
     competencies: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
 
-    interview: Mapped["Interview"] = relationship("Interview", back_populates="competency_matrix")
+    interview: Mapped[Interview] = relationship("Interview", back_populates="competency_matrix")
 
     def __repr__(self) -> str:
         return f"<CompetencyMatrix id={self.id!r} interview_id={self.interview_id!r}>"
@@ -107,7 +108,7 @@ class InterviewPlan(UUIDPrimaryKeyMixin, Base):
     round_structure: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     estimated_duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
 
-    interview: Mapped["Interview"] = relationship("Interview", back_populates="interview_plan")
+    interview: Mapped[Interview] = relationship("Interview", back_populates="interview_plan")
 
     def __repr__(self) -> str:
         return f"<InterviewPlan id={self.id!r} interview_id={self.interview_id!r}>"
@@ -131,8 +132,8 @@ class InterviewQuestion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     question_text: Mapped[str] = mapped_column(Text, nullable=False)
     sequence_number: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    interview: Mapped["Interview"] = relationship("Interview", back_populates="questions")
-    answer: Mapped["InterviewAnswer | None"] = relationship(
+    interview: Mapped[Interview] = relationship("Interview", back_populates="questions")
+    answer: Mapped[InterviewAnswer | None] = relationship(
         "InterviewAnswer", back_populates="question",
         uselist=False, cascade="all, delete-orphan"
     )
@@ -151,10 +152,10 @@ class InterviewAnswer(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     answer_text: Mapped[str] = mapped_column(Text, nullable=False)
     response_time_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    question: Mapped["InterviewQuestion"] = relationship(
+    question: Mapped[InterviewQuestion] = relationship(
         "InterviewQuestion", back_populates="answer"
     )
-    evaluation: Mapped["Evaluation | None"] = relationship(
+    evaluation: Mapped[Evaluation | None] = relationship(
         "Evaluation", back_populates="answer",
         uselist=False, cascade="all, delete-orphan"
     )
@@ -176,7 +177,7 @@ class Evaluation(UUIDPrimaryKeyMixin, Base):
     feedback: Mapped[str] = mapped_column(Text, nullable=False, default="")
     ideal_answer_summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
-    answer: Mapped["InterviewAnswer"] = relationship("InterviewAnswer", back_populates="evaluation")
+    answer: Mapped[InterviewAnswer] = relationship("InterviewAnswer", back_populates="evaluation")
 
     def __repr__(self) -> str:
         return f"<Evaluation id={self.id!r} score={self.score}>"
@@ -196,10 +197,10 @@ class InterviewReport(UUIDPrimaryKeyMixin, Base):
     generated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
     )
 
-    interview: Mapped["Interview"] = relationship("Interview", back_populates="report")
+    interview: Mapped[Interview] = relationship("Interview", back_populates="report")
 
     def __repr__(self) -> str:
         return f"<InterviewReport id={self.id!r} interview_id={self.interview_id!r}>"
@@ -222,7 +223,7 @@ class AgentLog(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # prompt versioning
     prompt_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
-    interview: Mapped["Interview"] = relationship("Interview", back_populates="agent_logs")
+    interview: Mapped[Interview] = relationship("Interview", back_populates="agent_logs")
 
     def __repr__(self) -> str:
         return f"<AgentLog id={self.id!r} agent={self.agent_name!r} status={self.node_status!r}>"

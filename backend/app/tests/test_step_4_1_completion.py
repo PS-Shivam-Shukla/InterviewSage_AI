@@ -10,21 +10,20 @@ Verifies that:
 """
 
 import uuid
-from datetime import datetime, timezone
-import pytest
+from datetime import UTC, datetime
+
 from sqlalchemy.orm import Session
 
-from app.agents.evaluation_agent import EvaluationAgent
 from app.models import (
-    User, Resume, JobDescription, Interview, InterviewQuestion,
-    InterviewAnswer, Evaluation, InterviewReport
+    Interview,
+    InterviewQuestion,
+    InterviewReport,
+    JobDescription,
+    Resume,
+    User,
 )
 from app.services.interview_service import InterviewService
-from app.services.report_service import ReportService
 from app.speech.streaming import AudioStreamingService
-
-
-
 
 
 def _setup_mock_interview(db: Session, question_count: int = 5) -> Interview:
@@ -62,7 +61,7 @@ def _setup_mock_interview(db: Session, question_count: int = 5) -> Interview:
         jd_id=jd.id,
         status="IN_PROGRESS",
         current_round="TECHNICAL",
-        started_at=datetime.now(timezone.utc),
+        started_at=datetime.now(UTC),
     )
     db.add(interview)
     db.flush()
@@ -76,7 +75,7 @@ def _setup_mock_interview(db: Session, question_count: int = 5) -> Interview:
             difficulty="MEDIUM",
             question_text=f"Question #{idx}: Explain system component #{idx}.",
             sequence_number=idx,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         db.add(q)
 

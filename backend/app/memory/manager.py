@@ -5,7 +5,7 @@ Memory Manager — Coordinates retriever, summarizer, personalization engine, an
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional
+
 from sqlalchemy.orm import Session
 
 from app.memory.personalization import PersonalizationEngine
@@ -17,9 +17,7 @@ from app.memory.schemas import (
     CandidateProfileResponse,
     CandidateTimelineItem,
     LearningRecommendationResponse,
-    MemoryRetrievalContext,
     MemorySummaryResponse,
-    PersonalizedQuestionRecommendation,
     SkillProgressResponse,
 )
 from app.memory.summarizer import MemorySummarizer
@@ -70,7 +68,7 @@ class MemoryManager:
             created_at=mem.created_at.isoformat(),
         )
 
-    def get_candidate_timeline(self, candidate_id: str) -> List[CandidateTimelineItem]:
+    def get_candidate_timeline(self, candidate_id: str) -> list[CandidateTimelineItem]:
         memories = self.repo.list_memories(candidate_id, limit=50)
         timeline = []
         for m in memories:
@@ -85,7 +83,7 @@ class MemoryManager:
             )
         return timeline
 
-    def get_skill_progression(self, candidate_id: str) -> List[SkillProgressResponse]:
+    def get_skill_progression(self, candidate_id: str) -> list[SkillProgressResponse]:
         skills = self.repo.list_skill_progress(candidate_id)
         return [
             SkillProgressResponse(
@@ -102,7 +100,7 @@ class MemoryManager:
             for s in skills
         ]
 
-    def get_recommendations(self, candidate_id: str) -> List[LearningRecommendationResponse]:
+    def get_recommendations(self, candidate_id: str) -> list[LearningRecommendationResponse]:
         recs = self.repo.list_recommendations(candidate_id)
         if not recs:
             return self.personalization.generate_learning_roadmap(candidate_id)

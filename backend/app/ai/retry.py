@@ -5,13 +5,14 @@ Implements exponential backoff with jitter, timeout controls, circuit breaker st
 
 from __future__ import annotations
 
-import time
 import random
-from typing import Any, Callable, Dict, Optional
+import time
+from collections.abc import Callable
 from enum import Enum
+from typing import Any
 
 from app.core.logging import get_logger
-from app.core.metrics import LLM_RETRY_TOTAL, LLM_FAILURES_TOTAL
+from app.core.metrics import LLM_FAILURES_TOTAL, LLM_RETRY_TOTAL
 
 logger = get_logger(__name__)
 
@@ -83,7 +84,7 @@ class RetryEngine:
         self.initial_delay_ms = initial_delay_ms
         self.max_delay_ms = max_delay_ms
         self.backoff_factor = backoff_factor
-        self._circuit_breakers: Dict[str, CircuitBreaker] = {}
+        self._circuit_breakers: dict[str, CircuitBreaker] = {}
 
     def get_circuit_breaker(self, provider: str) -> CircuitBreaker:
         """Get or create CircuitBreaker for provider."""
@@ -95,7 +96,7 @@ class RetryEngine:
         self,
         func: Callable[..., Any],
         provider: str,
-        fallback_func: Optional[Callable[..., Any]] = None,
+        fallback_func: Callable[..., Any] | None = None,
         *args: Any,
         **kwargs: Any,
     ) -> Any:

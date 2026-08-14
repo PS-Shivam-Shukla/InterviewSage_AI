@@ -5,15 +5,16 @@ Defines explicit runtime validation contracts to eliminate architectural ambigui
 
 from __future__ import annotations
 
-from typing import Dict, Any, List, Tuple
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
 class ContractValidationResult(BaseModel):
     is_valid: bool
     contract_name: str
-    violations: List[str] = Field(default_factory=list)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    violations: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class NegativeConstraintContract:
@@ -23,7 +24,7 @@ class NegativeConstraintContract:
     """
 
     @staticmethod
-    def validate(text: str, negative_skills: List[str]) -> ContractValidationResult:
+    def validate(text: str, negative_skills: list[str]) -> ContractValidationResult:
         from app.kernel.guardrails import Guardrails
         gr = Guardrails()
         is_valid, violations = gr.validate_negative_constraints(text, negative_skills)
@@ -42,8 +43,8 @@ class BlueprintConstraintContract:
     """
 
     @staticmethod
-    def validate(blueprint: Dict[str, Any]) -> ContractValidationResult:
-        violations: List[str] = []
+    def validate(blueprint: dict[str, Any]) -> ContractValidationResult:
+        violations: list[str] = []
         items = blueprint.get("blueprint_items") or []
         total_q = blueprint.get("total_questions", 0)
 
@@ -68,8 +69,8 @@ class EvaluationConfidenceContract:
     """
 
     @staticmethod
-    def validate(evaluation: Dict[str, Any], min_confidence: float = 0.75) -> ContractValidationResult:
-        violations: List[str] = []
+    def validate(evaluation: dict[str, Any], min_confidence: float = 0.75) -> ContractValidationResult:
+        violations: list[str] = []
         conf = float(evaluation.get("confidence_score", 1.0))
         score = float(evaluation.get("score", 0.0))
 
@@ -94,8 +95,8 @@ class ATSScoreContract:
     """
 
     @staticmethod
-    def validate(ats_result: Dict[str, Any]) -> ContractValidationResult:
-        violations: List[str] = []
+    def validate(ats_result: dict[str, Any]) -> ContractValidationResult:
+        violations: list[str] = []
         ats_score = ats_result.get("ats_score", 0)
 
         if not (0 <= ats_score <= 100):

@@ -7,7 +7,8 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from app.core.logging import get_logger
 from app.core.metrics import PROMPT_VERSION_USAGE_TOTAL
 
@@ -24,7 +25,7 @@ class PromptTemplateSpec:
     is_active: bool = True
 
 
-DEFAULT_REGISTRY_TEMPLATES: Dict[str, Dict[str, PromptTemplateSpec]] = {
+DEFAULT_REGISTRY_TEMPLATES: dict[str, dict[str, PromptTemplateSpec]] = {
     "prompt:question_personalizer": {
         "v1": PromptTemplateSpec(
             prompt_key="prompt:question_personalizer",
@@ -105,7 +106,7 @@ class PromptRegistry:
     """
 
     def __init__(self) -> None:
-        self._registry: Dict[str, Dict[str, PromptTemplateSpec]] = dict(DEFAULT_REGISTRY_TEMPLATES)
+        self._registry: dict[str, dict[str, PromptTemplateSpec]] = dict(DEFAULT_REGISTRY_TEMPLATES)
 
     def register_prompt(
         self,
@@ -146,7 +147,7 @@ class PromptRegistry:
         spec = versions.get(version) or versions.get("v1") or list(versions.values())[0]
         return spec
 
-    def render(self, prompt_key: str, version: str = "v1", variables: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
+    def render(self, prompt_key: str, version: str = "v1", variables: dict[str, Any] | None = None) -> dict[str, str]:
         """
         Render system and user prompt templates with variable substitution.
         """
@@ -171,6 +172,6 @@ class PromptRegistry:
             "version": spec.version,
         }
 
-    def list_versions(self, prompt_key: str) -> List[str]:
+    def list_versions(self, prompt_key: str) -> list[str]:
         """List available versions for a prompt key."""
         return list(self._registry.get(prompt_key, {}).keys())

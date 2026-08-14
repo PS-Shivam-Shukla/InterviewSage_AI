@@ -4,13 +4,17 @@ Report generation service implementation.
 """
 
 import json
-from typing import Optional
+from datetime import UTC, datetime
+
 from sqlalchemy.orm import Session
 
 from app.core.logging import get_logger
-from app.repositories import InterviewReportRepository, InterviewAnswerRepository, InterviewRepository
-from app.models import InterviewReport, JobDescription, InterviewQuestion
-from datetime import datetime, timezone
+from app.models import InterviewQuestion, InterviewReport, JobDescription
+from app.repositories import (
+    InterviewAnswerRepository,
+    InterviewReportRepository,
+    InterviewRepository,
+)
 
 logger = get_logger(__name__)
 
@@ -22,7 +26,7 @@ class ReportService:
         self.answer_repo = InterviewAnswerRepository(db)
         self.interview_repo = InterviewRepository(db)
 
-    def get_report(self, interview_id: str) -> Optional[dict]:
+    def get_report(self, interview_id: str) -> dict | None:
         report = self.report_repo.get_by_interview(interview_id)
         if not report:
             db_answers = self.answer_repo.list_answers_with_evaluations_by_interview(interview_id)
@@ -78,7 +82,7 @@ class ReportService:
 
         return history
 
-    def get_report_pdf(self, interview_id: str) -> Optional[bytes]:
+    def get_report_pdf(self, interview_id: str) -> bytes | None:
         report_data = self.get_report(interview_id)
         if not report_data:
             return None
@@ -308,7 +312,7 @@ class ReportService:
             competency_scorecard=json.dumps(competency_scorecard),
             improvement_plan=json.dumps(improvement_plan),
             transcript_snapshot=json.dumps(transcript),
-            generated_at=datetime.now(timezone.utc),
+            generated_at=datetime.now(UTC),
         )
 
         try:
@@ -333,7 +337,7 @@ class ReportService:
             "competency_scorecard": competency_scorecard,
             "improvement_plan": improvement_plan,
             "transcript_snapshot": transcript,
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
         }
 
     def _escape_pdf_text(self, text: str) -> str:

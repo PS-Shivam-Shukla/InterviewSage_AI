@@ -3,6 +3,7 @@ User repository tests.
 """
 
 import pytest
+
 from app.models import User
 
 

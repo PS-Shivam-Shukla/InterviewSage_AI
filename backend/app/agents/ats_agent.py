@@ -11,25 +11,23 @@ Architecture contract:
 
 from __future__ import annotations
 
-from typing import List, Optional
 from pydantic import BaseModel, Field
 
 from app.agents.base import BaseAgent
 from app.graph.state import InterviewState
 from app.mcp import mcp_server
 
-
 # ── Output schema ─────────────────────────────────────────────
 
 class ATSAnalysis(BaseModel):
     ats_overlap_score: int = Field(0, ge=0, le=100)
     keyword_coverage_score: int = Field(0, ge=0, le=100)
-    matched_skills: List[str] = Field(default_factory=list)
-    missing_skills: List[str] = Field(default_factory=list)
-    preferred_matched: List[str] = Field(default_factory=list)
-    strengths: List[str] = Field(default_factory=list)
-    weaknesses: List[str] = Field(default_factory=list)
-    interview_focus_areas: List[str] = Field(default_factory=list)
+    matched_skills: list[str] = Field(default_factory=list)
+    missing_skills: list[str] = Field(default_factory=list)
+    preferred_matched: list[str] = Field(default_factory=list)
+    strengths: list[str] = Field(default_factory=list)
+    weaknesses: list[str] = Field(default_factory=list)
+    interview_focus_areas: list[str] = Field(default_factory=list)
     confidence: float = Field(0.5, ge=0.0, le=1.0)
     incomplete_data: bool = False
 
@@ -43,7 +41,7 @@ class ATSAgent(BaseAgent):
     def _temperature(self) -> float:
         return 0.1
 
-    def _run(self, state: InterviewState, retry_feedback: Optional[str] = None) -> dict:
+    def _run(self, state: InterviewState, retry_feedback: str | None = None) -> dict:
         resume_data = state.get("resume_data") or {}
         jd_data = state.get("jd_data") or {}
 
@@ -59,7 +57,7 @@ class ATSAgent(BaseAgent):
         resume_skills = resume_data.get("skills", [])
         # Handle skills as dict (old schema) or list (new schema)
         if isinstance(resume_skills, dict):
-            all_skills: List[str] = []
+            all_skills: list[str] = []
             for v in resume_skills.values():
                 if isinstance(v, list):
                     all_skills.extend(str(s) for s in v)

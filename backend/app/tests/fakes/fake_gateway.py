@@ -7,7 +7,7 @@ Must NEVER be imported or used in production application code.
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Optional
+from typing import Any
 
 from app.ai.gateway import AIGateway
 
@@ -18,7 +18,7 @@ class FakeAIGateway(AIGateway):
     Overriding `_execute_llm_call` allows full DB audit logging and token accounting to run cleanly.
     """
 
-    def __init__(self, predefined_response: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, predefined_response: dict[str, Any] | None = None) -> None:
         super().__init__()
         self.predefined_response = predefined_response or {
             "status": "COMPLETED",

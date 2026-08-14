@@ -6,7 +6,7 @@ Stores and retrieves company-specific interview weightings (Amazon, Google, Micr
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Optional
+
 from sqlalchemy.orm import Session
 
 from app.career.schemas import CompanyProfileResponse

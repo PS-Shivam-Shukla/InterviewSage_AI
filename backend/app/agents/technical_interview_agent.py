@@ -7,22 +7,20 @@ scalability, edge cases).
 
 from __future__ import annotations
 
-from typing import Optional
 from pydantic import BaseModel
 
 from app.agents.base import BaseAgent
 from app.core.llm_client import LLMClient
 from app.graph.state import InterviewState
-from app.prompts.loader import get_system_prompt, get_developer_prompt
-
+from app.prompts.loader import get_developer_prompt, get_system_prompt
 
 # ── Output schema ─────────────────────────────────────────────
 
 class TechnicalTurn(BaseModel):
     question_text: str
     candidate_answer: str
-    follow_up_question: Optional[str] = None
-    follow_up_rationale: Optional[str] = None
+    follow_up_question: str | None = None
+    follow_up_rationale: str | None = None
 
 
 # ── Agent ─────────────────────────────────────────────────────
@@ -34,7 +32,7 @@ class TechnicalInterviewAgent(BaseAgent):
     def _temperature(self) -> float:
         return 0.4
 
-    def _run(self, state: InterviewState, retry_feedback: Optional[str] = None) -> dict:
+    def _run(self, state: InterviewState, retry_feedback: str | None = None) -> dict:
         current_q        = state.get("current_question") or {}
         candidate_answer = state.get("pending_answer", "")
 

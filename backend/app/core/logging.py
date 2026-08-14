@@ -7,9 +7,9 @@ import json
 import logging
 import logging.handlers
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from app.core.config import settings
 
@@ -24,7 +24,7 @@ class StructuredFormatter(logging.Formatter):
         from app.core.request_context import get_interview_id, get_request_id, get_user_id
 
         log_data: dict[str, Any] = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),

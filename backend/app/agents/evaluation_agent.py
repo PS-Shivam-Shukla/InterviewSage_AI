@@ -7,27 +7,26 @@ breakdown, feedback, and ideal-answer summary.
 from __future__ import annotations
 
 import re
-from typing import Dict, Optional
+
 from pydantic import BaseModel, Field, model_validator
 
 from app.agents.base import BaseAgent
 from app.core.llm_client import LLMClient
 from app.graph.state import InterviewState
 from app.mcp import mcp_server
-from app.prompts.loader import get_system_prompt, get_developer_prompt
-
+from app.prompts.loader import get_developer_prompt, get_system_prompt
 
 # ── Output schema ─────────────────────────────────────────────
 
 class EvaluationOutput(BaseModel):
     score: int = Field(ge=1, le=10)
-    rubric_breakdown: Dict[str, int] = Field(default_factory=dict)
+    rubric_breakdown: dict[str, int] = Field(default_factory=dict)
     feedback: str = ""
     ideal_answer_summary: str = ""
     needs_human_review: bool = False
 
     @model_validator(mode="after")
-    def sub_scores_in_range(self) -> "EvaluationOutput":
+    def sub_scores_in_range(self) -> EvaluationOutput:
         for dim, val in self.rubric_breakdown.items():
             if not (1 <= val <= 5):
                 raise ValueError(
@@ -45,7 +44,7 @@ class EvaluationAgent(BaseAgent):
     def _temperature(self) -> float:
         return 0.1   # maximum consistency
 
-    def _run(self, state: InterviewState, retry_feedback: Optional[str] = None) -> dict:
+    def _run(self, state: InterviewState, retry_feedback: str | None = None) -> dict:
         current_q   = state.get("current_question") or {}
         answers     = state.get("answers") or []
         matrix      = state.get("competency_matrix") or []

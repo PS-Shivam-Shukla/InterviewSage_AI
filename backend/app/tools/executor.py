@@ -10,8 +10,9 @@ Enforces strict execution constraints:
 from __future__ import annotations
 
 import time
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from app.core.logging import get_logger
@@ -24,11 +25,11 @@ class Observation(BaseModel):
     tool_name: str
     success: bool
     output: Any = None
-    error: Optional[str] = None
+    error: str | None = None
     latency_ms: int = 0
-    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return self.model_dump()
 
 
@@ -38,14 +39,14 @@ class ToolExecutor:
     Prevents direct LLM code execution by routing through registered MCP tool schemas.
     """
 
-    def __init__(self, mcp_registry: Optional[Any] = None) -> None:
+    def __init__(self, mcp_registry: Any | None = None) -> None:
         if mcp_registry is None:
             from app.mcp import mcp_server
             self._registry = mcp_server
         else:
             self._registry = mcp_registry
 
-    def execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Observation:
+    def execute_tool(self, tool_name: str, arguments: dict[str, Any]) -> Observation:
         """
         Validate and execute requested tool name with provided arguments.
         Returns a structured Observation.

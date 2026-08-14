@@ -6,17 +6,19 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from datetime import datetime, timezone
-from typing import Any, Dict, List
-from sqlalchemy import func
+from datetime import datetime
+from typing import Any
+
 from sqlalchemy.orm import Session
 
 from app.analytics.repository import AnalyticsRepository
-from app.models.interview import Interview, InterviewReport, AgentLog
-from app.models.llm_audit import LLMRequest, TokenUsage
-from app.models.evaluation import EvaluationRun, ModelScore
+from app.core.logging import get_logger
+from app.models.evaluation import ModelScore
+from app.models.interview import AgentLog, Interview, InterviewReport
 from app.models.voice import VoiceMetrics
 from app.repositories import InterviewRepository
+
+logger = get_logger(__name__)
 
 
 class AnalyticsService:
@@ -241,7 +243,7 @@ class AnalyticsService:
 
     # ── Sprint 11 Admin Operations ────────────────────────────
 
-    def get_admin_overview(self) -> Dict[str, Any]:
+    def get_admin_overview(self) -> dict[str, Any]:
         """Return OP-1 Admin Dashboard Overview payload."""
         counts = self.repo.get_interview_counts()
         llm_metrics = self.repo.get_llm_request_metrics()
@@ -267,7 +269,7 @@ class AnalyticsService:
             "hallucination_rate": eval_metrics["avg_hallucination"],
         }
 
-    def get_model_analytics(self) -> List[Dict[str, Any]]:
+    def get_model_analytics(self) -> list[dict[str, Any]]:
         """Return OP-10 Model Comparison Analytics."""
         scores = self.db.query(ModelScore).all()
         if not scores:
@@ -302,7 +304,7 @@ class AnalyticsService:
             for ms in scores
         ]
 
-    def get_cost_analytics(self) -> Dict[str, Any]:
+    def get_cost_analytics(self) -> dict[str, Any]:
         """Return OP-5 AI Cost Dashboard breakdown."""
         llm_metrics = self.repo.get_llm_request_metrics()
         return {

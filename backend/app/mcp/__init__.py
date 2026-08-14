@@ -3,16 +3,21 @@ MCP package — bootstraps and exports the singleton MCP server
 with all tools and resources registered (Phase 5).
 """
 
+from app.mcp.resources import (
+    competency_templates_handler,
+    industry_standards_handler,
+    question_bank_handler,
+)
 from app.mcp.server import mcp_server
 from app.mcp.tools import (
-    parse_resume_pdf, parse_jd_text, compute_ats_score,
-    map_skills, fetch_industry_standards, score_answer_rubric,
-    persist_agent_output, generate_report_pdf,
-)
-from app.mcp.resources import (
-    industry_standards_handler,
-    competency_templates_handler,
-    question_bank_handler,
+    compute_ats_score,
+    fetch_industry_standards,
+    generate_report_pdf,
+    map_skills,
+    parse_jd_text,
+    parse_resume_pdf,
+    persist_agent_output,
+    score_answer_rubric,
 )
 
 # ── Register all v1 tools ────────────────────────────────────

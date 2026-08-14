@@ -4,8 +4,8 @@ AI Gateway Response Data Structures.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -14,7 +14,7 @@ class AIGatewayResponse:
 
     success: bool
     raw_content: str
-    parsed_json: Optional[Dict[str, Any]] = None
+    parsed_json: dict[str, Any] | None = None
     provider: str = "ollama"
     model_name: str = "qwen2.5:7b"
     prompt_version: str = "v1"
@@ -25,4 +25,4 @@ class AIGatewayResponse:
     cost_usd: float = 0.0
     retry_count: int = 0
     repair_performed: bool = False
-    error_message: Optional[str] = None
+    error_message: str | None = None

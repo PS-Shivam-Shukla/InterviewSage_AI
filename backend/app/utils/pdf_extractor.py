@@ -6,7 +6,6 @@ Uses PyMuPDF (fitz) with PyPDF2 fallbacks and NUL byte sanitization.
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +35,7 @@ def extract_text_from_pdf_bytes(file_bytes: bytes) -> str:
         # Strategy 2: PyPDF2 fallback
         try:
             import io
+
             import PyPDF2
             reader = PyPDF2.PdfReader(io.BytesIO(file_bytes))
             text_parts = []

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import List, Optional
 
 
 @dataclass
@@ -68,7 +67,7 @@ class EvaluationMetrics:
         return round(100.0 - faithfulness, 2)
 
     @staticmethod
-    def calculate_context_precision(retrieved_contexts: List[str], target_concepts: List[str]) -> float:
+    def calculate_context_precision(retrieved_contexts: list[str], target_concepts: list[str]) -> float:
         """Calculate precision of retrieved context chunks against target concepts."""
         if not retrieved_contexts or not target_concepts:
             return 0.0
@@ -81,7 +80,7 @@ class EvaluationMetrics:
         return round((hits / len(retrieved_contexts)) * 100.0, 2)
 
     @staticmethod
-    def calculate_context_recall(retrieved_contexts: List[str], target_concepts: List[str]) -> float:
+    def calculate_context_recall(retrieved_contexts: list[str], target_concepts: list[str]) -> float:
         """Calculate recall of target concepts found in retrieved contexts."""
         if not target_concepts:
             return 100.0
@@ -129,8 +128,8 @@ class EvaluationMetrics:
         cls,
         question: str,
         answer: str,
-        expected_answer: Optional[str] = None,
-        context: Optional[str] = None,
+        expected_answer: str | None = None,
+        context: str | None = None,
         min_pass_score: float = 70.0,
     ) -> EvaluationMetricsResult:
         """Compute full metrics suite for a single evaluation sample."""

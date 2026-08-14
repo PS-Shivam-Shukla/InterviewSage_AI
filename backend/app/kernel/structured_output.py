@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Type, TypeVar
+from typing import Any, TypeVar
+
 from pydantic import BaseModel, ValidationError
 
 T = TypeVar("T", bound=BaseModel)
@@ -35,7 +36,7 @@ class StructuredOutputParser:
 
         return raw_text.strip()
 
-    def parse(self, raw_text: str, schema_class: Type[T]) -> tuple[T | None, float, str | None]:
+    def parse(self, raw_text: str, schema_class: type[T]) -> tuple[T | None, float, str | None]:
         """
         Parse raw model text into a validated Pydantic schema instance.
         Returns: (parsed_instance, confidence_score, error_message)
@@ -47,14 +48,14 @@ class StructuredOutputParser:
         try:
             data = json.loads(json_str)
         except json.JSONDecodeError as exc:
-            return None, 0.0, f"JSON Syntax Error: {str(exc)}"
+            return None, 0.0, f"JSON Syntax Error: {exc!s}"
 
         try:
             instance = schema_class.model_validate(data)
             confidence = self.estimate_confidence(data)
             return instance, confidence, None
         except ValidationError as val_err:
-            return None, 0.2, f"Schema Validation Error: {str(val_err)}"
+            return None, 0.2, f"Schema Validation Error: {val_err!s}"
 
     @staticmethod
     def estimate_confidence(parsed_data: dict[str, Any]) -> float:

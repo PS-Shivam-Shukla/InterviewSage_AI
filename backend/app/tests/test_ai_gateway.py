@@ -3,14 +3,14 @@ Unit and Integration Tests for AI Gateway Subsystem.
 Verifies LLM failure semantics, provider overrides, explicit error handling, and test-only fake doubles.
 """
 
-import pytest
 from unittest.mock import patch
+
 from sqlalchemy.orm import Session
 
 from app.ai.gateway import AIGateway
 from app.ai.request import AIGatewayRequest
 from app.ai.response import AIGatewayResponse
-from app.models.llm_audit import LLMRequest, LLMResponse, TokenUsage
+from app.models.llm_audit import LLMRequest
 from app.tests.fakes.fake_gateway import FakeAIGateway
 
 

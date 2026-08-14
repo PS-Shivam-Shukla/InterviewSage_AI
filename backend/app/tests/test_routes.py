@@ -1,10 +1,9 @@
-from datetime import datetime, timezone
 import uuid
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models import InterviewReport, User
+from app.models import User
 from app.services import AuthService
 
 

@@ -12,9 +12,9 @@ Design rules:
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any
+
 from typing_extensions import TypedDict
-import operator
 
 
 def _append(existing: list | None, new: list | None) -> list:
@@ -66,7 +66,7 @@ class InterviewState(TypedDict, total=False):
 
     # ── Runtime interview progress ────────────────────────────
     current_round: str                  # "HR" | "TECHNICAL" | "COMPLETE"
-    current_question: Optional[dict]    # Written by: Question Personalization Node; None between turns
+    current_question: dict | None    # Written by: Question Personalization Node; None between turns
     questions_asked: Annotated[list[dict], _append]  # Accumulates across all turns
     answers: Annotated[list[dict], _append]          # Accumulates candidate answers
     evaluations: Annotated[list[dict], _append]      # Accumulates per-answer evaluations
@@ -74,14 +74,14 @@ class InterviewState(TypedDict, total=False):
     # ── Post-interview ────────────────────────────────────────
     coaching_plan: dict[str, Any]       # Written by: CareerCoachAgent
     learning_plan: dict[str, Any]       # Generated learning recommendations
-    final_report: Optional[dict]        # Written by: ReportGeneratorAgent
+    final_report: dict | None        # Written by: ReportGeneratorAgent
 
     # ── Orchestration / transient / HITL ──────────────────────
     workflow_stage: str                 # Current execution stage
     human_review_required: bool         # HITL Interrupt Gate Flag
     retry_count_this_node: int          # Reset on each node entry by LangGraph runtime
     error_log: Annotated[list[dict], _append]  # Any agent can append errors here
-    next_node: Optional[str]            # Supervisor routing decision
+    next_node: str | None            # Supervisor routing decision
 
     # ── Model-Mediated Policy & Verification ───────────────────
     policy_iteration_count: int         # Tracks bounded PolicyNode loop iterations (max 5)
