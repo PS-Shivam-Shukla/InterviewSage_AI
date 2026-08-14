@@ -5,7 +5,7 @@ Selects 5 randomized questions per fresher interview session without replacement
 """
 
 import random
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 APTITUDE_20_BANK: List[Dict[str, Any]] = [
     {

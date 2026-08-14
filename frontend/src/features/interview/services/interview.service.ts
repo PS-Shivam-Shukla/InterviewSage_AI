@@ -30,7 +30,9 @@ export const interviewService = {
   },
 
   async submitAnswer(payload: SubmitAnswerPayload): Promise<any> {
-    const response = await apiClient.post(`/interviews/${payload.interview_id}/answers`, payload);
+    const response = await apiClient.post(`/interviews/${payload.interview_id}/answers`, payload, {
+      timeout: 300000,
+    });
     return response.data;
   },
 
@@ -71,18 +73,7 @@ export const interviewService = {
       const response = await apiClient.get<InterviewReplayItem[]>(`/interviews/${interviewId}/replay`);
       return response.data;
     } catch {
-      return [
-        {
-          id: 'rep-1',
-          question_text: 'Describe how you handle state persistence across multi-agent AI workflows.',
-          candidate_answer: 'I implement durable checkpointers using PostgreSQL with ACID isolation and Redis session caching.',
-          ai_comment: 'Excellent answer highlighting real DB transactions and caching layers.',
-          technical_score: 95,
-          communication_score: 92,
-          strengths: ['Deep PostgreSQL knowledge', 'ACID transaction mastery'],
-          weaknesses: ['Could elaborate on dead-letter queue retries'],
-        },
-      ];
+      return [];
     }
   },
 

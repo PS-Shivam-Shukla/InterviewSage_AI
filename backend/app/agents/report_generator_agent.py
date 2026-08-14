@@ -22,7 +22,7 @@ from app.prompts.loader import get_system_prompt
 class CompetencyScore(BaseModel):
     competency: str
     score: float
-    max_score: float = 10.0
+    max_score: float = 100.0
     percentage: float
 
 
@@ -36,7 +36,7 @@ class TranscriptTurn(BaseModel):
 
 
 class ReportOutput(BaseModel):
-    overall_score: float = Field(ge=0.0, le=10.0)
+    overall_score: float = Field(ge=0.0, le=100.0)
     competency_scorecard: List[CompetencyScore]
     improvement_plan: List[dict]
     transcript_snapshot: List[TranscriptTurn]
@@ -49,10 +49,12 @@ class ReportOutput(BaseModel):
 def _build_scorecard(
     evaluations: list[dict], matrix: list[dict]
 ) -> tuple[List[CompetencyScore], float]:
-    """Compute per-competency weighted scores and overall score."""
-    comp_scores: dict[str, list[int]] = defaultdict(list)
+    """Compute per-competency weighted scores and overall score on 0-100 canonical scale."""
+    comp_scores: dict[str, list[float]] = defaultdict(list)
     for e in evaluations:
-        comp_scores[e.get("competency_targeted", "General")].append(e.get("score", 0))
+        raw_s = float(e.get("score", 0))
+        pct_s = raw_s * 10.0 if (0 < raw_s <= 10) else raw_s
+        comp_scores[e.get("competency_targeted", "General")].append(pct_s)
 
     scorecard = []
     total_weight = 0.0
@@ -66,8 +68,8 @@ def _build_scorecard(
         scorecard.append(CompetencyScore(
             competency=name,
             score=round(avg, 1),
-            max_score=10.0,
-            percentage=round(avg * 10, 1),
+            max_score=100.0,
+            percentage=round(avg, 1),
         ))
         weighted_sum  += avg * weight
         total_weight  += weight
@@ -98,12 +100,14 @@ class ReportGeneratorAgent(BaseAgent):
 
         transcript = []
         for i, (q, a, e) in enumerate(zip(questions, answers, evaluations), 1):
+            raw_s = float(e.get("score", 0))
+            score_val = int(raw_s * 10) if (0 < raw_s <= 10) else int(raw_s)
             transcript.append(TranscriptTurn(
                 sequence_number=i,
                 round_type=q.get("round_type", ""),
                 question_text=q.get("question_text", ""),
                 answer_text=a.get("answer_text", "")[:500],
-                score=e.get("score", 0),
+                score=score_val,
                 feedback=e.get("feedback", ""),
             ))
 
@@ -111,7 +115,7 @@ class ReportGeneratorAgent(BaseAgent):
 
         # ── LLM only for 2-sentence executive summary ─────────
         summary_prompt = (
-            f"Overall score: {overall_score}/10\n"
+            f"Overall score: {overall_score}/100\n"
             f"Top competency: {scorecard[0].competency if scorecard else 'N/A'}\n"
             f"Weakest competency: {scorecard[-1].competency if scorecard else 'N/A'}\n"
             "Write a 2-3 sentence executive summary of this interview performance."
@@ -129,7 +133,7 @@ class ReportGeneratorAgent(BaseAgent):
             summary_out: SummaryOut = self._invoke_structured(messages, SummaryOut, retry_feedback)
             exec_summary = summary_out.executive_summary
         except Exception:
-            exec_summary = f"Interview completed with an overall score of {overall_score}/10."
+            exec_summary = f"Interview completed with an overall score of {overall_score}/100."
 
         report = ReportOutput(
             overall_score=overall_score,

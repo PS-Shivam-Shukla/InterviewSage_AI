@@ -153,8 +153,8 @@ def _difficulty_str_to_int(difficulty: str) -> int:
 
 def _difficulty_int_to_str(level: int) -> str:
     """Convert 1-5 int back to difficulty string."""
-    return {1: "EASY", 2: "MEDIUM", 3: "HARD", 4: "HARD", 5: "HARD"}.get(
-        max(1, min(5, level)), "MEDIUM"
+    return {1: "BASIC", 2: "INTERMEDIATE", 3: "HARD", 4: "ADVANCED", 5: "ADVANCED"}.get(
+        max(1, min(5, level)), "INTERMEDIATE"
     )
 
 
@@ -168,9 +168,9 @@ def _is_fresher(seniority: str) -> bool:
 def _determine_next_round_type(next_seq: int, is_fresher_candidate: bool) -> str:
     """Determine round type for the next dynamically generated question."""
     if is_fresher_candidate:
-        if next_seq <= 5:
+        if next_seq <= 4:
             return "APTITUDE"
-        elif next_seq == 6:
+        elif next_seq <= 7:
             return "TECHNICAL"
         else:
             return "HR"
@@ -903,7 +903,8 @@ class InterviewService:
         )
         seniority = resume_data.get("seniority_signal", "MID")
         is_fresher_candidate = _is_fresher(seniority)
-        total_questions = 7 if is_fresher_candidate else 5
+        all_configured_questions = self.question_repo.list_by_interview(interview_id)
+        total_questions = len(all_configured_questions) if all_configured_questions else (7 if is_fresher_candidate else 5)
 
         # ── 4. Build previous evaluations list for adaptive difficulty ─────────
         previous_evaluations: List[dict] = []
@@ -1120,25 +1121,40 @@ class InterviewService:
                 ACTIVE_INTERVIEWS_GAUGE.dec()
 
             else:
-                # ── Dynamically generate next question if not pre-generated ───
-                if not next_db_q:
-                    next_round_type = _determine_next_round_type(next_seq, is_fresher_candidate)
-                    asked_history = [
-                        {
-                            "question_text": q.question_text,
-                            "competency_targeted": q.competency_targeted,
-                            "round_type": q.round_type,
-                        }
-                        for q in all_configured_questions
-                    ]
-                    # Include current evaluation for adaptive context
-                    gen_evaluations = previous_evaluations + [{
-                        "score": llm_score_1_10,
-                        "competency_targeted": competency,
-                        "question_type": round_type.lower() if round_type else "fundamentals",
-                    }]
+                # ── Dynamically generate/update next question adaptively ──────
+                asked_history = [
+                    {
+                        "question_text": q.question_text,
+                        "competency_targeted": q.competency_targeted,
+                        "round_type": q.round_type,
+                    }
+                    for q in all_configured_questions
+                    if q.sequence_number < next_seq
+                ]
+                gen_evaluations = previous_evaluations + [{
+                    "score": llm_score_1_10,
+                    "competency_targeted": competency,
+                    "question_type": round_type.lower() if round_type else "fundamentals",
+                }]
 
-                    # ── CORRECT STATE KEYS to QuestionGeneratorAgent ──────────
+                if next_db_q:
+                    # Regenerate pre-created question with real-time evaluation history & adaptive difficulty
+                    next_q = self._generate_question_via_llm(
+                        next_db_q.round_type,
+                        resume_data,
+                        jd_data,
+                        competency_matrix,
+                        asked_history,
+                        gen_evaluations,
+                    )
+                    if next_q and next_q.get("question_text"):
+                        next_db_q.question_text = next_q["question_text"]
+                        next_db_q.competency_targeted = next_q.get("competency_targeted") or next_db_q.competency_targeted
+                        next_db_q.difficulty = next_q.get("difficulty") or next_difficulty_str
+                        self.db.add(next_db_q)
+                        self.db.flush()
+                else:
+                    next_round_type = _determine_next_round_type(next_seq, is_fresher_candidate)
                     next_q = self._generate_question_via_llm(
                         next_round_type,
                         resume_data,
@@ -1162,7 +1178,7 @@ class InterviewService:
                         interview_id=interview_obj.id,
                         round_type=next_round_type,
                         competency_targeted=next_q.get("competency_targeted") or "General",
-                        difficulty=next_difficulty_str,   # adaptive difficulty
+                        difficulty=next_q.get("difficulty") or next_difficulty_str,
                         question_text=next_q["question_text"],
                         sequence_number=next_seq,
                         created_at=datetime.now(timezone.utc),
@@ -1173,7 +1189,7 @@ class InterviewService:
                     logger.info(
                         f"QuestionGeneratorAgent[adaptive]: interview={interview_id}, "
                         f"seq={next_seq}, competency={next_db_q.competency_targeted!r}, "
-                        f"difficulty={next_difficulty_str} ({adaptation.adaptation_reason})"
+                        f"difficulty={next_db_q.difficulty} ({adaptation.adaptation_reason})"
                     )
 
                 next_q_data = {
@@ -1232,24 +1248,33 @@ class InterviewService:
     def resume_interview(self, interview_id: str) -> Optional[Interview]:
         return self._update_status(interview_id, "IN_PROGRESS")
 
-    def complete_interview(self, interview_id: str) -> Optional[Interview]:
+    def complete_interview(
+        self, interview_id: str, overall_score: Optional[float] = None
+    ) -> Optional[Interview]:
         interview = self.get_interview(interview_id)
         if not interview:
             return None
+
         if interview.status != "COMPLETED":
             interview.status = "COMPLETED"
             interview.completed_at = datetime.now(timezone.utc)
-            existing_answers = self.answer_repo.list_answers_with_evaluations_by_interview(interview_id)
-            all_scores = [
-                item.get("evaluation", {}).get("score", 0)
-                for item in existing_answers
-                if isinstance(item.get("evaluation"), dict)
-            ]
-            if all_scores:
-                interview.overall_score = int(round(sum(all_scores) / len(all_scores)))
+
+            if overall_score is not None:
+                interview.overall_score = int(overall_score)
+            else:
+                existing_answers = self.answer_repo.list_answers_with_evaluations_by_interview(interview_id)
+                all_scores = [
+                    item.get("evaluation", {}).get("score", 0)
+                    for item in existing_answers
+                    if isinstance(item.get("evaluation"), dict) and item.get("evaluation", {}).get("score") is not None
+                ]
+                if all_scores:
+                    interview.overall_score = int(round(sum(all_scores) / len(all_scores)))
+
             self.db.add(interview)
             self.db.commit()
             self.db.refresh(interview)
+            ACTIVE_INTERVIEWS_GAUGE.dec()
 
             try:
                 from app.services.report_service import ReportService
@@ -1259,21 +1284,6 @@ class InterviewService:
                 logger.warning(f"Report generation warning during explicit completion for {interview_id}: {exc}")
 
         return interview
-
-    def complete_interview(
-        self, interview_id: str, overall_score: Optional[float] = None
-    ) -> Optional[Interview]:
-        interview = self.get_interview(interview_id)
-        if not interview:
-            return None
-        update_data: Dict[str, Any] = {
-            "status": "COMPLETED",
-            "completed_at": datetime.now(timezone.utc),
-        }
-        if overall_score is not None:
-            update_data["overall_score"] = int(overall_score)
-        ACTIVE_INTERVIEWS_GAUGE.dec()
-        return self.interview_repo.update(interview_id, update_data)
 
     def _update_status(self, interview_id: str, status: str) -> Optional[Interview]:
         interview = self.get_interview(interview_id)

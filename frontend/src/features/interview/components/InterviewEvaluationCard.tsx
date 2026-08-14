@@ -7,6 +7,8 @@ export interface EvaluationData {
   score?: number;
   reasoning?: string;
   feedback?: string;
+  ideal_answer_summary?: string;
+  technical_score?: number;
   technical_coverage?: number;
   communication_score?: number;
   confidence_score?: number;
@@ -29,7 +31,7 @@ export const InterviewEvaluationCard: React.FC<InterviewEvaluationCardProps> = (
 
   const score = evaluation.score ?? 0;
   const reasoning = evaluation.reasoning || evaluation.feedback || 'No feedback provided.';
-  const techScore = evaluation.technical_coverage ?? score;
+  const techScore = evaluation.technical_score ?? evaluation.technical_coverage ?? score;
   const commDisplay = evaluation.communication_score != null ? `${evaluation.communication_score}%` : 'N/A';
   const confDisplay = evaluation.confidence_score != null ? `${evaluation.confidence_score}%` : 'N/A';
 
@@ -79,6 +81,18 @@ export const InterviewEvaluationCard: React.FC<InterviewEvaluationCardProps> = (
           {reasoning}
         </p>
       </div>
+
+      {evaluation.ideal_answer_summary && (
+        <div className="p-4 rounded-xl bg-indigo-950/40 border border-indigo-800/50 space-y-2">
+          <div className="flex items-center space-x-2 text-xs font-bold text-indigo-300 uppercase tracking-wide">
+            <Brain className="w-4 h-4 text-emerald-400" />
+            <span>Ideal Reference Answer</span>
+          </div>
+          <p className="text-sm text-indigo-100 leading-relaxed font-sans">
+            {evaluation.ideal_answer_summary}
+          </p>
+        </div>
+      )}
 
       {onNextQuestion && hasNextQuestion && (
         <div className="flex justify-end pt-2">

@@ -83,6 +83,13 @@ class InterviewState(TypedDict, total=False):
     error_log: Annotated[list[dict], _append]  # Any agent can append errors here
     next_node: Optional[str]            # Supervisor routing decision
 
+    # ── Model-Mediated Policy & Verification ───────────────────
+    policy_iteration_count: int         # Tracks bounded PolicyNode loop iterations (max 5)
+    policy_decisions: Annotated[list[dict], _append]  # Log of tool_call and finish decisions
+    observations: Annotated[list[dict], _append]      # Log of tool execution observations
+    available_tools: list[dict]         # Machine-readable MCP tool schemas exposed to LLM
+    verification_report: dict[str, Any] # Written by: ReportVerificationNode
+
 
 # V4 Architecture Alias
 GraphState = InterviewState

@@ -126,7 +126,10 @@ class LLMClient:
             raise
 
     def invoke_structured(
-        self, messages: list[BaseMessage], output_schema: Type[T]
+        self,
+        messages: list[BaseMessage],
+        output_schema: Type[T],
+        retry_feedback: Optional[str] = None,
     ) -> T:
         """
         Call the model and parse the response into a Pydantic model.
@@ -190,7 +193,10 @@ class FakeLLMClient(LLMClient):
         return "Fake LLM response"
 
     def invoke_structured(
-        self, messages: list[BaseMessage], output_schema: Type[T]
+        self,
+        messages: list[BaseMessage],
+        output_schema: Type[T],
+        retry_feedback: Optional[str] = None,
     ) -> T:
         self._calls.append(messages)
         if self._call_index < len(self._responses):

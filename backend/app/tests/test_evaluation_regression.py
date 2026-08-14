@@ -45,7 +45,7 @@ def test_aptitude_correct_numeric_answer():
 
 
 def test_aptitude_incorrect_numeric_answer():
-    """Case B: Aptitude incorrect numeric answer -> 2/10 (20%), NOT GIBBERISH."""
+    """Case B: Aptitude incorrect numeric answer -> 0/10 (0%), NOT GIBBERISH."""
     agent = EvaluationAgent()
     state = {
         "current_question": {
@@ -60,7 +60,7 @@ def test_aptitude_incorrect_numeric_answer():
     }
     res = agent(state)
     eval_rec = res["evaluations"][0]
-    assert eval_rec["score"] == 2
+    assert eval_rec["score"] == 0
     assert eval_rec["answer_quality"] == "VALID_ANSWER"
     assert "24" in eval_rec["feedback"]
     assert "10" in eval_rec["feedback"]

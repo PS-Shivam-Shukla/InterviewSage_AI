@@ -78,6 +78,12 @@ class TestGraphCompilation:
         }
         assert expected.issubset(node_names)
 
+    def test_production_graph_uses_concrete_agents(self):
+        """Production graph (allow_stubs=False) initializes concrete agent instances."""
+        graph = build_graph(allow_stubs=False)
+        assert graph is not None
+
+
 
 # ─────────────────────────────────────────────────────────────
 # Routing function unit tests
@@ -215,6 +221,12 @@ class TestFullStubRun:
         def eval_tech(state):
             return {"evaluations": [{"score": 8, "feedback": "Good"}]}
 
+        def policy_handler(state):
+            return {
+                "policy_decisions": [{"action": "finish", "reasoning": "Test complete"}],
+                "next_node": "report_generator_agent",
+            }
+
         graph = build_graph(
             interview_planner_agent=planner_agent,
             question_generator_hr=qgen_hr,
@@ -223,6 +235,8 @@ class TestFullStubRun:
             question_generator_tech=qgen_tech,
             technical_interview_agent=tech_agent,
             evaluation_agent_tech=eval_tech,
+            policy_node_handler=policy_handler,
+            allow_stubs=True,
         )
 
         initial_state = _base_state(

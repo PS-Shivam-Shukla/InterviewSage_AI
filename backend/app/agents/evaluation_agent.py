@@ -73,8 +73,8 @@ class EvaluationAgent(BaseAgent):
                 "score": 0,  # 0/10 raw score -> 0%
                 "rubric_breakdown": {
                     "Correctness": 1,
-                    "Completeness": 1,
-                    "Clarity & Structure": 1,
+                    "Communication": 1,
+                    "Confidence": 1,
                 },
                 "feedback": sanity_res.reason,
                 "ideal_answer_summary": "Candidate did not provide a valid answer.",
@@ -115,7 +115,7 @@ class EvaluationAgent(BaseAgent):
             exp_norm = _norm(expected_raw)
 
             is_correct = bool(exp_norm and ((ans_norm == exp_norm) or (ans_norm != "" and ans_norm in exp_norm)))
-            score_val = 10 if is_correct else 2
+            score_val = 10 if is_correct else 0
             feedback_str = (
                 f"Correct answer. Candidate provided '{answer_text}' which matches expected answer '{expected_raw}'."
                 if is_correct
@@ -126,8 +126,8 @@ class EvaluationAgent(BaseAgent):
                 "score": score_val,
                 "rubric_breakdown": {
                     "Correctness": 5 if is_correct else 1,
-                    "Accuracy": 5 if is_correct else 1,
-                    "Logic": 5 if is_correct else 2,
+                    "Communication": 5 if is_correct else 1,
+                    "Confidence": 5 if is_correct else 1,
                 },
                 "feedback": feedback_str,
                 "ideal_answer_summary": f"The correct answer is {expected_raw}." if expected_raw else "Quantitative / logical problem solving.",
@@ -173,7 +173,7 @@ class EvaluationAgent(BaseAgent):
             f"Candidate answer:\n{answer_text}\n\n"
             f"Scoring rubric:\n{rubric}\n\n"
             "EVALUATION INSTRUCTIONS: Evaluate three independent dimensions in rubric_breakdown (each 1-5):\n"
-            "1. Core Technical/Behavioral correctness & depth\n"
+            "1. Correctness (core technical/behavioral correctness & depth)\n"
             "2. Communication (clarity, logical structure, explanation quality)\n"
             "3. Confidence (assertiveness vs hedging phrases like 'maybe', 'I think', 'probably', 'I guess')\n"
             "Evaluate candidates of all seniority levels (including Fresher/Junior) on all three dimensions, calibrating expectations to their experience level.\n"
@@ -208,9 +208,9 @@ class EvaluationAgent(BaseAgent):
             "evaluations": [{
                 "score": 0,
                 "rubric_breakdown": {
-                    "Technical Depth": 1,
-                    "Problem Solving": 1,
-                    "Clarity & Structure": 1,
+                    "Correctness": 1,
+                    "Communication": 1,
+                    "Confidence": 1,
                 },
                 "feedback": f"Evaluation system unavailable: {error[:120]}",
                 "ideal_answer_summary": "Evaluation requires human review or system retry.",

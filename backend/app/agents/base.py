@@ -58,9 +58,16 @@ class BaseAgent(ABC):
     # ── Public entry point ────────────────────────────────────
 
     def __call__(self, state: InterviewState) -> dict:
-        """LangGraph node entry point — wraps _run with retries."""
+        """LangGraph node entry point — wraps _run with retries and real-time console tracking."""
         t0 = time.monotonic()
         last_error: Optional[str] = None
+        interview_id = state.get("interview_id", "N/A")
+
+        logger.info(
+            f"\n================================================================================\n"
+            f"🤖 [AGENT STARTED] Agent: {self.agent_name} | Interview ID: {interview_id} | Prompt: {self.prompt_version}\n"
+            f"────────────────────────────────────────────────────────────────────────────────"
+        )
 
         for attempt in range(MAX_RETRIES + 1):
             try:
@@ -147,9 +154,19 @@ class BaseAgent(ABC):
         retry_count: int,
         error: Optional[str] = None,
     ) -> None:
-        """Write to AGENT_LOG if a db session is available in state."""
-        # db_session is injected via state in integration flows;
-        # absent in pure unit tests — silently skip.
+        """Write real-time console tracking and persist to AGENT_LOG if a db session is available."""
+        # 1. Print formatted real-time telemetry block to console/stdout
+        try:
+            output_summary = str(output)[:250].replace("\n", " ") if output else (error or "No output")
+            logger.info(
+                f"🤖 [AGENT COMPLETED] Agent: {self.agent_name} | Status: {status} | Latency: {latency_ms}ms | Retries: {retry_count}\n"
+                f"   Output Summary: {output_summary}\n"
+                f"================================================================================"
+            )
+        except Exception:
+            pass
+
+        # 2. Persist log to DB via MCP server if session present
         db = state.get("_db_session")
         if db is None:
             return

@@ -42,17 +42,29 @@ async def _stream_turn(
 ) -> AsyncGenerator[str, None]:
     """
     Core streaming generator:
-    1. Persists the answer to state.
-    2. Invokes the graph continuation (evaluation + next question generation).
-    3. Streams the next question text token-by-token.
-    4. Sends a final [DONE] event.
+    1. Emits initial ack event.
+    2. Streams agent execution telemetry (EvaluationAgent + QuestionGeneratorAgent).
+    3. Streams evaluation feedback.
+    4. Streams next question text token-by-token.
+    5. Sends a final [DONE] event.
     """
     # Emit an immediate acknowledgement
-    yield await _sse_event({"type": "ack", "message": "Answer received, processing…"})
+    yield await _sse_event({"type": "ack", "message": "Answer received, starting agent execution…"})
     await asyncio.sleep(0)   # yield control to allow flush
 
     try:
+        # Stream EvaluationAgent telemetry start
+        yield await _sse_event({
+            "type": "telemetry",
+            "agent": "EvaluationAgent",
+            "status": "RUNNING",
+            "detail": "Evaluating candidate answer using rubric & role context…",
+        })
+        await asyncio.sleep(0)
+
         from app.services.interview_service import InterviewService
+        from fastapi import HTTPException
+
         svc = InterviewService(db)
         result = svc.submit_answer(interview_id, answer_text)
 
@@ -63,13 +75,31 @@ async def _stream_turn(
         next_question = result.get("next_question", "")
         evaluation    = result.get("evaluation", {})
 
-        # Stream evaluation feedback first
+        # Stream EvaluationAgent completion telemetry
+        yield await _sse_event({
+            "type": "telemetry",
+            "agent": "EvaluationAgent",
+            "status": "COMPLETED",
+            "detail": f"Evaluation complete. Score: {evaluation.get('display_score', 'N/A')}",
+        })
+        await asyncio.sleep(0)
+
+        # Stream evaluation feedback
         if evaluation:
             yield await _sse_event({"type": "evaluation", "data": evaluation})
             await asyncio.sleep(0)
 
-        # Stream next question word-by-word
+        # Stream QuestionGeneratorAgent telemetry
         if next_question:
+            yield await _sse_event({
+                "type": "telemetry",
+                "agent": "QuestionGeneratorAgent",
+                "status": "COMPLETED",
+                "detail": f"Generated next question ({result.get('round_type', 'TECHNICAL')})",
+            })
+            await asyncio.sleep(0)
+
+            # Stream next question word-by-word
             words = next_question.split()
             for i, word in enumerate(words):
                 chunk = word + (" " if i < len(words) - 1 else "")
@@ -83,8 +113,10 @@ async def _stream_turn(
         })
 
     except Exception as exc:
-        logger.error(f"SSE stream error for interview {interview_id}: {exc}")
-        yield await _sse_event({"type": "error", "message": "Internal server error"})
+        from fastapi import HTTPException
+        err_msg = exc.detail if isinstance(exc, HTTPException) else str(exc)
+        logger.error(f"SSE stream error for interview {interview_id}: {err_msg}")
+        yield await _sse_event({"type": "error", "message": err_msg})
 
 
 @router.post(

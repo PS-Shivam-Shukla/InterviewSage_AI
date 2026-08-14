@@ -113,21 +113,25 @@ class MCPServer:
 
     def call_tool(self, name: str, **kwargs: Any) -> ToolCallResult:
         """
-        Invoke a registered tool.
-
-        Args:
-            name: Tool name as registered
-            **kwargs: Tool-specific arguments
-
-        Returns:
-            ToolCallResult with output or error details
+        Invoke a registered tool with real-time console telemetry.
         """
+        from app.core.logging import get_logger
+        mcp_logger = get_logger(__name__)
+
+        mcp_logger.info(
+            f"\n================================================================================\n"
+            f"🛠️ [MCP SERVER TOOL STARTED] Tool: '{name}' | Arguments: {list(kwargs.keys())}\n"
+            f"────────────────────────────────────────────────────────────────────────────────"
+        )
+
         if name not in self._tools:
+            err_msg = f"Unknown tool: {name!r}"
+            mcp_logger.warning(f"🛠️ [MCP SERVER TOOL FAILED] Tool: '{name}' | Error: {err_msg}")
             return ToolCallResult(
                 tool_name=name,
                 success=False,
                 output=None,
-                error=f"Unknown tool: {name!r}",
+                error=err_msg,
             )
 
         tool = self._tools[name]
@@ -135,11 +139,13 @@ class MCPServer:
         # Validate required params
         missing = [p for p in tool.required_params if p not in kwargs]
         if missing:
+            err_msg = f"Missing required parameters: {missing}"
+            mcp_logger.warning(f"🛠️ [MCP SERVER TOOL FAILED] Tool: '{name}' | Error: {err_msg}")
             return ToolCallResult(
                 tool_name=name,
                 success=False,
                 output=None,
-                error=f"Missing required parameters: {missing}",
+                error=err_msg,
             )
 
         t0 = time.monotonic()
@@ -152,6 +158,12 @@ class MCPServer:
                 output=output,
                 latency_ms=latency,
             )
+            out_summary = str(output)[:250].replace("\n", " ") if output else "No output"
+            mcp_logger.info(
+                f"🛠️ [MCP SERVER TOOL COMPLETED] Tool: '{name}' | Status: SUCCESS | Latency: {latency}ms\n"
+                f"   Output Summary: {out_summary}\n"
+                f"================================================================================"
+            )
         except Exception as exc:
             latency = int((time.monotonic() - t0) * 1000)
             result = ToolCallResult(
@@ -160,6 +172,10 @@ class MCPServer:
                 output=None,
                 error=str(exc),
                 latency_ms=latency,
+            )
+            mcp_logger.error(
+                f"🛠️ [MCP SERVER TOOL EXCEPTION] Tool: '{name}' | Latency: {latency}ms | Error: {exc}\n"
+                f"================================================================================"
             )
 
         self._call_log.append(

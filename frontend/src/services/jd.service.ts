@@ -36,7 +36,7 @@ export interface JobDescriptionMatchResponse {
 export const jdService = {
   async createJobDescription(payload: JobDescriptionCreatePayload): Promise<JobDescriptionResponse> {
     const response = await apiClient.post<JobDescriptionResponse>('/job-descriptions/', payload, {
-      timeout: 120000,
+      timeout: 300000,
     });
     return response.data;
   },

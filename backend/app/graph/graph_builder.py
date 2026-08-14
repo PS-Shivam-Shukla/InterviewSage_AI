@@ -103,12 +103,38 @@ def _stub(name: str) -> Callable:
     return stub_handler
 
 
+def tool_executor_handler(state: InterviewState) -> dict:
+    """ToolExecutor node handler — executes model-selected MCP tool and records observation."""
+    decisions = state.get("policy_decisions") or []
+    if not decisions:
+        return {}
+
+    latest_dec = decisions[-1]
+    tool_name = latest_dec.get("tool")
+    tool_args = latest_dec.get("arguments") or {}
+
+    if not tool_name:
+        return {"next_node": "policy_node"}
+
+    from app.tools.executor import tool_executor
+    obs = tool_executor.execute_tool(tool_name, tool_args)
+
+    return {
+        "observations": [obs.to_dict()],
+        "next_node": "policy_node",
+    }
+
+
+def route_after_policy(state: InterviewState) -> str:
+    """Dynamic router after PolicyNode decision."""
+    return state.get("next_node") or "report_generator_agent"
+
+
 # ─────────────────────────────────────────────────────────────
 # Graph builder
 # ─────────────────────────────────────────────────────────────
 
 def build_graph(
-    # Real agent callables injected here; default to stubs for Phase-5
     resume_agent: Callable = None,
     jd_agent: Callable = None,
     ats_agent: Callable = None,
@@ -123,15 +149,41 @@ def build_graph(
     evaluation_agent_tech: Callable = None,
     career_coach_agent: Callable = None,
     report_generator_agent: Callable = None,
+    policy_node_handler: Callable = None,
+    report_verification_handler: Callable = None,
+    allow_stubs: bool = True,
 ) -> StateGraph:
     """
     Build and compile the interview workflow StateGraph.
 
-    Each parameter accepts a real agent callable or defaults to a stub.
-    This design allows the graph to be assembled and tested in Phase 5
-    before any real agent logic exists.
+    When allow_stubs=False (Production Mode), missing agent callables default to concrete agent instances.
+    When allow_stubs=True (Test/Stub Mode), missing agent callables default to pass-through stubs.
     """
-    # Fall back to stubs for any agent not yet implemented
+    from app.agents import (
+        ResumeAgent, JDAgent, ATSAgent, ProfileIntelligenceAgent,
+        CompetencyMappingAgent, InterviewPlannerAgent, QuestionGeneratorAgent,
+        HRInterviewAgent, TechnicalInterviewAgent, EvaluationAgent,
+        CareerCoachAgent, ReportGeneratorAgent,
+    )
+    from app.graph.policy_node import policy_node
+    from app.graph.report_verification_node import report_verification_node
+
+    if not allow_stubs:
+        resume_agent = resume_agent or ResumeAgent()
+        jd_agent = jd_agent or JDAgent()
+        ats_agent = ats_agent or ATSAgent()
+        profile_intelligence_agent = profile_intelligence_agent or ProfileIntelligenceAgent()
+        competency_mapping_agent = competency_mapping_agent or CompetencyMappingAgent()
+        interview_planner_agent = interview_planner_agent or InterviewPlannerAgent()
+        question_generator_hr = question_generator_hr or QuestionGeneratorAgent(round_type="HR")
+        question_generator_tech = question_generator_tech or QuestionGeneratorAgent(round_type="TECHNICAL")
+        hr_interview_agent = hr_interview_agent or HRInterviewAgent()
+        technical_interview_agent = technical_interview_agent or TechnicalInterviewAgent()
+        evaluation_agent_hr = evaluation_agent_hr or EvaluationAgent()
+        evaluation_agent_tech = evaluation_agent_tech or EvaluationAgent()
+        career_coach_agent = career_coach_agent or CareerCoachAgent()
+        report_generator_agent = report_generator_agent or ReportGeneratorAgent()
+
     nodes = {
         "supervisor":                  _stub("supervisor"),
         "resume_agent":                resume_agent or _stub("resume_agent"),
@@ -146,8 +198,11 @@ def build_graph(
         "question_generator_tech":     question_generator_tech or _stub("question_generator_tech"),
         "technical_interview_agent":   technical_interview_agent or _stub("technical_interview_agent"),
         "evaluation_agent_tech":       evaluation_agent_tech or _stub("evaluation_agent_tech"),
+        "policy_node":                 policy_node_handler or policy_node,
+        "tool_executor_node":          tool_executor_handler,
         "career_coach_agent":          career_coach_agent or _stub("career_coach_agent"),
         "report_generator_agent":      report_generator_agent or _stub("report_generator_agent"),
+        "report_verification_node":    report_verification_handler or report_verification_node,
     }
 
     graph = StateGraph(InterviewState)
@@ -193,20 +248,25 @@ def build_graph(
         },
     )
 
-    # ── Technical round loop ──────────────────────────────────
+    # ── Technical round loop with PolicyNode tool loop ────────
     graph.add_edge("question_generator_tech", "technical_interview_agent")
     graph.add_edge("technical_interview_agent", "evaluation_agent_tech")
+    graph.add_edge("evaluation_agent_tech", "policy_node")
+
+    # Model-Mediated Policy Node loop: policy_node -> tool_executor -> policy_node OR finish
     graph.add_conditional_edges(
-        "evaluation_agent_tech",
-        route_after_tech_evaluation,
+        "policy_node",
+        route_after_policy,
         {
-            "question_generator_tech": "question_generator_tech",
-            "career_coach_agent":      "career_coach_agent",
+            "tool_executor_node": "tool_executor_node",
+            "report_generator_agent": "career_coach_agent",
         },
     )
+    graph.add_edge("tool_executor_node", "policy_node")
 
-    # ── Post-interview ────────────────────────────────────────
+    # ── Post-interview with Evidence Reflection ───────────────
     graph.add_edge("career_coach_agent", "report_generator_agent")
-    graph.add_edge("report_generator_agent", END)
+    graph.add_edge("report_generator_agent", "report_verification_node")
+    graph.add_edge("report_verification_node", END)
 
     return graph.compile()

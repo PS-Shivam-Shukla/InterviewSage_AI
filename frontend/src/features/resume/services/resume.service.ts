@@ -10,7 +10,7 @@ export const resumeService = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-      timeout: 120000,
+      timeout: 300000,
       onUploadProgress: (progressEvent: any) => {
         if (progressEvent.total && onUploadProgress) {
           const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -44,7 +44,7 @@ export const resumeService = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-      timeout: 120000,
+      timeout: 300000,
     });
 
     return response.data;

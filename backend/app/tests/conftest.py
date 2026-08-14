@@ -34,6 +34,7 @@ def mock_llm_agents(monkeypatch):
         from app.agents.evaluation_agent import EvaluationAgent
 
         orig_eval_call = EvaluationAgent.__call__
+        orig_gen_call = QuestionGeneratorAgent.__call__
 
         def mock_eval_call(self, state):
             answers = state.get("answers") or []
@@ -57,6 +58,8 @@ def mock_llm_agents(monkeypatch):
             }
 
         def mock_gen_call(self, state):
+            if getattr(self, "llm", None) is not None:
+                return orig_gen_call(self, state)
             r_type = getattr(self, "round_type", "TECHNICAL")
             return {
                 "current_question": {

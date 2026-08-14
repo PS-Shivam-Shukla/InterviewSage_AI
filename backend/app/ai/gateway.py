@@ -75,21 +75,16 @@ class AIGateway:
                     res = client.post(url, json=payload)
                     if res.status_code == 200:
                         data = res.json()
-                        return str(data.get("response") or "")
+                        response_text = str(data.get("response") or "")
+                        if response_text:
+                            return response_text
+                        raise RuntimeError("Ollama returned empty response string")
+                    raise RuntimeError(f"Ollama HTTP request failed with status code {res.status_code}: {res.text}")
             except Exception as exc:
-                logger.warning(f"Ollama direct HTTP call warning ({exc}). Using mock fallback execution.")
+                logger.error(f"Ollama direct HTTP call failed: {exc}")
+                raise RuntimeError(f"LLM Provider 'ollama' request failed: {exc}") from exc
 
-        # Baseline fallback simulation response for unit test / mock environments
-        return json.dumps({
-            "status": "COMPLETED",
-            "tier": "Senior Engineer",
-            "level": 3,
-            "score": 85.0,
-            "question_text": "How do you optimize PostgreSQL WAL logs for high-concurrency microservices?",
-            "reasoning": "Clear architectural explanation of WAL settings, connection pooling, and indexing strategies.",
-            "technical_coverage": 88,
-            "confidence_score": 90,
-        })
+        raise ValueError(f"LLM Provider '{provider}' is unconfigured or unavailable")
 
     def execute(
         self,

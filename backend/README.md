@@ -11,6 +11,7 @@ Backend for InterviewSage AI - An Agentic AI Interview Simulation Platform power
 - **Database**: SQLite (PostgreSQL-ready)
 - **AI/LLM**: LangChain abstraction layer
 - **Tool Protocol**: Model Context Protocol (MCP)
+- **Voice Streaming**: Dual-Engine Architecture (FasterWhisper STT + Kokoro TTS with local synthetic fallback handlers)
 - **Testing**: Pytest
 
 ## Project Structure

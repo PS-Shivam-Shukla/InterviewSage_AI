@@ -286,6 +286,7 @@ class QuestionRelevanceService:
         jd_required_skills: List[str],
         questions_asked: List[Dict[str, Any]],
         round_type: str = "technical",
+        competency_targeted: Optional[str] = None,
     ) -> QuestionRelevanceResult:
         """
         Executes multi-gate validation pipeline.
@@ -295,7 +296,16 @@ class QuestionRelevanceService:
         3. Experience Evidence Check
         4. JD Relationship Check
         5. Lexical & Paraphrase Duplicate Check
+        6. Competency Isolation & Placeholder Protection Check
         """
+        # --- GATE 0: Placeholder Protection Check ---
+        if re.search(r"\[[A-Za-z0-9_\-\s]+\]|\{[A-Za-z0-9_\-\s]+\}|<[A-Za-z0-9_\-\s]+>", question_text):
+            return QuestionRelevanceResult(
+                accepted=False,
+                reason=f"GATE 0 FAILED (Unresolved Placeholder): Question contains bracketed placeholders in '{question_text[:60]}'.",
+                skill_tier="UNRELATED",
+            )
+
         # --- GATE 1: Difficulty Ceiling Check ---
         from app.services.difficulty_policy import QuestionDifficultyPolicy
         is_valid_diff, diff_reason = QuestionDifficultyPolicy.validate_question_difficulty(
@@ -335,8 +345,9 @@ class QuestionRelevanceService:
                     unmatched_entities.append(entity)
 
         # Reject UNRELATED technology if question introduces completely un-demonstrated/un-requested tech
-        # (Allow general questions with 0 tech entities)
-        if unmatched_entities and not matched_entities and round_type != "behavioral":
+        # (Allow general questions with 0 tech entities in HR/behavioral/culture rounds)
+        r_type_clean = (round_type or "").strip().lower()
+        if unmatched_entities and not matched_entities and r_type_clean not in ("hr", "behavioral", "company", "culture"):
             return QuestionRelevanceResult(
                 accepted=False,
                 reason=f"GATE 2 FAILED (Unrelated Tech): Question references un-demonstrated technology {unmatched_entities}.",
@@ -347,7 +358,7 @@ class QuestionRelevanceService:
         if not highest_tier or highest_tier == "UNRELATED":
             if matched_entities:
                 highest_tier = "POSSIBLE_MATCH"
-            elif round_type in ("behavioral", "company"):
+            elif r_type_clean in ("hr", "behavioral", "company", "culture"):
                 highest_tier = "STRONG_MATCH"  # Non-technical rounds valid without tech entities
 
         # --- GATE 3 & 4: Experience Evidence & JD Gap Policy Check ---
@@ -363,7 +374,7 @@ class QuestionRelevanceService:
 
         # --- GATE 5: Lexical & Paraphrase Duplicate Check ---
         dup_score, matched_q = LexicalSimilarityEngine.compute_hybrid_duplicate_score(question_text, questions_asked)
-        if dup_score > 0.35:
+        if dup_score > 0.45:
             return QuestionRelevanceResult(
                 accepted=False,
                 reason=f"GATE 5 FAILED (Paraphrase Duplicate): Question is too similar (score {dup_score:.2f}) to previous question '{matched_q}'.",
@@ -371,6 +382,19 @@ class QuestionRelevanceService:
                 matched_entities=matched_entities,
                 duplicate_score=dup_score,
             )
+
+        # --- GATE 6: Competency Cross-Contamination Check ---
+        if competency_targeted:
+            comp_clean = competency_targeted.strip().upper()
+            q_lower = question_text.lower()
+            sql_keywords = {"primary key", "foreign key", "relational database", "table normalization", "sql query", "join query"}
+            cpp_competencies = {"C/C++", "C++", "C"}
+            if comp_clean in cpp_competencies and any(k in q_lower for k in sql_keywords):
+                return QuestionRelevanceResult(
+                    accepted=False,
+                    reason=f"GATE 6 FAILED (Competency Mismatch): Generated SQL question for {competency_targeted} competency.",
+                    skill_tier="UNRELATED",
+                )
 
         # All Gates Passed -> ACCEPTED
         return QuestionRelevanceResult(

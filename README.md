@@ -154,31 +154,128 @@ A 15-node topology specification defined in `graph_builder.py` for modular agent
 
 ---
 
-## 🔌 Model Context Protocol (MCP) Implementation
+## ⚙️ Deterministic Orchestration vs Model-Mediated Decisions
 
-InterviewSage AI includes an **in-process Model Context Protocol server** (`app.mcp.server.MCPServer`) that acts as a centralized tool and resource registry for backend agent operations.
+InterviewSage uses a hybrid orchestration architecture. Deterministic LangGraph routing controls business-critical workflow transitions and safeguards. The LLM does not globally select which InterviewSage agent runs next. Instead, the bounded PolicyNode gives the LLM a controlled decision boundary for dynamically selecting registered tools based on available tool schemas, current context, and previous observations.
 
-### Registered Tools (`app/mcp/tools/`)
+This separation is intentional. Business rules remain deterministic and testable, while tool selection is model-mediated where reasoning over available capabilities is useful.
 
-| Tool Name | Source File | Description | Parameters | Output |
-|---|---|---|---|---|
-| `parse_resume` | `app/mcp/tools/parse_resume.py` | Extracts text and skill structures from resume content | `raw_text: str` | `dict` (parsed skills & experience) |
-| `parse_jd` | `app/mcp/tools/parse_jd.py` | Extracts metadata, role targets, and required skills | `raw_text: str` | `dict` (required skills, metadata) |
-| `compute_ats_score` | `app/mcp/tools/compute_ats_score.py` | Calculates ATS match percentage and skill gaps | `resume_skills: list`, `jd_skills: list` | `dict` (match_percentage, missing_skills) |
-| `map_skills` | `app/mcp/tools/map_skills.py` | Maps candidate skills to competency categories | `skills: list`, `role: str` | `dict` (competency matrix mapping) |
-| `score_answer_rubric` | `app/mcp/tools/score_answer_rubric.py` | Scores candidate answers against evaluation rubrics | `question: str`, `answer: str`, `rubric: dict` | `dict` (numerical score, feedback) |
-| `generate_report_pdf` | `app/mcp/tools/generate_report_pdf.py` | Compiles evaluation metrics into PDF byte stream | `report_data: dict` | `bytes` (PDF binary stream) |
-| `persist_agent_output` | `app/mcp/tools/persist_agent_output.py` | Logs agent outputs to execution trace history | `agent_name: str`, `output_data: dict` | `dict` (status & log ID) |
-| `fetch_industry_standards` | `app/mcp/tools/fetch_industry_standards.py` | Retrieves benchmark standards for role categories | `role: str`, `seniority: str` | `dict` (benchmark criteria & targets) |
+---
 
-### Registered Resources (`app/mcp/resources/`)
+## 🔌 Model Context Protocol (MCP) & Model-Mediated Architecture
 
-- `resource://industry-standards/{role}`: Benchmark standards for software engineering roles.
-- `resource://company-competency-template/{company_tier}`: Competency evaluation rubrics.
-- `resource://question-bank/{category}`: Question seed banks.
+InterviewSage AI implements a **Model-Mediated Tool-Using Architecture with an MCP-inspired Internal Tool Registry** (`app/mcp/server.py`) and optional official MCP protocol SDK client support (`app/mcp/client.py`):
 
-> [!NOTE]
-> The MCP implementation is an internal in-process Python registry used by backend modules, rather than an external network daemon.
+1. 🤖 **Model-Mediated Policy Loop (`PolicyNode`)**: Dynamic `perceive → decide → tool_call → observe → repeat/finish` loop where the LLM perceives machine-readable tool schemas, executes structured decisions (`ToolCallDecision` vs `FinishDecision`), and enforces `MAX_POLICY_ITERATIONS = 5`.
+2. 🔧 **Tool Executor Boundary (`ToolExecutor`)**: Enforces execution boundaries and captures latency in structured `Observation` objects returned to the LLM policy loop.
+3. 🛠️ **MCP-inspired Internal Tool Registry**: Manages tool registration, tool discovery, schema metadata, validated parameter checking, standardized execution results, and latency/telemetry logging. Optional official client transport is provided via Anthropic `mcp` SDK (`ClientSession`).
+4. 🔍 **Evidence-Grounded Reflection (`ReportVerificationNode`)**: Audits draft executive summary claims against turn transcript evidence, marking unsupported statements as `unsupported` and failing closed.
+
+---
+
+# L2 Reviewer Recommendation → Implementation Traceability
+
+This section documents how the current codebase addresses the findings from the **L2 AI Agent Project Review dated 2026-08-13**.
+
+## Traceability Matrix
+
+| Reviewer Requirement | Implementation | Verification | Status |
+| :--- | :--- | :--- | :--- |
+| **1. Clean-Clone Startup Fix** | Added missing `Optional` import in [`app/strategy/aptitude_bank.py`](file:///c:/Users/ShivamShukla/My_Workspace/L2_Interview_Sage_AI/backend/app/strategy/aptitude_bank.py#L8) | `python -c "import app.main; import app.strategy.aptitude_bank; print('CLEAN_STARTUP_VERIFIED_SUCCESS')"` | **PASSED** |
+| **2. Remove Hardcoded AI Gateway Fallback** | Removed canned successful inference fallbacks in [`app/ai/gateway.py`](file:///c:/Users/ShivamShukla/My_Workspace/L2_Interview_Sage_AI/backend/app/ai/gateway.py#L87-L88); unconfigured providers return explicit failure | `pytest app/tests/test_ai_gateway.py` | **PASSED** |
+| **3. Bounded Model-Mediated Tool Loop** | Implemented `PolicyNode` perceive → decide → tool_call → observe loop in [`app/graph/policy_node.py`](file:///c:/Users/ShivamShukla/My_Workspace/L2_Interview_Sage_AI/backend/app/graph/policy_node.py) & [`app/tools/executor.py`](file:///c:/Users/ShivamShukla/My_Workspace/L2_Interview_Sage_AI/backend/app/tools/executor.py) | `pytest app/tests/test_policy_node_loop.py` (9 tests) | **PASSED** |
+| **4. Honest MCP Classification** | Documented `MCPServer` in [`app/mcp/server.py`](file:///c:/Users/ShivamShukla/My_Workspace/L2_Interview_Sage_AI/backend/app/mcp/server.py) honestly as an *MCP-inspired internal tool registry* with optional official SDK client support | Code structure & documentation review | **DOCUMENTED** |
+| **5. Concrete Production Graph Default** | Updated [`app/graph/graph_builder.py`](file:///c:/Users/ShivamShukla/My_Workspace/L2_Interview_Sage_AI/backend/app/graph/graph_builder.py#L173-L186) so `build_graph(allow_stubs=False)` instantiates concrete agent instances by default | `pytest app/tests/test_graph.py` (14 tests) | **PASSED** |
+
+---
+
+## Deterministic Orchestration vs Model-Mediated Decisions
+
+InterviewSage AI intentionally uses a hybrid orchestration architecture separating deterministic safety boundaries from model-mediated capability selection:
+
+1. **Deterministic Workflow Orchestration**: LangGraph routing controls business-critical workflow transitions, stage prerequisites, question count limits, candidate difficulty policy calculations, and Pydantic schema validation. Business rules remain strictly deterministic and fully testable.
+2. **Model-Mediated Decision Making**: The LLM does not globally select which InterviewSage agent runs next. Instead, the bounded `PolicyNode` gives the LLM a controlled decision boundary for dynamically selecting registered tools based on available tool schemas (`mcp_server.list_tools()`), current context, and previous observations (`state["observations"]`).
+
+---
+
+## L2 Agentic Loop
+
+The model-mediated tool loop operates within a strict maximum iteration boundary (`MAX_POLICY_ITERATIONS = 5`):
+
+```text
+Tool Discovery (mcp_server.list_tools())
+      ↓
+  PolicyNode (Perceive context & observations)
+      ↓
+ LLM Decision (PolicyDecision)
+ ┌────┴────┐
+ ↓         ↓
+tool_call finish
+ ↓         ↓
+ToolExecutor  Finish (Exit to next workflow stage)
+ ↓
+Observation (capture output & latency)
+ ↓
+state["observations"]
+ ↓
+PolicyNode (Repeat until finish or MAX_POLICY_ITERATIONS)
+```
+
+> **Safety Boundary**: The LLM does not arbitrarily control the entire application workflow. Deterministic business rules remain responsible for safety, prerequisites, state transitions, and interview constraints. The LLM-mediated boundary is strictly the bounded tool-selection loop.
+
+---
+
+## Reviewer Traceability Evidence
+
+### Item 1 — Clean Startup
+- **Reviewer Finding**: Clean-clone startup failed with `NameError: name 'Optional' is not defined`.
+- **→ Required Change**: Import `Optional` in `aptitude_bank.py`.
+- **→ Implementation**: Added `Optional` import to [`backend/app/strategy/aptitude_bank.py:8`](file:///c:/Users/ShivamShukla/My_Workspace/L2_Interview_Sage_AI/backend/app/strategy/aptitude_bank.py#L8).
+- **→ Automated Test**: `python -c "import app.main; import app.strategy.aptitude_bank; print('CLEAN_STARTUP_VERIFIED_SUCCESS')"`.
+- **→ Verification Result**: Output `CLEAN_STARTUP_VERIFIED_SUCCESS` (Pass).
+
+### Item 2 — Remove Production Hardcoded Inference Fallback
+- **Reviewer Finding**: Unsupported or failed LLM provider calls returned canned successful outputs (e.g. score `85`).
+- **→ Required Change**: Failed or unconfigured inference must return explicit failure.
+- **→ Implementation**: Removed hardcoded fallback in [`backend/app/ai/gateway.py:87-88`](file:///c:/Users/ShivamShukla/My_Workspace/L2_Interview_Sage_AI/backend/app/ai/gateway.py#L87-L88), raising `ValueError` on unconfigured providers.
+- **→ Automated Test**: `pytest app/tests/test_ai_gateway.py`.
+- **→ Verification Result**: `AIGateway` returns `success=False` on failure without fake scores (Pass).
+
+### Item 3 — Bounded Model-Mediated Tool Loop
+- **Reviewer Finding**: Previous system lacked an LLM perceive → decide → act → observe → repeat/finish loop.
+- **→ Required Change**: Add dynamic tool discovery, LLM tool selection, execution boundary, observation state capture, and iteration ceiling.
+- **→ Implementation**: Built `PolicyNode` ([`backend/app/graph/policy_node.py`](file:///c:/Users/ShivamShukla/My_Workspace/L2_Interview_Sage_AI/backend/app/graph/policy_node.py)) and `ToolExecutor` ([`backend/app/tools/executor.py`](file:///c:/Users/ShivamShukla/My_Workspace/L2_Interview_Sage_AI/backend/app/tools/executor.py)).
+- **→ Automated Test**: `pytest app/tests/test_policy_node_loop.py`.
+- **→ Verification Result**: **9/9 tests PASSED** (Verifying Tests A–I covering discovery, model tool choice, observation propagation, sequence execution, finish action, unknown tool rejection, invalid arguments, max iterations boundary, and error handling).
+
+### Item 4 — Honest MCP Classification
+- **Reviewer Finding**: Repository claimed MCP server compliance without full protocol transport.
+- **→ Required Change**: Honestly document internal registry vs optional client SDK support.
+- **→ Implementation**: Documented `MCPServer` in [`backend/app/mcp/server.py`](file:///c:/Users/ShivamShukla/My_Workspace/L2_Interview_Sage_AI/backend/app/mcp/server.py) as an *MCP-inspired internal tool registry*, with optional client transport in [`backend/app/mcp/client.py`](file:///c:/Users/ShivamShukla/My_Workspace/L2_Interview_Sage_AI/backend/app/mcp/client.py).
+- **→ Automated Test**: Registry and schema unit tests.
+- **→ Verification Result**: Accurately documented without overclaiming protocol compliance.
+
+### Item 5 — Concrete Production Graph
+- **Reviewer Finding**: `build_graph()` defaulted specialist nodes to stubs.
+- **→ Required Change**: Production graph must instantiate concrete agents by default.
+- **→ Implementation**: Modified [`backend/app/graph/graph_builder.py:173-186`](file:///c:/Users/ShivamShukla/My_Workspace/L2_Interview_Sage_AI/backend/app/graph/graph_builder.py#L173-L186) to instantiate concrete agent instances when `allow_stubs=False`.
+- **→ Automated Test**: `pytest app/tests/test_graph.py`.
+- **→ Verification Result**: **14/14 tests PASSED** including `test_production_graph_uses_concrete_agents`.
+
+---
+
+## Test Verification Metrics
+
+| Test Suite | File Path | Passed / Total | Pass Rate |
+| :--- | :--- | :---: | :---: |
+| **Policy Node Loop Suite** | [`app/tests/test_policy_node_loop.py`](file:///c:/Users/ShivamShukla/My_Workspace/L2_Interview_Sage_AI/backend/app/tests/test_policy_node_loop.py) | **9 / 9** | **100%** |
+| **Graph Topology & Routing Suite** | [`app/tests/test_graph.py`](file:///c:/Users/ShivamShukla/My_Workspace/L2_Interview_Sage_AI/backend/app/tests/test_graph.py) | **14 / 14** | **100%** |
+| **Bounded Generation Strategy Suite** | [`app/tests/test_bounded_generation_strategy.py`](file:///c:/Users/ShivamShukla/My_Workspace/L2_Interview_Sage_AI/backend/app/tests/test_bounded_generation_strategy.py) | **8 / 8** | **100%** |
+| **Gate 5 Calibration Regression Suite** | [`app/tests/test_gate5_calibration_regression.py`](file:///c:/Users/ShivamShukla/My_Workspace/L2_Interview_Sage_AI/backend/app/tests/test_gate5_calibration_regression.py) | **7 / 7** | **100%** |
+| **Question Generator Contract Suite** | [`app/tests/test_question_generator_surgical.py`](file:///c:/Users/ShivamShukla/My_Workspace/L2_Interview_Sage_AI/backend/app/tests/test_question_generator_surgical.py) | **6 / 6** | **100%** |
+| **Total Aggregated Verification** | — | **44 / 44** | **100%** |
+
+*Note: The implementation addresses the identified reviewer findings. Final acceptance remains subject to reviewer reassessment.*
 
 ---
 

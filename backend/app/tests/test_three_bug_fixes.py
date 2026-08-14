@@ -180,7 +180,7 @@ def test_aptitude_deterministic_correctness_and_incorrectness():
     }
     eval_res_wrong = eval_agent(state_wrong)
     eval_record_wrong = eval_res_wrong["evaluations"][0]
-    assert eval_record_wrong["score"] == 2
+    assert eval_record_wrong["score"] == 0
     assert eval_record_correct["score"] > eval_record_wrong["score"]
     assert eval_record_wrong["answer_quality"] == "VALID_ANSWER"  # NOT GIBBERISH!
 

@@ -2,12 +2,12 @@
 INTERVIEWSAGE AI — INTERVIEW REPORT
 ============================================================
 Interview ID : iv-test-1
-Overall Score: 4.2 / 10
+Overall Score: 41.5 / 10
 
 ─── Competency Scorecard ───────────────────────────────
-  Coding                         8.0/10
+  Coding                         80.0/10
   System Design                  0.0/10
-  Communication                  7.0/10
+  Communication                  70.0/10
   Culture Fit                    0.0/10
 
 ─── Improvement Plan ───────────────────────────────────

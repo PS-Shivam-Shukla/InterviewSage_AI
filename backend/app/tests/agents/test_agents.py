@@ -506,6 +506,6 @@ class TestReportGeneratorAgent:
             {"competency_targeted": "Communication", "score": 5},
         ]
         scorecard, overall = _build_scorecard(evals, matrix)
-        # weighted: 10*0.6 + 5*0.4 = 6+2 = 8.0
-        assert overall == 8.0
+        # weighted: 100*0.6 + 50*0.4 = 60+20 = 80.0
+        assert overall == 80.0
         assert len(scorecard) == 2

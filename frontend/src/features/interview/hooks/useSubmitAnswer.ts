@@ -18,7 +18,7 @@ export function useSubmitAnswer() {
 
         updateMetrics({
           answerQualityScore: evalScore,
-          technicalScore: typeof ev.technical_coverage === 'number' ? ev.technical_coverage : evalScore,
+          technicalScore: typeof ev.technical_score === 'number' ? ev.technical_score : (typeof ev.technical_coverage === 'number' ? ev.technical_coverage : evalScore),
           communicationScore: typeof ev.communication_score === 'number' ? ev.communication_score : evalScore,
           confidenceScore: typeof ev.confidence_score === 'number' ? ev.confidence_score : evalScore,
         });
@@ -37,7 +37,7 @@ export function useSubmitAnswer() {
             text: ev.reasoning || ev.feedback,
             timestamp: new Date().toISOString(),
             feedback: {
-              technical_score: typeof ev.technical_coverage === 'number' ? ev.technical_coverage : evalScore,
+              technical_score: typeof ev.technical_score === 'number' ? ev.technical_score : (typeof ev.technical_coverage === 'number' ? ev.technical_coverage : evalScore),
               communication_score: typeof ev.communication_score === 'number' ? ev.communication_score : evalScore,
               confidence_score: typeof ev.confidence_score === 'number' ? ev.confidence_score : evalScore,
             },
