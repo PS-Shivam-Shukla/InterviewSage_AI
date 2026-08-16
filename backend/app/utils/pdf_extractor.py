@@ -54,6 +54,10 @@ def extract_text_from_pdf_bytes(file_bytes: bytes) -> str:
             except Exception:
                 extracted_text = ""
 
-    # CRITICAL: Sanitize NUL (0x00) bytes to prevent PostgreSQL/SQLite DB crashes
-    clean_text = extracted_text.replace("\x00", "").strip()
-    return clean_text
+    # CRITICAL: Sanitize NUL (0x00) bytes, zero-width spaces (\u200b), soft hyphens, and control codes
+    import re
+    clean_text = extracted_text.replace("\x00", "")
+    clean_text = re.sub(r'[\u200b\u200c\u200d\ufeff\u00a0\u00ad]', ' ', clean_text)
+    clean_text = re.sub(r'[ \t]+', ' ', clean_text)
+    clean_text = re.sub(r'\n{3,}', '\n\n', clean_text)
+    return clean_text.strip()

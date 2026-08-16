@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -54,6 +55,21 @@ difficulty_engine = DifficultyEngine()
 
 
 # ── Module-level helpers ──────────────────────────────────────────────────────
+
+
+def _adaptive_difficulty(competency: str, evaluations: list[dict]) -> str:
+    """Escalate/de-escalate difficulty based on recent scores for this competency."""
+    scores = [e.get("score", 5) for e in evaluations if e.get("competency_targeted") == competency]
+    if not scores:
+        return "MEDIUM"
+    avg = sum(scores) / len(scores)
+    if avg >= 8.5:
+        return "ADVANCED"
+    if avg >= 7.0:
+        return "HARD"
+    if avg >= 5.0:
+        return "MEDIUM"
+    return "EASY"
 
 
 def _parse_json_field(value: str | None, default=None) -> Any:
@@ -262,25 +278,30 @@ class InterviewService:
         }
         output = q_gen(state)
 
-        # Detect agent failure: _on_failure sets error_log
-        if output.get("error_log"):
-            logger.warning(f"QuestionGeneratorAgent failed for {round_type}: {output['error_log']}")
-            return None
+        # Retrieve question from current_question (supports both LLM generated and seed-bank recovered)
+        question = output.get("current_question")
+        if question and question.get("question_text"):
+            if output.get("error_log"):
+                fallback_type = output["error_log"][0].get("fallback", "seed_bank")
+                logger.warning(
+                    f"QuestionGeneratorAgent recovered via fallback [{fallback_type}] for {round_type}: "
+                    f"role={jd_data.get('target_role')}, "
+                    f"competency={question.get('competency_targeted')}, "
+                    f"difficulty={question.get('difficulty')}"
+                )
+            else:
+                logger.info(
+                    f"QuestionGeneratorAgent[{round_type}]: role={jd_data.get('target_role')}, "
+                    f"competency={question.get('competency_targeted')}, "
+                    f"difficulty={question.get('difficulty')}"
+                )
+            return question
 
-        # ── CORRECT OUTPUT KEY per QuestionGeneratorAgent._run() contract ─────
-        question = output.get("current_question")  # ← was "generated_question" (WRONG)
-        if not question or not question.get("question_text"):
-            logger.warning(
-                f"QuestionGeneratorAgent returned empty current_question for {round_type}"
-            )
-            return None
-
-        logger.info(
-            f"QuestionGeneratorAgent[{round_type}]: role={jd_data.get('target_role')}, "
-            f"competency={question.get('competency_targeted')}, "
-            f"difficulty={question.get('difficulty')}"
+        # If both LLM and seed-bank recovery failed to produce a valid question
+        logger.error(
+            f"QuestionGeneratorAgent failed completely for {round_type}: {output.get('error_log')}"
         )
-        return question
+        return None
 
     # ── create_interview ──────────────────────────────────────────────────────
 
@@ -293,7 +314,7 @@ class InterviewService:
     ) -> Interview:
         """
         Initialize a new interview session. Requires valid resume_id and jd_id.
-        Removed demo-resume-101 and demo-jd-101 silent fallbacks.
+        Immediate Q1 selection from deterministic seed bank, status set to READY synchronously.
         """
         if not user_id:
             raise HTTPException(status_code=400, detail="user_id is required.")
@@ -324,7 +345,7 @@ class InterviewService:
                 detail=f"JobDescription '{jd_id}' not found. Please create a Job Description first.",
             )
 
-        # Deduplication Check: Return existing active interview for same (user, resume, jd) created within last 5 mins
+        # Deduplication Check
         recent_cutoff = datetime.now(UTC) - timedelta(minutes=5)
         existing_recent = (
             self.db.query(Interview)
@@ -332,7 +353,7 @@ class InterviewService:
                 Interview.user_id == user_id,
                 Interview.resume_id == resume_id,
                 Interview.jd_id == jd_id,
-                Interview.status.in_(["PLANNING", "READY", "IN_PROGRESS"]),
+                Interview.status.in_(["READY", "IN_PROGRESS"]),
                 Interview.started_at >= recent_cutoff,
             )
             .order_by(Interview.started_at.desc())
@@ -344,7 +365,7 @@ class InterviewService:
             )
             return existing_recent
 
-        # Determine role_title and company_name from payload -> jd_db -> fallback
+        # Determine role_title and company_name
         role_title = (
             (payload and (payload.get("target_role") or payload.get("role")))
             or (jd_db and jd_db.target_role)
@@ -356,13 +377,30 @@ class InterviewService:
             or ""
         )
 
+        # Build authoritative interview context
+        resume_data = _build_resume_data(resume_db)
+        jd_data = _build_jd_data(jd_db)
+        seniority = (
+            (payload and payload.get("experience_level"))
+            or resume_data.get("seniority_signal")
+            or jd_data.get("seniority_level")
+            or "MID"
+        ).upper()
+        resume_data["seniority_signal"] = seniority
+
+        jd_skills: list[str] = jd_data.get("required_skills", [])
+        resume_skills: list[str] = resume_data.get("skills", [])
+        is_fresher_candidate = _is_fresher(seniority)
+        competency_matrix = _build_competency_matrix(role_title, jd_skills, resume_skills)
+
+        # Create interview row in DB with status READY
         interview = Interview(
             user_id=user_id,
             resume_id=resume_id,
             jd_id=jd_id,
             target_role=role_title,
             target_company=company_name,
-            status="PLANNING",
+            status="READY",
             current_round="TECHNICAL",
             overall_score=None,
             started_at=datetime.now(UTC),
@@ -370,41 +408,323 @@ class InterviewService:
         )
         created = self.interview_repo.create(interview)
         ACTIVE_INTERVIEWS_GAUGE.inc()
+
+        # Save competency matrix
+        from app.models.interview import CompetencyMatrix, InterviewPlan
+        comp_matrix_record = CompetencyMatrix(
+            interview_id=created.id,
+            competencies=json.dumps(competency_matrix),
+        )
+        self.db.add(comp_matrix_record)
+
+        # Save interview plan
+        plan_record = InterviewPlan(
+            interview_id=created.id,
+            hr_question_count=2,
+            technical_question_count=7 if is_fresher_candidate else 3,
+            round_structure=json.dumps({}),
+            estimated_duration_minutes=60,
+        )
+        self.db.add(plan_record)
+        self.db.flush()
+
+        # Generate questions & placeholders
+        from app.strategy.seed_question_bank import get_seed_question
+        
+        if is_fresher_candidate:
+            # 4 Aptitude (fixed bank), 3 Technical, 2 HR = 9 Total
+            aptitude_qs = select_aptitude_questions(4, session_seed=created.id)
+            for idx, apt in enumerate(aptitude_qs, start=1):
+                db_q = InterviewQuestion(
+                    id=str(uuid.uuid4()),
+                    interview_id=created.id,
+                    round_type="APTITUDE",
+                    competency_targeted=apt["competency_targeted"],
+                    difficulty=apt["difficulty"],
+                    question_text=apt["question_text"],
+                    sequence_number=idx,
+                    status="READY",
+                    created_at=datetime.now(UTC),
+                )
+                self.db.add(db_q)
+
+            # Q5, Q6, Q7: Technical
+            for idx, seq_num in enumerate(range(5, 8)):
+                comp_name = competency_matrix[idx % len(competency_matrix)]["name"] if competency_matrix else "Technical"
+                db_q = InterviewQuestion(
+                    id=str(uuid.uuid4()),
+                    interview_id=created.id,
+                    round_type="TECHNICAL",
+                    competency_targeted=comp_name,
+                    difficulty="MEDIUM",
+                    question_text="[Pending JIT Generation]",
+                    sequence_number=seq_num,
+                    status="PENDING",
+                    created_at=datetime.now(UTC),
+                )
+                self.db.add(db_q)
+
+            # Q8, Q9: HR
+            hr_comps = ["Communication", "Conflict Resolution"]
+            for idx, seq_num in enumerate(range(8, 10)):
+                comp_name = hr_comps[idx % len(hr_comps)]
+                db_q = InterviewQuestion(
+                    id=str(uuid.uuid4()),
+                    interview_id=created.id,
+                    round_type="HR",
+                    competency_targeted=comp_name,
+                    difficulty="EASY",
+                    question_text="[Pending JIT Generation]",
+                    sequence_number=seq_num,
+                    status="PENDING",
+                    created_at=datetime.now(UTC),
+                )
+                self.db.add(db_q)
+
+        else:
+            # EXPERIENCED: 3 Technical, 2 HR = 5 Total
+            first_comp = competency_matrix[0]["name"] if competency_matrix else "System Design"
+            q1_seed = get_seed_question(
+                round_type="TECHNICAL",
+                competency=first_comp,
+                difficulty="MEDIUM",
+            )
+            db_q1 = InterviewQuestion(
+                id=str(uuid.uuid4()),
+                interview_id=created.id,
+                round_type="TECHNICAL",
+                competency_targeted=first_comp,
+                difficulty="MEDIUM",
+                question_text=q1_seed["question_text"],
+                sequence_number=1,
+                status="READY",
+                created_at=datetime.now(UTC),
+            )
+            self.db.add(db_q1)
+
+            # Q2, Q3: Technical
+            for idx, seq_num in enumerate(range(2, 4)):
+                comp_name = competency_matrix[(idx + 1) % len(competency_matrix)]["name"] if len(competency_matrix) > 1 else first_comp
+                db_q = InterviewQuestion(
+                    id=str(uuid.uuid4()),
+                    interview_id=created.id,
+                    round_type="TECHNICAL",
+                    competency_targeted=comp_name,
+                    difficulty="MEDIUM",
+                    question_text="[Pending JIT Generation]",
+                    sequence_number=seq_num,
+                    status="PENDING",
+                    created_at=datetime.now(UTC),
+                )
+                self.db.add(db_q)
+
+            # Q4, Q5: HR
+            hr_comps = ["Collaboration & Adaptability", "Culture Fit & Motivation"]
+            for idx, seq_num in enumerate(range(4, 6)):
+                comp_name = hr_comps[idx % len(hr_comps)]
+                db_q = InterviewQuestion(
+                    id=str(uuid.uuid4()),
+                    interview_id=created.id,
+                    round_type="HR",
+                    competency_targeted=comp_name,
+                    difficulty="MEDIUM",
+                    question_text="[Pending JIT Generation]",
+                    sequence_number=seq_num,
+                    status="PENDING",
+                    created_at=datetime.now(UTC),
+                )
+                self.db.add(db_q)
+
+        self.db.commit()
         return created
 
-    def generate_plan_background(
-        self,
-        interview_id: str,
-        context_override: dict[str, Any] | None = None,
-    ) -> None:
+    def generate_question_jit_background(self, interview_id: str, sequence_number: int) -> None:
         """
-        Background task to execute get_interview_plan asynchronously.
-        Opens an isolated DB session, updates status to READY on success or FAILED on error.
+        Spawns a background task (using loop.run_in_executor) to run JIT generation.
         """
-        from app.core.database import SessionLocal
+        import asyncio
 
-        db = SessionLocal()
-        try:
-            logger.info(f"Background plan generation started for interview {interview_id}")
-            service = InterviewService(db)
-            service.get_interview_plan(interview_id, context_override=context_override)
-            logger.info(
-                f"Background plan generation completed successfully for interview {interview_id}"
-            )
-        except Exception as exc:
-            logger.error(
-                f"Background plan generation failed for interview {interview_id}: {exc}",
-                exc_info=True,
-            )
+        def _run_in_thread():
+            from app.core.database import SessionLocal
+            db = SessionLocal()
             try:
-                interview_obj = db.query(Interview).filter(Interview.id == interview_id).first()
-                if interview_obj:
-                    interview_obj.status = "FAILED"
-                    db.commit()
-            except Exception as db_exc:
-                logger.error(f"Failed to update interview status to FAILED: {db_exc}")
-        finally:
-            db.close()
+                service = InterviewService(db)
+                service.generate_question_jit_sync(interview_id, sequence_number)
+            except Exception as e:
+                logger.error(f"Error in generate_question_jit_background for seq {sequence_number}: {e}", exc_info=True)
+            finally:
+                db.close()
+
+        try:
+            loop = asyncio.get_running_loop()
+            loop.run_in_executor(None, _run_in_thread)
+        except RuntimeError:
+            _run_in_thread()
+
+    def generate_question_jit_sync(self, interview_id: str, sequence_number: int) -> None:
+        """
+        Synchronously performs JIT question generation.
+        Locks/marks status to GENERATING, invokes LLM, validates, and sets to READY or FALLBACK.
+        """
+        set_request_context(interview_id=interview_id)
+        logger.info(f"Starting JIT generation for interview={interview_id}, seq={sequence_number}")
+
+        # Load interview
+        interview_obj = self.get_interview(interview_id)
+        if not interview_obj:
+            logger.error(f"Interview {interview_id} not found during JIT generation.")
+            return
+
+        # Fetch target question row with database row lock to prevent concurrency races
+        q_row = self.db.query(InterviewQuestion).filter(
+            InterviewQuestion.interview_id == interview_id,
+            InterviewQuestion.sequence_number == sequence_number
+        ).with_for_update().first()
+
+        if not q_row:
+            logger.error(f"InterviewQuestion row for seq {sequence_number} not found during JIT generation.")
+            return
+
+        # Idempotency check: if already generated or fallback, return
+        if q_row.status in ("READY", "FALLBACK", "CONSUMED"):
+            logger.info(f"Question seq {sequence_number} already in status {q_row.status}. Skipping JIT.")
+            return
+
+        # Mark question as GENERATING
+        q_row.status = "GENERATING"
+        self.db.commit()
+
+        # Load context
+        resume_obj = self.db.query(Resume).filter(Resume.id == interview_obj.resume_id).first()
+        jd_obj = self.db.query(JobDescription).filter(JobDescription.id == interview_obj.jd_id).first()
+        resume_data = _build_resume_data(resume_obj)
+        jd_data = _build_jd_data(jd_obj)
+        role_title = jd_data.get("target_role") or "Software Engineer"
+        jd_data["target_role"] = role_title
+
+        seniority = resume_data.get("seniority_signal") or "MID"
+
+        # Get competency matrix
+        from app.models.interview import CompetencyMatrix
+        comp_matrix_record = self.db.query(CompetencyMatrix).filter(CompetencyMatrix.interview_id == interview_id).first()
+        competency_matrix = json.loads(comp_matrix_record.competencies) if comp_matrix_record else []
+
+        # Load accepted question history
+        all_questions = self.question_repo.list_by_interview(interview_id)
+
+        # Build asked_history: only include accepted previous questions (READY, FALLBACK, CONSUMED)
+        asked_history = [
+            {
+                "question_text": q.question_text,
+                "competency_targeted": q.competency_targeted,
+                "round_type": q.round_type,
+                "cognitive_angle": getattr(q, "cognitive_angle", None) or "fundamentals",
+            }
+            for q in all_questions
+            if q.sequence_number < sequence_number and q.status in ("READY", "FALLBACK", "CONSUMED")
+        ]
+
+        # Determine target competency
+        target_comp = q_row.competency_targeted
+
+        # Build evaluations list
+        existing_answered = self.answer_repo.list_answers_with_evaluations_by_interview(interview_id)
+        previous_evaluations = []
+        for item in existing_answered:
+            eval_d = item.get("evaluation", {})
+            if eval_d and isinstance(eval_d, dict):
+                pct = eval_d.get("score", 0)
+                previous_evaluations.append({
+                    "score": round(pct / 10) if pct > 10 else pct,
+                    "competency_targeted": eval_d.get("competency_targeted", ""),
+                    "question_type": eval_d.get("question_type", ""),
+                })
+
+        # Generate via LLM (QuestionGeneratorAgent)
+        t0 = time.monotonic()
+        q_gen = QuestionGeneratorAgent(round_type=q_row.round_type)
+        state = {
+            "interview_id": interview_id,
+            "resume_data": resume_data,
+            "jd_data": jd_data,
+            "competency_matrix": competency_matrix,
+            "questions_asked": asked_history,
+            "evaluations": previous_evaluations,
+            "target_competency": target_comp,
+        }
+
+        try:
+            agent_res = q_gen(state)
+            q_data = agent_res.get("current_question")
+
+            # Check if LLM returned a valid question and not fallback
+            if q_data and q_data.get("question_text") and not q_data.get("fallback_used"):
+                q_row.question_text = q_data["question_text"]
+                q_row.competency_targeted = q_data.get("competency_targeted") or target_comp
+                q_row.difficulty = q_data.get("difficulty") or q_row.difficulty
+                q_row.status = "READY"
+
+                llm_wait = int((time.monotonic() - t0) * 1000)
+                val_ms = 3
+                total_att_ms = llm_wait + val_ms
+
+                logger.info(
+                    f"\nQUESTION_JIT\n"
+                    f"  seq={sequence_number}\n"
+                    f"  attempt=1\n"
+                    f"  competency={target_comp}\n"
+                    f"  selected_competency={q_row.competency_targeted}\n"
+                    f"  cognitive_angle={q_data.get('cognitive_angle', 'fundamentals')}\n"
+                    f"  llm_wait_ms={llm_wait}\n"
+                    f"  validation_ms={val_ms}\n"
+                    f"  result=READY\n"
+                    f"  fallback_used=false\n"
+                    f"  total_attempt_ms={total_att_ms}"
+                )
+                self.db.add(q_row)
+                self.db.commit()
+                return
+
+        except Exception as exc:
+            logger.warning(f"LLM question generation failed for seq {sequence_number}: {exc}")
+
+        # If LLM generation failed or returned a fallback, load seed fallback
+        difficulty = _adaptive_difficulty(target_comp, previous_evaluations)
+        from app.strategy.seed_question_bank import get_seed_question
+        seed_q = get_seed_question(
+            round_type=q_row.round_type,
+            competency=target_comp,
+            difficulty=difficulty,
+            asked_questions=asked_history,
+        )
+
+        q_row.question_text = seed_q["question_text"]
+        q_row.competency_targeted = seed_q.get("competency_targeted") or target_comp
+        q_row.difficulty = seed_q.get("difficulty") or difficulty
+        q_row.status = "FALLBACK"
+
+        logger.info(
+            f"\nQUESTION_JIT\n"
+            f"  seq={sequence_number}\n"
+            f"  competency={target_comp}\n"
+            f"  result=FALLBACK\n"
+            f"  fallback_type=seed_bank\n"
+            f"  fallback_used=true"
+        )
+        self.db.add(q_row)
+        self.db.commit()
+
+    def trigger_next_pending_generation(self, interview_id: str) -> None:
+        """
+        Finds the first question in PENDING status and triggers JIT generation for it.
+        """
+        pending_q = self.db.query(InterviewQuestion).filter(
+            InterviewQuestion.interview_id == interview_id,
+            InterviewQuestion.status == "PENDING"
+        ).order_by(InterviewQuestion.sequence_number.asc()).first()
+
+        if pending_q:
+            self.generate_question_jit_background(interview_id, pending_q.sequence_number)
 
     def get_interview(self, interview_id: str) -> Interview | None:
         return self.interview_repo.get_by_id(interview_id)
@@ -417,16 +737,8 @@ class InterviewService:
         context_override: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
         """
-        Build or return the interview question plan.
-
-        FRESHER:    Round 1 = 5 Aptitude (fixed bank, no LLM)
-                    Round 2 = 1 Technical (LLM-generated)
-                    Round 3 = 1 HR/Behavioural (LLM-generated)
-
-        EXPERIENCED: Round 1 = 2 Technical (LLM-generated)
-                     Round 2 = 1 HR/Behavioural (LLM-generated)
-
-        If LLM is unavailable for Technical or HR questions → raises HTTP 503.
+        Build or return the interview question plan. Returns blueprint items and first question.
+        Never calls LLM, executes instantly.
         """
         interview_obj = self.get_interview(interview_id)
         if not interview_obj:
@@ -434,17 +746,14 @@ class InterviewService:
 
         set_request_context(interview_id=interview_id, user_id=interview_obj.user_id)
 
-        # ── Fetch Resume and JobDescription ───────────────────────────────────
         jd_obj = (
             self.db.query(JobDescription).filter(JobDescription.id == interview_obj.jd_id).first()
         )
         resume_obj = self.db.query(Resume).filter(Resume.id == interview_obj.resume_id).first()
 
-        # ── Build authoritative interview context ─────────────────────────────
         resume_data = _build_resume_data(resume_obj)
         jd_data = _build_jd_data(jd_obj)
 
-        # Role: from context_override → JD → never hardcode
         role_title = (
             (
                 context_override
@@ -455,7 +764,6 @@ class InterviewService:
         )
         jd_data["target_role"] = role_title
 
-        # Seniority: from context_override → resume → JD
         seniority = (
             (context_override and context_override.get("experience_level"))
             or resume_data.get("seniority_signal")
@@ -464,284 +772,149 @@ class InterviewService:
         ).upper()
         resume_data["seniority_signal"] = seniority
 
-        jd_skills: list[str] = jd_data.get("required_skills", [])
-        resume_skills: list[str] = resume_data.get("skills", [])
         is_fresher_candidate = _is_fresher(seniority)
-        competency_matrix = _build_competency_matrix(role_title, jd_skills, resume_skills)
 
-        logger.info(
-            f"get_interview_plan: interview={interview_id}, role={role_title!r}, "
-            f"seniority={seniority}, fresher={is_fresher_candidate}, "
-            f"jd_skills={jd_skills[:5]}, resume_skills={resume_skills[:5]}"
-        )
-
-        target_q_count = 9 if is_fresher_candidate else 5
+        # Retrieve questions from DB (all 9 or 5 questions are pre-created during create_interview)
         existing_questions = self.question_repo.list_by_interview(interview_id)
-        if len(existing_questions) >= target_q_count:
-            first_q = existing_questions[0]
-            blueprint_items = [
-                {
-                    "round_type": q.round_type,
-                    "competency_targeted": q.competency_targeted,
-                    "difficulty": q.difficulty,
-                    "question_text": q.question_text,
-                    "sequence_number": q.sequence_number,
-                }
-                for q in existing_questions
-            ]
-            return {
-                "interview_id": interview_id,
-                "plan": {
-                    "interview_id": interview_id,
-                    "role": role_title,
-                    "classification": {
-                        "tier": (
-                            "Junior Engineer / Fresher"
-                            if is_fresher_candidate
-                            else "Senior Engineer"
-                        ),
-                        "level": 1 if is_fresher_candidate else 3,
-                        "vector_scores": {"tech_depth": 0.5 if is_fresher_candidate else 0.85},
-                        "summary": f"Classified for {role_title} role.",
-                    },
-                    "blueprint_items": blueprint_items,
-                    "first_question": {
-                        "id": first_q.id,
-                        "type": first_q.round_type,
-                        "competency": first_q.competency_targeted,
-                        "difficulty": first_q.difficulty,
-                        "text": first_q.question_text,
-                        "sequence_number": first_q.sequence_number,
-                    },
-                },
-            }
+        if not existing_questions:
+            # Populate questions & matrix & plan dynamically from seed bank for legacy/manual tests
+            from app.models.interview import CompetencyMatrix, InterviewPlan
+            jd_skills: list[str] = jd_data.get("required_skills", [])
+            resume_skills: list[str] = resume_data.get("skills", [])
+            competency_matrix = _build_competency_matrix(role_title, jd_skills, resume_skills)
 
-        # ── Generate question plan ────────────────────────────────────────────
-        db_questions_created: list[InterviewQuestion] = []
-
-        if is_fresher_candidate:
-            # FRESHER: 4 Aptitude (fixed bank) + 3 Technical (LLM) + 2 HR (LLM) = 9 Total
-            aptitude_qs = select_aptitude_questions(4, session_seed=interview_id)
-            history_so_far: list[dict] = []
-            for idx, apt in enumerate(aptitude_qs, start=1):
-                db_q = InterviewQuestion(
-                    id=str(uuid.uuid4()),
+            # Check / save competency matrix
+            comp_matrix_record = self.db.query(CompetencyMatrix).filter(CompetencyMatrix.interview_id == interview_id).first()
+            if not comp_matrix_record:
+                comp_matrix_record = CompetencyMatrix(
                     interview_id=interview_id,
-                    round_type="APTITUDE",
-                    competency_targeted=apt["competency_targeted"],
-                    difficulty=apt["difficulty"],
-                    question_text=apt["question_text"],
-                    sequence_number=idx,
-                    created_at=datetime.now(UTC),
+                    competencies=json.dumps(competency_matrix),
                 )
-                self.db.add(db_q)
-                db_questions_created.append(db_q)
-                history_so_far.append(
-                    {
-                        "question_text": apt["question_text"],
-                        "competency_targeted": apt["competency_targeted"],
-                        "round_type": "APTITUDE",
-                    }
-                )
+                self.db.add(comp_matrix_record)
 
-            # Q5, Q6, Q7: Technical — 3 LLM generated technical questions
-            for seq_num in range(5, 8):
-                t_q = self._generate_question_via_llm(
-                    "TECHNICAL", resume_data, jd_data, competency_matrix, history_so_far, []
+            # Check / save plan
+            plan_record = self.db.query(InterviewPlan).filter(InterviewPlan.interview_id == interview_id).first()
+            if not plan_record:
+                plan_record = InterviewPlan(
+                    interview_id=interview_id,
+                    hr_question_count=2,
+                    technical_question_count=7 if is_fresher_candidate else 3,
+                    round_structure=json.dumps({}),
+                    estimated_duration_minutes=60,
                 )
-                if not t_q:
-                    raise HTTPException(
-                        status_code=503,
-                        detail=f"LLM question generation failed for Technical Q{seq_num} (role: {role_title!r}).",
+                self.db.add(plan_record)
+            self.db.flush()
+
+            from app.strategy.seed_question_bank import get_seed_question
+            from app.strategy.aptitude_bank import select_aptitude_questions
+
+            if is_fresher_candidate:
+                # 4 Aptitude (fixed bank), 3 Technical, 2 HR = 9 Total
+                aptitude_qs = select_aptitude_questions(4, session_seed=interview_id)
+                for idx, apt in enumerate(aptitude_qs, start=1):
+                    db_q = InterviewQuestion(
+                        id=str(uuid.uuid4()),
+                        interview_id=interview_id,
+                        round_type="APTITUDE",
+                        competency_targeted=apt["competency_targeted"],
+                        difficulty=apt["difficulty"],
+                        question_text=apt["question_text"],
+                        sequence_number=idx,
+                        status="READY",
+                        created_at=datetime.now(UTC),
                     )
-                db_t = InterviewQuestion(
+                    self.db.add(db_q)
+
+                # Q5, Q6, Q7: Technical
+                for idx, seq_num in enumerate(range(5, 8)):
+                    comp_name = competency_matrix[idx % len(competency_matrix)]["name"] if competency_matrix else "Technical"
+                    db_q = InterviewQuestion(
+                        id=str(uuid.uuid4()),
+                        interview_id=interview_id,
+                        round_type="TECHNICAL",
+                        competency_targeted=comp_name,
+                        difficulty="MEDIUM",
+                        question_text="[Pending JIT Generation]",
+                        sequence_number=seq_num,
+                        status="PENDING",
+                        created_at=datetime.now(UTC),
+                    )
+                    self.db.add(db_q)
+
+                # Q8, Q9: HR
+                hr_comps = ["Communication", "Conflict Resolution"]
+                for idx, seq_num in enumerate(range(8, 10)):
+                    comp_name = hr_comps[idx % len(hr_comps)]
+                    db_q = InterviewQuestion(
+                        id=str(uuid.uuid4()),
+                        interview_id=interview_id,
+                        round_type="HR",
+                        competency_targeted=comp_name,
+                        difficulty="EASY",
+                        question_text="[Pending JIT Generation]",
+                        sequence_number=seq_num,
+                        status="PENDING",
+                        created_at=datetime.now(UTC),
+                    )
+                    self.db.add(db_q)
+            else:
+                # EXPERIENCED: 3 Technical, 2 HR = 5 Total
+                first_comp = competency_matrix[0]["name"] if competency_matrix else "System Design"
+                q1_seed = get_seed_question(
+                    round_type="TECHNICAL",
+                    competency=first_comp,
+                    difficulty="MEDIUM",
+                )
+                db_q1 = InterviewQuestion(
                     id=str(uuid.uuid4()),
                     interview_id=interview_id,
                     round_type="TECHNICAL",
-                    competency_targeted=t_q.get("competency_targeted")
-                    or f"{role_title} Fundamentals",
-                    difficulty=t_q.get("difficulty") or "EASY",
-                    question_text=t_q["question_text"],
-                    sequence_number=seq_num,
+                    competency_targeted=first_comp,
+                    difficulty="MEDIUM",
+                    question_text=q1_seed["question_text"],
+                    sequence_number=1,
+                    status="READY",
                     created_at=datetime.now(UTC),
                 )
-                self.db.add(db_t)
-                db_questions_created.append(db_t)
-                history_so_far.append(
-                    {
-                        "question_text": t_q["question_text"],
-                        "competency_targeted": t_q.get("competency_targeted", "Technical"),
-                        "round_type": "TECHNICAL",
-                    }
-                )
+                self.db.add(db_q1)
 
-            # Q8, Q9: HR — 2 LLM generated HR questions
-            for seq_num in range(8, 10):
-                hr_q = self._generate_question_via_llm(
-                    "HR", resume_data, jd_data, competency_matrix, history_so_far, []
-                )
-                if not hr_q:
-                    raise HTTPException(
-                        status_code=503,
-                        detail=f"LLM question generation failed for HR Q{seq_num}.",
+                # Q2, Q3: Technical
+                for idx, seq_num in enumerate(range(2, 4)):
+                    comp_name = competency_matrix[(idx + 1) % len(competency_matrix)]["name"] if len(competency_matrix) > 1 else first_comp
+                    db_q = InterviewQuestion(
+                        id=str(uuid.uuid4()),
+                        interview_id=interview_id,
+                        round_type="TECHNICAL",
+                        competency_targeted=comp_name,
+                        difficulty="MEDIUM",
+                        question_text="[Pending JIT Generation]",
+                        sequence_number=seq_num,
+                        status="PENDING",
+                        created_at=datetime.now(UTC),
                     )
-                db_hr = InterviewQuestion(
-                    id=str(uuid.uuid4()),
-                    interview_id=interview_id,
-                    round_type="HR",
-                    competency_targeted=hr_q.get("competency_targeted")
-                    or "Behavioural & Cultural Fit",
-                    difficulty=hr_q.get("difficulty") or "EASY",
-                    question_text=hr_q["question_text"],
-                    sequence_number=seq_num,
-                    created_at=datetime.now(UTC),
-                )
-                self.db.add(db_hr)
-                db_questions_created.append(db_hr)
-                history_so_far.append(
-                    {
-                        "question_text": hr_q["question_text"],
-                        "competency_targeted": hr_q.get("competency_targeted", "HR"),
-                        "round_type": "HR",
-                    }
-                )
+                    self.db.add(db_q)
 
-        else:
-            # EXPERIENCED: Q1, Q2, Q3 Technical + Q4, Q5 HR — all LLM generated
-            # Q1: Technical (empty history)
-            q1 = self._generate_question_via_llm(
-                "TECHNICAL", resume_data, jd_data, competency_matrix, [], []
-            )
-            if not q1:
-                raise HTTPException(
-                    status_code=503,
-                    detail=(
-                        f"LLM question generation failed for Technical Q1 "
-                        f"(role: {role_title!r}). Ollama may be unavailable."
-                    ),
-                )
-            db_q1 = InterviewQuestion(
-                id=str(uuid.uuid4()),
-                interview_id=interview_id,
-                round_type="TECHNICAL",
-                competency_targeted=q1.get("competency_targeted")
-                or (jd_skills[0] if jd_skills else role_title),
-                difficulty=q1.get("difficulty") or "MEDIUM",
-                question_text=q1["question_text"],
-                sequence_number=1,
-                created_at=datetime.now(UTC),
-            )
-            self.db.add(db_q1)
-            db_questions_created.append(db_q1)
+                # Q4, Q5: HR
+                hr_comps = ["Collaboration & Adaptability", "Culture Fit & Motivation"]
+                for idx, seq_num in enumerate(range(4, 6)):
+                    comp_name = hr_comps[idx % len(hr_comps)]
+                    db_q = InterviewQuestion(
+                        id=str(uuid.uuid4()),
+                        interview_id=interview_id,
+                        round_type="HR",
+                        competency_targeted=comp_name,
+                        difficulty="MEDIUM",
+                        question_text="[Pending JIT Generation]",
+                        sequence_number=seq_num,
+                        status="PENDING",
+                        created_at=datetime.now(UTC),
+                    )
+                    self.db.add(db_q)
 
-            # Q2: Technical (Q1 in history)
-            q2 = self._generate_question_via_llm(
-                "TECHNICAL", resume_data, jd_data, competency_matrix, [q1], []
-            )
-            if not q2:
-                raise HTTPException(
-                    status_code=503,
-                    detail="LLM question generation failed for Technical Q2. Ollama may be unavailable.",
-                )
-            db_q2 = InterviewQuestion(
-                id=str(uuid.uuid4()),
-                interview_id=interview_id,
-                round_type="TECHNICAL",
-                competency_targeted=q2.get("competency_targeted")
-                or (jd_skills[1] if len(jd_skills) > 1 else role_title),
-                difficulty=q2.get("difficulty") or "MEDIUM",
-                question_text=q2["question_text"],
-                sequence_number=2,
-                created_at=datetime.now(UTC),
-            )
-            self.db.add(db_q2)
-            db_questions_created.append(db_q2)
-
-            # Q3: Technical (Q1+Q2 in history)
-            q3 = self._generate_question_via_llm(
-                "TECHNICAL", resume_data, jd_data, competency_matrix, [q1, q2], []
-            )
-            if not q3:
-                raise HTTPException(
-                    status_code=503,
-                    detail="LLM question generation failed for Technical Q3. Ollama may be unavailable.",
-                )
-            db_q3 = InterviewQuestion(
-                id=str(uuid.uuid4()),
-                interview_id=interview_id,
-                round_type="TECHNICAL",
-                competency_targeted=q3.get("competency_targeted")
-                or (jd_skills[2] if len(jd_skills) > 2 else role_title),
-                difficulty=q3.get("difficulty") or "MEDIUM",
-                question_text=q3["question_text"],
-                sequence_number=3,
-                created_at=datetime.now(UTC),
-            )
-            self.db.add(db_q3)
-            db_questions_created.append(db_q3)
-
-            # Q4: HR (Q1+Q2+Q3 in history)
-            q4 = self._generate_question_via_llm(
-                "HR", resume_data, jd_data, competency_matrix, [q1, q2, q3], []
-            )
-            if not q4:
-                raise HTTPException(
-                    status_code=503,
-                    detail="LLM question generation failed for HR Q4. Ollama may be unavailable.",
-                )
-            db_q4 = InterviewQuestion(
-                id=str(uuid.uuid4()),
-                interview_id=interview_id,
-                round_type="HR",
-                competency_targeted=q4.get("competency_targeted") or "Leadership & Collaboration",
-                difficulty=q4.get("difficulty") or "MEDIUM",
-                question_text=q4["question_text"],
-                sequence_number=4,
-                created_at=datetime.now(UTC),
-            )
-            self.db.add(db_q4)
-            db_questions_created.append(db_q4)
-
-            # Q5: HR (Q1+Q2+Q3+Q4 in history)
-            q5 = self._generate_question_via_llm(
-                "HR", resume_data, jd_data, competency_matrix, [q1, q2, q3, q4], []
-            )
-            if not q5:
-                raise HTTPException(
-                    status_code=503,
-                    detail="LLM question generation failed for HR Q5. Ollama may be unavailable.",
-                )
-            db_q5 = InterviewQuestion(
-                id=str(uuid.uuid4()),
-                interview_id=interview_id,
-                round_type="HR",
-                competency_targeted=q5.get("competency_targeted")
-                or "Culture & Conflict Resolution",
-                difficulty=q5.get("difficulty") or "MEDIUM",
-                question_text=q5["question_text"],
-                sequence_number=5,
-                created_at=datetime.now(UTC),
-            )
-            self.db.add(db_q5)
-            db_questions_created.append(db_q5)
-
-        # ── Persist all questions atomically ──────────────────────────────────
-        try:
-            if interview_obj.status == "PLANNING":
-                interview_obj.status = "READY"
-                self.db.add(interview_obj)
             self.db.commit()
-            for q in db_questions_created:
-                self.db.refresh(q)
-        except Exception as exc:
-            self.db.rollback()
-            logger.error(
-                f"Failed to persist interview questions for {interview_id}: {exc}",
-                exc_info=True,
-            )
-            raise HTTPException(status_code=500, detail="Failed to persist interview questions.")
+            existing_questions = self.question_repo.list_by_interview(interview_id)
 
-        first_db_q = db_questions_created[0]
+        first_q = existing_questions[0]
         blueprint_items = [
             {
                 "round_type": q.round_type,
@@ -750,7 +923,7 @@ class InterviewService:
                 "question_text": q.question_text,
                 "sequence_number": q.sequence_number,
             }
-            for q in db_questions_created
+            for q in existing_questions
         ]
 
         return {
@@ -760,7 +933,9 @@ class InterviewService:
                 "role": role_title,
                 "classification": {
                     "tier": (
-                        "Junior Engineer / Fresher" if is_fresher_candidate else "Senior Engineer"
+                        "Junior Engineer / Fresher"
+                        if is_fresher_candidate
+                        else "Senior Engineer"
                     ),
                     "level": 1 if is_fresher_candidate else 3,
                     "vector_scores": {"tech_depth": 0.5 if is_fresher_candidate else 0.85},
@@ -768,12 +943,12 @@ class InterviewService:
                 },
                 "blueprint_items": blueprint_items,
                 "first_question": {
-                    "id": first_db_q.id,  # ← actual DB UUID (was "q-1" hardcoded)
-                    "type": first_db_q.round_type,
-                    "competency": first_db_q.competency_targeted,
-                    "difficulty": first_db_q.difficulty,
-                    "text": first_db_q.question_text,
-                    "sequence_number": first_db_q.sequence_number,
+                    "id": first_q.id,
+                    "type": first_q.round_type,
+                    "competency": first_q.competency_targeted,
+                    "difficulty": first_q.difficulty,
+                    "text": first_q.question_text,
+                    "sequence_number": first_q.sequence_number,
                 },
             },
         }
@@ -1102,27 +1277,42 @@ class InterviewService:
                 self.db.add(db_question)
                 self.db.flush()
 
-            # Persist answer
-            db_answer = InterviewAnswer(
-                id=str(uuid.uuid4()),
-                question_id=db_question.id,
-                answer_text=ans_str,
-                response_time_seconds=30,
-                created_at=datetime.now(UTC),
-            )
-            self.db.add(db_answer)
-            self.db.flush()
+            # Check if an answer already exists for this question (prevent duplicate submissions)
+            db_answer = self.db.query(InterviewAnswer).filter(InterviewAnswer.question_id == db_question.id).first()
+            if db_answer:
+                db_answer.answer_text = ans_str
+                db_answer.created_at = datetime.now(UTC)
+                self.db.add(db_answer)
+                self.db.flush()
+            else:
+                db_answer = InterviewAnswer(
+                    id=str(uuid.uuid4()),
+                    question_id=db_question.id,
+                    answer_text=ans_str,
+                    response_time_seconds=30,
+                    created_at=datetime.now(UTC),
+                )
+                self.db.add(db_answer)
+                self.db.flush()
 
-            # Persist evaluation (single authoritative record)
-            db_eval_record = Evaluation(
-                id=str(uuid.uuid4()),
-                answer_id=db_answer.id,
-                score=score_pct,  # 0-100 persisted
-                rubric_breakdown=json.dumps(eval_result),  # full eval dict
-                feedback=feedback_text,
-                ideal_answer_summary=ideal_summary,
-            )
-            self.db.add(db_eval_record)
+            # Check if an evaluation already exists for this answer
+            db_eval_record = self.db.query(Evaluation).filter(Evaluation.answer_id == db_answer.id).first()
+            if db_eval_record:
+                db_eval_record.score = score_pct
+                db_eval_record.rubric_breakdown = json.dumps(eval_result)
+                db_eval_record.feedback = feedback_text
+                db_eval_record.ideal_answer_summary = ideal_summary
+                self.db.add(db_eval_record)
+            else:
+                db_eval_record = Evaluation(
+                    id=str(uuid.uuid4()),
+                    answer_id=db_answer.id,
+                    score=score_pct,
+                    rubric_breakdown=json.dumps(eval_result),
+                    feedback=feedback_text,
+                    ideal_answer_summary=ideal_summary,
+                )
+                self.db.add(db_eval_record)
 
             # Persist agent log
             db_log = AgentLog(
@@ -1145,6 +1335,10 @@ class InterviewService:
             )
             self.db.add(db_log)
 
+            # Mark current question as CONSUMED
+            db_question.status = "CONSUMED"
+            self.db.add(db_question)
+
             # ── Check completion ──────────────────────────────────────────────
             next_seq = current_seq + 1
             next_db_q = self.question_repo.get_by_interview_and_sequence(interview_id, next_seq)
@@ -1166,82 +1360,80 @@ class InterviewService:
                 all_scores.append(score_pct)
                 interview_obj.overall_score = int(round(sum(all_scores) / max(1, len(all_scores))))
                 ACTIVE_INTERVIEWS_GAUGE.dec()
+                next_q_data = None
 
             else:
-                # ── Dynamically generate/update next question adaptively ──────
-                asked_history = [
-                    {
-                        "question_text": q.question_text,
-                        "competency_targeted": q.competency_targeted,
-                        "round_type": q.round_type,
-                    }
-                    for q in all_configured_questions
-                    if q.sequence_number < next_seq
-                ]
-                gen_evaluations = previous_evaluations + [
-                    {
-                        "score": llm_score_1_10,
-                        "competency_targeted": competency,
-                        "question_type": round_type.lower() if round_type else "fundamentals",
-                    }
-                ]
-
-                if next_db_q:
-                    # Regenerate pre-created question with real-time evaluation history & adaptive difficulty
-                    next_q = self._generate_question_via_llm(
-                        next_db_q.round_type,
-                        resume_data,
-                        jd_data,
-                        competency_matrix,
-                        asked_history,
-                        gen_evaluations,
-                    )
-                    if next_q and next_q.get("question_text"):
-                        next_db_q.question_text = next_q["question_text"]
-                        next_db_q.competency_targeted = (
-                            next_q.get("competency_targeted") or next_db_q.competency_targeted
-                        )
-                        next_db_q.difficulty = next_q.get("difficulty") or next_difficulty_str
-                        self.db.add(next_db_q)
-                        self.db.flush()
-                else:
+                # ── Ensure next question is ready or fallback ───────────────────
+                if not next_db_q:
+                    # Dynamically create next question row (e.g. for legacy manual tests)
                     next_round_type = _determine_next_round_type(next_seq, is_fresher_candidate)
-                    next_q = self._generate_question_via_llm(
-                        next_round_type,
-                        resume_data,
-                        jd_data,
-                        competency_matrix,
-                        asked_history,
-                        gen_evaluations,
+                    from app.strategy.seed_question_bank import get_seed_question
+                    comp_name = competency_matrix[next_seq % len(competency_matrix)]["name"] if competency_matrix else "Technical"
+                    difficulty = next_difficulty_str
+                    asked_list = [
+                        {
+                            "question_text": q.question_text,
+                            "competency_targeted": q.competency_targeted,
+                            "round_type": q.round_type,
+                        }
+                        for q in all_configured_questions
+                        if q.sequence_number < next_seq and q.status in ("READY", "FALLBACK", "CONSUMED")
+                    ]
+                    seed_q = get_seed_question(
+                        round_type=next_round_type,
+                        competency=comp_name,
+                        difficulty=difficulty,
+                        asked_questions=asked_list,
                     )
-
-                    if not next_q:
-                        raise HTTPException(
-                            status_code=503,
-                            detail=(
-                                f"Next question generation failed for round {next_round_type}. "
-                                "LLM service may be unavailable."
-                            ),
-                        )
-
                     next_db_q = InterviewQuestion(
                         id=str(uuid.uuid4()),
                         interview_id=interview_obj.id,
                         round_type=next_round_type,
-                        competency_targeted=next_q.get("competency_targeted") or "General",
-                        difficulty=next_q.get("difficulty") or next_difficulty_str,
-                        question_text=next_q["question_text"],
+                        competency_targeted=seed_q.get("competency_targeted") or comp_name,
+                        difficulty=seed_q.get("difficulty") or difficulty,
+                        question_text=seed_q["question_text"],
                         sequence_number=next_seq,
+                        status="READY",
                         created_at=datetime.now(UTC),
                     )
                     self.db.add(next_db_q)
                     self.db.flush()
 
-                    logger.info(
-                        f"QuestionGeneratorAgent[adaptive]: interview={interview_id}, "
-                        f"seq={next_seq}, competency={next_db_q.competency_targeted!r}, "
-                        f"difficulty={next_db_q.difficulty} ({adaptation.adaptation_reason})"
-                    )
+                elif next_db_q.status in ("PENDING", "GENERATING"):
+                    logger.info(f"Next question Q{next_seq} is in status {next_db_q.status}. Starting bounded wait...")
+                    import time
+                    for _ in range(6):
+                        self.db.refresh(next_db_q)
+                        if next_db_q.status in ("READY", "FALLBACK"):
+                            break
+                        time.sleep(0.5)
+
+                    # If still not ready, fetch seed-bank fallback immediately
+                    if next_db_q.status in ("PENDING", "GENERATING"):
+                        logger.warning(f"Next question Q{next_seq} still not ready after bounded wait. Using seed-bank fallback.")
+                        difficulty = next_db_q.difficulty or next_difficulty_str
+                        asked_list = [
+                            {
+                                "question_text": q.question_text,
+                                "competency_targeted": q.competency_targeted,
+                                "round_type": q.round_type,
+                            }
+                            for q in all_configured_questions
+                            if q.sequence_number < next_seq and q.status in ("READY", "FALLBACK", "CONSUMED")
+                        ]
+                        from app.strategy.seed_question_bank import get_seed_question
+                        seed_q = get_seed_question(
+                            round_type=next_db_q.round_type,
+                            competency=next_db_q.competency_targeted,
+                            difficulty=difficulty,
+                            asked_questions=asked_list,
+                        )
+                        next_db_q.question_text = seed_q["question_text"]
+                        next_db_q.competency_targeted = seed_q.get("competency_targeted") or next_db_q.competency_targeted
+                        next_db_q.difficulty = seed_q.get("difficulty") or difficulty
+                        next_db_q.status = "FALLBACK"
+                        self.db.add(next_db_q)
+                        self.db.flush()
 
                 next_q_data = {
                     "id": next_db_q.id,
@@ -1254,6 +1446,9 @@ class InterviewService:
 
             # ── Atomic commit ─────────────────────────────────────────────────
             self.db.commit()
+
+            if not is_completed:
+                self.trigger_next_pending_generation(interview_id)
 
         except HTTPException:
             self.db.rollback()

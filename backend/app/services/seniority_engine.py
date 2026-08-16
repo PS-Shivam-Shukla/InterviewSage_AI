@@ -221,7 +221,38 @@ def is_technical_role(title: str, description: str = "", technologies: list[str]
     return False
 
 
-# ── Seniority Engine ──────────────────────────────────────────────
+# Keywords that identify academic institutions masquerading as employers
+_ACADEMIC_INSTITUTION_KEYWORDS = {
+    "university",
+    "universite",
+    "college",
+    "institute",
+    "institution",
+    "school",
+    "academy",
+    "polytechnic",
+    "iit",
+    "nit",
+    "bits",
+    "iim",
+    "inter college",
+    "vidyalaya",
+    "mahavidyalaya",
+    "shiksha",
+}
+
+
+def is_academic_institution(company: str) -> bool:
+    """
+    Return True if the company name looks like a college/university/school.
+    Used to reject academic project entries that the LLM wrongly put into work_experience.
+    """
+    if not company:
+        return False
+    company_lower = company.lower()
+    return any(kw in company_lower for kw in _ACADEMIC_INSTITUTION_KEYWORDS)
+
+
 
 
 class SeniorityEngine:
@@ -239,7 +270,12 @@ class SeniorityEngine:
         ref_date = ref_date or datetime.date.today()
 
         # 1. Experience Interval Calculations
-        raw_experience = resume_data.get("experience") or []
+        # Accept both 'experience' (legacy) and 'work_experience' (current schema) keys
+        raw_experience = (
+            resume_data.get("work_experience")
+            or resume_data.get("experience")
+            or []
+        )
         all_intervals: list[tuple[datetime.date, datetime.date]] = []
         relevant_intervals: list[tuple[datetime.date, datetime.date]] = []
 
@@ -256,6 +292,18 @@ class SeniorityEngine:
             if key in seen_keys:
                 continue
             seen_keys.add(key)
+
+            # Defence layer 2: reject any entry whose company is clearly an
+            # academic institution — the LLM may put college projects into
+            # work_experience despite prompt instructions.
+            if is_academic_institution(company):
+                import logging as _logging
+                _logging.getLogger(__name__).debug(
+                    f"SeniorityEngine: skipping academic-institution entry title={title!r} company={company!r}"
+                )
+                dedup_entries.append(exp)  # keep for scoring text; exclude from time intervals
+                continue
+
             dedup_entries.append(exp)
 
             start_str = exp.get("start_date") or ""

@@ -132,6 +132,7 @@ class InterviewQuestion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     difficulty: Mapped[str] = mapped_column(String(20), nullable=False)
     question_text: Mapped[str] = mapped_column(Text, nullable=False)
     sequence_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING")
 
     interview: Mapped[Interview] = relationship("Interview", back_populates="questions")
     answer: Mapped[InterviewAnswer | None] = relationship(

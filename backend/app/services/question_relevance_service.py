@@ -228,21 +228,48 @@ class LexicalSimilarityEngine:
         cls, new_question: str, existing_questions: list[dict[str, Any]]
     ) -> tuple[float, str | None]:
         """
-        Computes maximum lexical duplicate score across past questions.
+        Computes maximum lexical duplicate score across past accepted questions.
+        Uses layered duplicate checking:
+        1. Exact normalized match -> 1.0
+        2. Word N-gram phrase similarity
+        3. Word-level cosine similarity
+        4. Bounded character N-gram similarity to avoid false positives on shared framework names
         Returns (max_score, matching_question_text).
         """
         max_score = 0.0
         matched_q = None
 
+        c1 = cls._clean_text(new_question)
+        if not c1:
+            return 0.0, None
+
         for q in existing_questions:
+            if not isinstance(q, dict):
+                continue
             old_text = q.get("question_text", "")
             if not old_text:
                 continue
 
-            char_sim = cls.char_ngram_similarity(new_question, old_text)
+            c2 = cls._clean_text(old_text)
+            if not c2:
+                continue
+
+            if c1 == c2:
+                return 1.0, old_text
+
+            char_sim = cls.char_ngram_similarity(new_question, old_text, n=3)
             word_sim = cls.word_ngram_similarity(new_question, old_text, n=2)
             cosine_sim = cls.word_tfidf_cosine(new_question, old_text)
-            hybrid = max(char_sim, word_sim, cosine_sim)
+
+            # Layered duplicate calculation:
+            # If word n-gram or cosine indicates strong semantic/phrase overlap, use full strength.
+            # Cap pure character sub-fragment overlap when distinct words only share short prefixes.
+            if word_sim >= 0.50:
+                hybrid = max(word_sim, cosine_sim, char_sim)
+            elif cosine_sim >= 0.55:
+                hybrid = max(cosine_sim, (char_sim + word_sim) / 2)
+            else:
+                hybrid = max(word_sim, cosine_sim, min(char_sim, 0.44))
 
             if hybrid > max_score:
                 max_score = hybrid

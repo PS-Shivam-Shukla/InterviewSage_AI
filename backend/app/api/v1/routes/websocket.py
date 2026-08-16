@@ -2,13 +2,15 @@
 WebSocket Endpoint for Real-time Event Streaming & Live Interview Synchronization.
 ADD-V5 Architecture Specification — Section 8.
 Secured with JWT authentication and strict tenant isolation (Audit H-3).
-Refactored for Step 5.2 to acquire DB sessions on-demand rather than holding
-persistent DB connections for the duration of the WebSocket.
+Refactored to acquire DB sessions on-demand and offload synchronous turn orchestration
+to worker threads, guaranteeing immediate WebSocket acceptance without event-loop blocking.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
+import time
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.orm import Session
@@ -51,7 +53,6 @@ class ConnectionManager:
         if interview_id not in self.active_connections:
             self.active_connections[interview_id] = []
         self.active_connections[interview_id].append(websocket)
-        logger.info(f"WebSocket client connected to interview session {interview_id}")
 
     def disconnect(self, interview_id: str, websocket: WebSocket):
         if interview_id in self.active_connections:
@@ -74,6 +75,7 @@ manager = ConnectionManager()
 
 
 @router.websocket("/interviews/{interview_id}")
+@router.websocket("/interview/{interview_id}")
 async def websocket_interview_session(
     websocket: WebSocket,
     interview_id: str,
@@ -83,7 +85,10 @@ async def websocket_interview_session(
     WebSocket route streaming turn state, agent logs, and live audio/text events.
     Enforces JWT authentication and interview resource ownership.
     Acquires DB sessions on-demand to prevent connection pool exhaustion.
+    Offloads heavy operations to threadpool to prevent event loop blocking.
     """
+    t_start = time.monotonic()
+
     # 1. Extract token from Query or Headers
     auth_token = token
     if auth_token:
@@ -137,8 +142,13 @@ async def websocket_interview_session(
         if should_close:
             db.close()
 
-    # 3. Accept connection (DB connection released during idle periods)
+    # 3. Accept connection immediately (DB connection released during idle periods)
     await manager.connect(interview_id, websocket)
+    accept_ms = int((time.monotonic() - t_start) * 1000)
+    logger.info(
+        f"WebSocket client connected to interview session {interview_id} [websocket_accept_ms={accept_ms}ms]"
+    )
+
     streaming_service = AudioStreamingService()
 
     try:
@@ -167,6 +177,15 @@ async def websocket_interview_session(
                     if event_type == "PING":
                         await websocket.send_json(
                             {"type": "PONG", "event": "PONG", "interview_id": interview_id}
+                        )
+                    elif event_type == "HEARTBEAT":
+                        await websocket.send_json(
+                            {
+                                "type": "HEARTBEAT_ACK",
+                                "event": "HEARTBEAT_ACK",
+                                "status": "ACTIVE",
+                                "interview_id": interview_id,
+                            }
                         )
                     elif event_type == "END_CANDIDATE_SPEECH":
                         if interview_id in _processing_sessions:
@@ -202,15 +221,19 @@ async def websocket_interview_session(
                                 }
                             )
 
-                            # Process voice turn with an on-demand DB session
-                            db_turn, should_close_turn = _acquire_db_session()
-                            try:
-                                turn_result = streaming_service.process_voice_turn_orchestrated(
-                                    session_id=interview_id, db=db_turn, audio_bytes=raw_bytes
-                                )
-                            finally:
-                                if should_close_turn:
-                                    db_turn.close()
+                            # Execute synchronous voice turn orchestration in worker thread to prevent event loop blocking
+                            def _run_turn_sync():
+                                db_turn, should_close_turn = _acquire_db_session()
+                                try:
+                                    return streaming_service.process_voice_turn_orchestrated(
+                                        session_id=interview_id, db=db_turn, audio_bytes=raw_bytes
+                                    )
+                                finally:
+                                    if should_close_turn:
+                                        db_turn.close()
+
+                            loop = asyncio.get_running_loop()
+                            turn_result = await loop.run_in_executor(None, _run_turn_sync)
 
                             if turn_result.get("error"):
                                 await websocket.send_json(

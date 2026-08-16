@@ -62,25 +62,89 @@ class ResumeService:
 
         return self._format_resume(created), raw_text
 
-    def process_resume_background(self, resume_id: str, raw_text: str, filename: str) -> None:
+    def process_resume_background(
+        self, resume_id: str, raw_text: str, filename: str, agent: ResumeAgent | None = None
+    ) -> None:
         """Background task for LLM parsing & deterministic Seniority Engine evaluation."""
         from app.core.database import SessionLocal
+        from app.core.llm_client import check_ollama_health
+        from app.core.config import settings
         from app.services.seniority_engine import SeniorityEngine
+        import concurrent.futures
 
         db = SessionLocal()
         try:
-            logger.info(f"Background ResumeAgent processing started for resume {resume_id}")
-            agent = ResumeAgent()
+            logger.info(f"[RESUME PROCESSING STARTED] resume_id={resume_id}")
+
+            # Pre-flight health check if using Ollama
+            if settings.llm_provider.lower() == "ollama":
+                is_healthy = check_ollama_health(timeout=3.0)
+                if not is_healthy:
+                    logger.error(
+                        f"[RESUME PROCESSING FAILED] resume_id={resume_id} reason=Ollama service unreachable on pre-flight check"
+                    )
+                    resume = db.query(Resume).filter(Resume.id == resume_id).first()
+                    if resume:
+                        resume.status = "FAILED"
+                        db.commit()
+                    return
+
+            logger.info(
+                f"[RESUME EXTRACTION] resume_id={resume_id} raw_text_length={len(raw_text or '')}"
+            )
+            logger.info(
+                f"[RESUME AGENT] resume_id={resume_id} model={settings.llm_model_name}"
+            )
+
+            if agent is None:
+                agent = ResumeAgent()
             state = {
                 "resume_raw_text": raw_text or f"Resume File: {filename}",
-                "interview_id": f"upload-{filename}",
+                "interview_id": resume_id[:36],
                 "_db_session": None,
             }
-            agent_output = agent(state)
+
+            # Hard upper-bound processing timeout (600s max for local LLM inference)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(agent, state)
+                try:
+                    agent_output = future.result(timeout=600.0)
+                except concurrent.futures.TimeoutError:
+                    logger.error(
+                        f"[RESUME PROCESSING FAILED] resume_id={resume_id} reason=ResumeAgent execution timed out (hard limit 600s exceeded)"
+                    )
+                    resume = db.query(Resume).filter(Resume.id == resume_id).first()
+                    if resume:
+                        resume.status = "FAILED"
+                        db.commit()
+                    return
+
+            if agent_output.get("is_failed") or "error_log" in agent_output:
+                logger.error(
+                    f"[RESUME PROCESSING FAILED] resume_id={resume_id} reason={agent_output.get('error_log')}"
+                )
+                resume = db.query(Resume).filter(Resume.id == resume_id).first()
+                if resume:
+                    resume.status = "FAILED"
+                    db.commit()
+                return
+
             analysis_dict = agent_output.get("resume_data", {})
             tech_skills = analysis_dict.get("technical_skills", [])
 
+            # Safety check: if raw_text contained substantial content (>50 chars) but analysis_dict has zero skills, zero experience, and zero summary, treat as FAILED
+            if len((raw_text or "").strip()) > 50 and not tech_skills and not analysis_dict.get("experience") and not analysis_dict.get("summary"):
+                logger.error(
+                    f"[RESUME PROCESSING FAILED] resume_id={resume_id} reason=LLM returned empty structured analysis for valid text content"
+                )
+                resume = db.query(Resume).filter(Resume.id == resume_id).first()
+                if resume:
+                    resume.status = "FAILED"
+                    db.commit()
+                return
+
             # Deterministic Python Seniority Evaluation
+            logger.info(f"[SENIORITY ENGINE] resume_id={resume_id} evaluating extracted data")
             seniority_res = SeniorityEngine.evaluate(analysis_dict)
             career_level = seniority_res["seniority_signal"]
             seniority_score = seniority_res["seniority_score"]
@@ -99,11 +163,11 @@ class ResumeService:
                 resume.status = "COMPLETED"
                 db.commit()
                 logger.info(
-                    f"Background ResumeAgent & SeniorityEngine completed for {resume_id}: signal={career_level}, score={seniority_score}"
+                    f"[RESUME PROCESSING COMPLETED] resume_id={resume_id}: signal={career_level}, score={seniority_score}"
                 )
         except Exception as exc:
             logger.error(
-                f"Background ResumeAgent processing failed for {resume_id}: {exc}", exc_info=True
+                f"[RESUME PROCESSING FAILED] resume_id={resume_id} reason={exc}", exc_info=True
             )
             try:
                 resume = db.query(Resume).filter(Resume.id == resume_id).first()
@@ -256,6 +320,46 @@ class ResumeService:
                         }
                     )
 
+            # Normalize education items — inject fallback IDs when LLM returns None
+            raw_education = ai_dict.get("education") or []
+            normalized_education = []
+            for idx, item in enumerate(raw_education):
+                if isinstance(item, dict):
+                    normalized_education.append({
+                        "id": item.get("id") or f"edu-{idx+1}",
+                        "degree": item.get("degree") or "",
+                        "institution": item.get("institution") or "",
+                        "field_of_study": item.get("field_of_study") or item.get("field") or "",
+                        "graduation_year": str(item.get("graduation_year") or ""),
+                        "gpa": item.get("gpa"),
+                    })
+
+            # Normalize project items — inject fallback IDs when LLM returns None
+            raw_projects = ai_dict.get("projects") or []
+            normalized_projects = []
+            for idx, item in enumerate(raw_projects):
+                if isinstance(item, dict):
+                    normalized_projects.append({
+                        "id": item.get("id") or f"proj-{idx+1}",
+                        "title": item.get("title") or item.get("name") or f"Project {idx+1}",
+                        "description": item.get("description") or "",
+                        "technologies": item.get("technologies") or [],
+                        "link": item.get("link"),
+                        "role": item.get("role"),
+                    })
+
+            # Normalize certification items — inject fallback IDs when LLM returns None
+            raw_certs = ai_dict.get("certifications") or []
+            normalized_certs = []
+            for idx, item in enumerate(raw_certs):
+                if isinstance(item, dict):
+                    normalized_certs.append({
+                        "id": item.get("id") or f"cert-{idx+1}",
+                        "name": item.get("name") or item.get("title") or f"Certification {idx+1}",
+                        "issuer": item.get("issuer") or item.get("organization") or "",
+                        "issue_date": item.get("issue_date") or item.get("date") or "",
+                    })
+
             summary_text = (
                 ai_dict.get("summary") or f"Extracted candidate profile for {resume.file_path}."
             )
@@ -309,9 +413,9 @@ class ResumeService:
                     "all": list(set(tech_skills + soft_skills)),
                 },
                 "experience": normalized_exp,
-                "education": ai_dict.get("education") or [],
-                "projects": ai_dict.get("projects") or [],
-                "certifications": ai_dict.get("certifications") or [],
+                "education": normalized_education,
+                "projects": normalized_projects,
+                "certifications": normalized_certs,
                 "summary": summary_text,
                 "strengths": ai_dict.get("strengths") or [],
                 "weaknesses": ai_dict.get("weaknesses") or [],

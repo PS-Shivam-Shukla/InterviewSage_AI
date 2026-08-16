@@ -34,8 +34,8 @@ export const InterviewQuestionCard: React.FC<InterviewQuestionCardProps> = ({
   }
 
   const seq = question.sequence_number || sequenceNumber;
-  const roundType = question.round_type || 'TECHNICAL';
-  const competency = question.competency || 'System Architecture';
+  const roundType = (question.round_type || 'TECHNICAL').toUpperCase();
+  const competency = question.competency || 'General';
   const difficulty = (question.difficulty || 'MEDIUM') as InterviewDifficulty;
 
   return (

@@ -378,6 +378,44 @@ class TestQuestionGeneratorAgent:
         assert "current_question" in fallback
         assert "question_text" in fallback["current_question"]
 
+    def test_aptitude_round_uses_aptitude_matrix(self):
+        fake_output = GeneratedQuestion(
+            question_text="If 5 machines take 5 minutes to make 5 widgets, how long for 100 machines?",
+            competency_targeted="Quantitative Aptitude",
+            difficulty="BASIC",
+            question_type="fundamentals",
+        )
+        agent = QuestionGeneratorAgent(
+            round_type="APTITUDE", llm_client=FakeLLMClient(responses=[fake_output])
+        )
+        result = agent(_base_state())
+        assert result["current_question"]["round_type"] == "APTITUDE"
+        assert result["current_question"]["competency_targeted"] in {
+            "Quantitative Aptitude",
+            "Logical Reasoning",
+            "Verbal Ability",
+            "Data Interpretation",
+        }
+
+    def test_hr_round_uses_hr_matrix(self):
+        fake_output = GeneratedQuestion(
+            question_text="Tell me about a time you handled a conflict within your team.",
+            competency_targeted="Conflict Resolution & Adaptability",
+            difficulty="BASIC",
+            question_type="behavioral",
+        )
+        agent = QuestionGeneratorAgent(
+            round_type="HR", llm_client=FakeLLMClient(responses=[fake_output])
+        )
+        result = agent(_base_state())
+        assert result["current_question"]["round_type"] == "HR"
+        assert result["current_question"]["competency_targeted"] in {
+            "Leadership & Team Collaboration",
+            "Conflict Resolution & Adaptability",
+            "Work Ethic & Ownership",
+            "Culture Fit & Career Growth",
+        }
+
     def test_adaptive_difficulty(self):
         from app.agents.question_generator_agent import _adaptive_difficulty
 

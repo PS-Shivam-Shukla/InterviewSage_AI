@@ -96,33 +96,7 @@ class ResumeAgentInput(BaseModel):
     file_name: str | None = None
 
 
-class ResumeAnalysis(BaseModel):
-    summary: str = Field(
-        default="", description="Executive candidate summary extracted from resume"
-    )
-    technical_skills: list[str] = Field(
-        default_factory=list, description="Technical skills and technologies"
-    )
-    soft_skills: list[str] = Field(
-        default_factory=list, description="Soft skills and domain competencies"
-    )
-    experience: list[ExperienceEntry] = Field(default_factory=list)
-    education: list[EducationEntry] = Field(default_factory=list)
-    projects: list[ProjectEntry] = Field(default_factory=list)
-    certifications: list[CertificationEntry] = Field(default_factory=list)
-    languages: list[str] = Field(default_factory=list)
-    strengths: list[str] = Field(default_factory=list)
-    weaknesses: list[str] = Field(default_factory=list)
-    career_level: str = Field(
-        default="MID", description="Seniority signal: JUNIOR, MID, SENIOR, STAFF, UNKNOWN"
-    )
-    resume_quality_score: int = Field(default=85, ge=0, le=100)
-
-    @field_validator("career_level")
-    @classmethod
-    def validate_seniority(cls, v: str) -> str:
-        allowed = {"JUNIOR", "MID", "SENIOR", "STAFF", "UNKNOWN"}
-        return v.upper() if v.upper() in allowed else "MID"
+from app.agents.resume_agent import ResumeAnalysis
 
 
 # ── JDAgent Contracts ──────────────────────────────────────────

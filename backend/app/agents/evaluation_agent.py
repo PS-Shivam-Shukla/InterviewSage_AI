@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.agents.base import BaseAgent
 from app.core.llm_client import LLMClient
@@ -25,6 +25,36 @@ class EvaluationOutput(BaseModel):
     feedback: str = ""
     ideal_answer_summary: str = ""
     needs_human_review: bool = False
+
+    @field_validator("rubric_breakdown", mode="before")
+    @classmethod
+    def coerce_rubric_values(cls, v: object) -> object:
+        """
+        qwen3/small models sometimes return rubric_breakdown values as nested dicts:
+          {"Correctness": {"sub-score": 1}}  ->  {"Correctness": 1}
+        Unwrap any nested dict to extract the plain integer score.
+        """
+        if not isinstance(v, dict):
+            return v
+        cleaned: dict[str, int] = {}
+        for key, val in v.items():
+            if isinstance(val, dict):
+                for candidate_key in ("sub-score", "score", "value", "rating", "val"):
+                    if candidate_key in val and isinstance(val[candidate_key], (int, float)):
+                        cleaned[key] = int(val[candidate_key])
+                        break
+                else:
+                    for inner_val in val.values():
+                        if isinstance(inner_val, (int, float)):
+                            cleaned[key] = int(inner_val)
+                            break
+                    else:
+                        cleaned[key] = 1
+            elif isinstance(val, (int, float)):
+                cleaned[key] = int(val)
+            else:
+                cleaned[key] = 1
+        return cleaned
 
     @model_validator(mode="after")
     def sub_scores_in_range(self) -> EvaluationOutput:
@@ -74,17 +104,22 @@ class EvaluationAgent(BaseAgent):
 
         sanity_res = AnswerSanityGuard.evaluate(answer_text, round_type=round_type)
         if not sanity_res.needs_llm_eval:
-            # Bypass LLM evaluation for EMPTY, NO_ANSWER, or GIBBERISH
+            # Fetch dynamic rubric dimensions from MCP tool
+            _default_rubric = mcp_server.call_tool(
+                "score_answer_rubric", question_type=q_type, seniority_level="MID"
+            )
+            _default_dims = (
+                {d["name"]: 1 for d in (_default_rubric.output or {}).get("dimensions", [])}
+                if _default_rubric.success and (_default_rubric.output or {}).get("dimensions")
+                else {"Correctness": 1, "Communication": 1, "Confidence": 1}
+            )
             eval_record = {
                 "score": 0,  # 0/10 raw score -> 0%
-                "rubric_breakdown": {
-                    "Correctness": 1,
-                    "Communication": 1,
-                    "Confidence": 1,
-                },
+                "rubric_breakdown": _default_dims,
                 "feedback": sanity_res.reason,
                 "ideal_answer_summary": "Candidate did not provide a valid answer.",
                 "needs_human_review": False,
+                "l2_recommendation": None,
                 "question_id": current_q.get("sequence_number"),
                 "competency_targeted": competency,
                 "question_type": q_type,
@@ -149,6 +184,7 @@ class EvaluationAgent(BaseAgent):
                     else "Quantitative / logical problem solving."
                 ),
                 "needs_human_review": False,
+                "l2_recommendation": None,
                 "question_id": current_q.get("sequence_number"),
                 "competency_targeted": competency,
                 "question_type": "aptitude",
@@ -162,13 +198,32 @@ class EvaluationAgent(BaseAgent):
         jd_skills_str = ", ".join((jd_data.get("required_skills") or [])[:8])
         resume_skills_str = ", ".join((resume_data.get("skills") or [])[:8])
 
-        # Fetch rubric template via MCP tool (no answer_text — template only)
+        # Fetch rubric template dynamically via MCP tool
         rubric_result = mcp_server.call_tool(
             "score_answer_rubric",
             question_type=q_type,
             seniority_level=seniority,
         )
         rubric = rubric_result.output if rubric_result.success else {}
+
+        # Build dynamic rubric dimension instructions from the MCP rubric template
+        rubric_dimensions = rubric.get("dimensions", [])
+        if rubric_dimensions:
+            dim_lines = "\n".join(
+                f"  - {d['name']} (weight {d.get('weight', 0)}%): {d.get('description', '')}"
+                for d in rubric_dimensions
+            )
+            dim_names = [d["name"] for d in rubric_dimensions]
+            rubric_instruction = (
+                f"Score each of the following {len(dim_names)} dimensions in rubric_breakdown (each 1-5):\n"
+                f"{dim_lines}\n"
+                f"Important: Each dimension value in rubric_breakdown MUST be a plain integer from 1 to 5. "
+                f"Do not nest objects or dictionaries."
+            )
+        else:
+            rubric_instruction = (
+                "Score each dimension from the scoring rubric in rubric_breakdown as a plain integer (1-5)."
+            )
 
         # Competency weight for this competency
         weight = next((c.get("weight", 10) for c in matrix if c.get("name") == competency), 10)
@@ -183,14 +238,11 @@ class EvaluationAgent(BaseAgent):
             f"Question type: {q_type} | Round type: {round_type} | Seniority: {seniority}\n"
             f"Candidate answer:\n{answer_text}\n\n"
             f"Scoring rubric:\n{rubric}\n\n"
-            "EVALUATION INSTRUCTIONS: Evaluate three independent dimensions in rubric_breakdown (each 1-5):\n"
-            "1. Correctness (core technical/behavioral correctness & depth)\n"
-            "2. Communication (clarity, logical structure, explanation quality)\n"
-            "3. Confidence (assertiveness vs hedging phrases like 'maybe', 'I think', 'probably', 'I guess')\n"
-            "Evaluate candidates of all seniority levels (including Fresher/Junior) on all three dimensions, calibrating expectations to their experience level.\n"
+            f"EVALUATION INSTRUCTIONS:\n{rubric_instruction}\n"
+            "Evaluate candidate calibrating expectations to their experience level.\n"
             "CRITICAL SCORING RULE: If the answer is semantically irrelevant to the question "
             "(e.g., random characters, celebrity names, gibberish, unrelated personal statements, "
-            "or content completely unrelated to the topic), you MUST assign score=1 and all sub-scores=1.\n"
+            "or content completely unrelated to the topic), you MUST assign score=1 and all rubric dimension values=1.\n"
             "Return ONLY JSON matching the schema."
         )
 
@@ -204,8 +256,19 @@ class EvaluationAgent(BaseAgent):
             messages, EvaluationOutput, retry_feedback
         )
 
+        # ── L2 Review Recommendation ─────────────────────────────────────────
+        l2_recommendation: str | None = None
+        if evaluation.needs_human_review:
+            l2_recommendation = "Answer flagged as unreadable or ambiguous — L2 human review required."
+        elif evaluation.score <= 2:
+            l2_recommendation = (
+                f"Low score ({evaluation.score}/10) on {competency} ({q_type}) — "
+                "L2 review recommended to verify automated scoring calibration."
+            )
+
         eval_record = {
             **evaluation.model_dump(),
+            "l2_recommendation": l2_recommendation,
             "question_id": current_q.get("sequence_number"),
             "competency_targeted": competency,
             "question_type": q_type,
@@ -215,21 +278,31 @@ class EvaluationAgent(BaseAgent):
 
     def _on_failure(self, state: InterviewState, error: str) -> dict:
         current_q = state.get("current_question") or {}
+        q_type = current_q.get("question_type", "fundamentals")
+
+        _fail_rubric = mcp_server.call_tool(
+            "score_answer_rubric", question_type=q_type, seniority_level="MID"
+        )
+        _fail_dims = (
+            {d["name"]: 1 for d in (_fail_rubric.output or {}).get("dimensions", [])}
+            if _fail_rubric.success and (_fail_rubric.output or {}).get("dimensions")
+            else {"Correctness": 1, "Communication": 1, "Confidence": 1}
+        )
         return {
             "evaluations": [
                 {
                     "score": 0,
-                    "rubric_breakdown": {
-                        "Correctness": 1,
-                        "Communication": 1,
-                        "Confidence": 1,
-                    },
+                    "rubric_breakdown": _fail_dims,
                     "feedback": f"Evaluation system unavailable: {error[:120]}",
                     "ideal_answer_summary": "Evaluation requires human review or system retry.",
                     "needs_human_review": True,
+                    "l2_recommendation": (
+                        f"EvaluationAgent execution failed ({error[:80]}). "
+                        "Manual L2 review is required."
+                    ),
                     "question_id": current_q.get("sequence_number"),
                     "competency_targeted": current_q.get("competency_targeted", ""),
-                    "question_type": current_q.get("question_type", ""),
+                    "question_type": q_type,
                     "answer_quality": "EVALUATION_UNAVAILABLE",
                 }
             ],

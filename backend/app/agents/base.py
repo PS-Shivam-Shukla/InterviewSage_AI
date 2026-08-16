@@ -57,6 +57,8 @@ class BaseAgent(ABC):
 
     # ── Public entry point ────────────────────────────────────
 
+    max_retries: int = MAX_RETRIES
+
     def __call__(self, state: InterviewState) -> dict:
         """LangGraph node entry point — wraps _run with retries and real-time console tracking."""
         t0 = time.monotonic()
@@ -69,7 +71,8 @@ class BaseAgent(ABC):
             f"────────────────────────────────────────────────────────────────────────────────"
         )
 
-        for attempt in range(MAX_RETRIES + 1):
+        total_allowed_attempts = self.max_retries + 1
+        for attempt in range(total_allowed_attempts):
             try:
                 result = self._run(state, retry_feedback=last_error)
                 latency = int((time.monotonic() - t0) * 1000)
@@ -78,17 +81,17 @@ class BaseAgent(ABC):
             except (ValidationError, ValueError) as exc:
                 last_error = str(exc)
                 logger.warning(
-                    f"[{self.agent_name}] attempt {attempt + 1}/{MAX_RETRIES + 1} "
+                    f"[{self.agent_name}] attempt {attempt + 1}/{total_allowed_attempts} "
                     f"validation error: {last_error[:120]}"
                 )
-                if attempt == MAX_RETRIES:
+                if attempt == total_allowed_attempts - 1:
                     latency = int((time.monotonic() - t0) * 1000)
                     self._log(state, "FAILED", {}, latency, attempt, last_error)
                     return self._on_failure(state, last_error)
             except Exception as exc:
                 last_error = str(exc)
                 logger.error(f"[{self.agent_name}] unexpected error: {last_error}")
-                if attempt == MAX_RETRIES:
+                if attempt == total_allowed_attempts - 1:
                     latency = int((time.monotonic() - t0) * 1000)
                     self._log(state, "FAILED", {}, latency, attempt, last_error)
                     return self._on_failure(state, last_error)
@@ -190,3 +193,7 @@ class BaseAgent(ABC):
             )
         except Exception as exc:
             logger.warning(f"[{self.agent_name}] failed to persist log: {exc}")
+            try:
+                db.rollback()
+            except Exception:
+                pass

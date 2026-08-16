@@ -25,7 +25,7 @@ def test_e2e_question_and_evaluation_loop(
     )
     assert interview is not None
     interview_id = interview.id
-    assert interview.status == "PLANNING"
+    assert interview.status in ("PLANNING", "READY")
 
     # 2. Get Interview Plan
     plan_res = svc.get_interview_plan(interview_id)

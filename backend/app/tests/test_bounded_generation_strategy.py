@@ -155,16 +155,23 @@ def test_req_7_and_8_and_9_repeated_gate5_triggers_bounded_fallback():
                     question_type="fundamentals",
                 )
 
-    fake_llm = FakeLLM3()
-    agent = QuestionGeneratorAgent(round_type="TECHNICAL", llm_client=fake_llm)
-    result = agent(state)
+    from app.agents import question_generator_agent
+    orig_angles = question_generator_agent.PRIMARY_COGNITIVE_ANGLES
+    question_generator_agent.PRIMARY_COGNITIVE_ANGLES = ["fundamentals_and_concepts", "implementation_and_usage"]
+    try:
+        fake_llm = FakeLLM3()
+        agent = QuestionGeneratorAgent(round_type="TECHNICAL", llm_client=fake_llm)
+        agent.max_retries = 2
+        result = agent(state)
 
-    assert (
-        len(fake_llm.prompts_captured) == 3
-    ), f"Prompts captured count: {len(fake_llm.prompts_captured)}"
-    assert "STRATEGY: FALLBACK COMPETENCY" in fake_llm.prompts_captured[2]
-    assert result["current_question"]["competency_targeted"] in ("SQL", "Python")
-    assert "Explain Python GIL" in result["current_question"]["question_text"]
+        assert (
+            len(fake_llm.prompts_captured) == 3
+        ), f"Prompts captured count: {len(fake_llm.prompts_captured)}"
+        assert "STRATEGY: FALLBACK COMPETENCY" in fake_llm.prompts_captured[2]
+        assert result["current_question"]["competency_targeted"] in ("SQL", "Python")
+        assert "Explain Python GIL" in result["current_question"]["question_text"]
+    finally:
+        question_generator_agent.PRIMARY_COGNITIVE_ANGLES = orig_angles
 
 
 def test_req_10_exact_duplicate_rejected():

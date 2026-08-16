@@ -37,13 +37,14 @@ async def lifespan(app: FastAPI):
     os.makedirs(settings.upload_dir, exist_ok=True)
     os.makedirs("./logs", exist_ok=True)
 
-    # Run PostgreSQL schema migrations
-    try:
-        from app.migrate_interview_role import migrate as migrate_roles
+    # Run PostgreSQL schema migrations (skipped in test runs to prevent lock contention)
+    if not os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("TESTING"):
+        try:
+            from app.migrate_interview_role import migrate as migrate_roles
 
-        migrate_roles()
-    except Exception as exc:
-        logger.warning(f"Database startup migration warning: {exc}")
+            migrate_roles()
+        except Exception as exc:
+            logger.warning(f"Database startup migration warning: {exc}")
 
     # Initialize OpenTelemetry / LangSmith instrumentation
     setup_telemetry(app)

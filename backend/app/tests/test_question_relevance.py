@@ -97,6 +97,29 @@ def test_10_different_questions_are_not_duplicates():
     assert score < 0.40
 
 
+def test_10b_same_framework_distinct_questions_accepted():
+    """Verify distinct questions in the same technology (e.g. React state vs React effects) pass duplicate check."""
+    q_existing = "Explain how React manages component state using useState and useReducer hooks."
+    q_new = "How do you optimize rendering performance and prevent unnecessary re-renders in React components?"
+    score, _ = LexicalSimilarityEngine.compute_hybrid_duplicate_score(q_new, [{"question_text": q_existing}])
+    assert score < 0.45, f"Expected distinct React questions to have score < 0.45, got {score}"
+
+    res = QuestionRelevanceService.validate_question(
+        question_text=q_new,
+        question_difficulty="INTERMEDIATE",
+        relevant_experience_months=24,
+        seniority_level="MID",
+        candidate_skills=["React", "JavaScript", "TypeScript"],
+        work_experience_bullets=["Built frontend applications using React and TypeScript."],
+        jd_required_skills=["React", "TypeScript"],
+        questions_asked=[{"question_text": q_existing, "competency_targeted": "React"}],
+        round_type="technical",
+        competency_targeted="React",
+    )
+    assert res.accepted is True
+    assert res.duplicate_score < 0.45
+
+
 def test_11_two_month_candidate_cannot_receive_hard():
     res = QuestionRelevanceService.validate_question(
         question_text="Design a distributed FastAPI microservices system for 100k requests per second.",

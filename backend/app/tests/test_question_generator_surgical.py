@@ -182,3 +182,140 @@ def test_question_generator_agent_execution_hr(mocker):
         "Work Ethic & Ownership",
         "Culture Fit & Career Growth",
     }
+
+
+def test_multi_angle_retry_stays_on_same_competency(mocker):
+    """Verify that retries rotate cognitive angles on the SAME target competency before switching."""
+    agent = QuestionGeneratorAgent(round_type="TECHNICAL")
+    state = {
+        "resume_data": {
+            "skills": ["React", "TypeScript"],
+            "seniority_signal": "MID",
+            "relevant_experience_months": 24,
+            "experience": [{"description": "Frontend developer building React apps"}],
+        },
+        "jd_data": {
+            "target_role": "Frontend Engineer",
+            "required_skills": ["React", "TypeScript"],
+        },
+        "competency_matrix": [
+            {"name": "React", "weight": 70},
+            {"name": "TypeScript", "weight": 30},
+        ],
+        "target_competency": "React",
+        "questions_asked": [],
+        "evaluations": [],
+    }
+
+    # Attempt 1: PRIMARY
+    mocker.patch.object(
+        QuestionGeneratorAgent,
+        "_invoke_structured",
+        return_value=GeneratedQuestion(
+            question_text="Explain React components and JSX syntax.",
+            competency_targeted="React",
+            difficulty="MEDIUM",
+            question_type="fundamentals",
+        ),
+    )
+    res1 = agent._run(state)
+    assert res1["current_question"]["competency_targeted"] == "React"
+    assert res1["current_question"]["cognitive_angle"] == "fundamentals_and_concepts"
+
+    # Attempt 2 retry: ALTERNATIVE_ANGLE on SAME competency (React)
+    mocker.patch.object(
+        QuestionGeneratorAgent,
+        "_invoke_structured",
+        return_value=GeneratedQuestion(
+            question_text="How would you implement custom hooks in React for API fetching?",
+            competency_targeted="React",
+            difficulty="MEDIUM",
+            question_type="fundamentals",
+        ),
+    )
+    res2 = agent._run(state, retry_feedback="[ATTEMPT 1 FAILED] [strategy=PRIMARY] Question was too similar.")
+    assert res2["current_question"]["competency_targeted"] == "React"
+    assert res2["current_question"]["cognitive_angle"] == "implementation_and_usage"
+
+    # Attempt 3 retry: ALTERNATIVE_ANGLE on SAME competency (React)
+    mocker.patch.object(
+        QuestionGeneratorAgent,
+        "_invoke_structured",
+        return_value=GeneratedQuestion(
+            question_text="How do you diagnose and debug memory leaks caused by uncleared event listeners in React?",
+            competency_targeted="React",
+            difficulty="MEDIUM",
+            question_type="fundamentals",
+        ),
+    )
+    res3 = agent._run(state, retry_feedback="[ATTEMPT 2 FAILED] [strategy=ALTERNATIVE_ANGLE] Question failed relevance.")
+    assert res3["current_question"]["competency_targeted"] == "React"
+    assert res3["current_question"]["cognitive_angle"] == "debugging_and_failure_investigation"
+
+
+def test_seed_bank_fallback_recovery_preserves_competency():
+    """Verify that when LLM retries are exhausted, _on_failure returns a valid seed question."""
+    agent = QuestionGeneratorAgent(round_type="TECHNICAL")
+    state = {
+        "resume_data": {
+            "skills": ["React"],
+            "seniority_signal": "MID",
+        },
+        "jd_data": {
+            "target_role": "Frontend Engineer",
+            "required_skills": ["React"],
+        },
+        "competency_matrix": [{"name": "React", "weight": 100}],
+        "questions_asked": [],
+        "target_competency": "React",
+    }
+
+    fallback_res = agent._on_failure(state, error="LLM call timed out")
+    curr_q = fallback_res.get("current_question")
+    assert curr_q is not None
+    assert curr_q.get("question_text")
+    assert curr_q.get("competency_targeted") == "React"
+    assert curr_q.get("round_type") == "TECHNICAL"
+    assert curr_q.get("fallback_used") is True
+    assert curr_q.get("fallback_type") == "seed_bank"
+    assert len(fallback_res.get("error_log", [])) == 1
+
+
+def test_interview_service_accepts_seed_bank_fallback(mocker):
+    """Verify that InterviewService._generate_question_via_llm accepts seed-bank recovered questions."""
+    from app.services.interview_service import InterviewService
+
+    mocker.patch.object(
+        QuestionGeneratorAgent,
+        "__call__",
+        return_value={
+            "current_question": {
+                "question_text": "Explain the core architectural principles and standard implementation patterns for React.",
+                "competency_targeted": "React",
+                "difficulty": "MEDIUM",
+                "question_type": "fundamentals",
+                "round_type": "TECHNICAL",
+                "sequence_number": 1,
+                "fallback_used": True,
+                "fallback_type": "seed_bank",
+            },
+            "error_log": [{"agent": "QuestionGeneratorAgent", "error": "LLM failed", "fallback": "seed_bank"}],
+        },
+    )
+
+    dummy_db = mocker.MagicMock()
+    service = InterviewService(dummy_db)
+    result = service._generate_question_via_llm(
+        round_type="TECHNICAL",
+        resume_data={"skills": ["React"], "seniority_signal": "MID"},
+        jd_data={"target_role": "Frontend Engineer", "required_skills": ["React"]},
+        competency_matrix=[{"name": "React", "weight": 100}],
+        questions_asked=[],
+        evaluations=[],
+    )
+
+    assert result is not None
+    assert result["question_text"] == "Explain the core architectural principles and standard implementation patterns for React."
+    assert result["competency_targeted"] == "React"
+    assert result["fallback_used"] is True
+

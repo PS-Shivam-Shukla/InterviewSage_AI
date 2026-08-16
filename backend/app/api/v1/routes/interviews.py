@@ -24,7 +24,7 @@ router = APIRouter(prefix="/interviews", tags=["Interviews"])
     status_code=status.HTTP_201_CREATED,
     summary="Start a new interview",
 )
-async def create_interview(
+def create_interview(
     request: InterviewCreateRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
@@ -43,9 +43,8 @@ async def create_interview(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create interview"
         )
 
-    # If new interview created in PLANNING status, trigger background LLM plan generation
-    if interview.status == "PLANNING":
-        background_tasks.add_task(service.generate_plan_background, interview.id, payload)
+    # Trigger background JIT generation for first pending question immediately on startup
+    background_tasks.add_task(service.trigger_next_pending_generation, interview.id)
 
     return interview
 
@@ -55,7 +54,7 @@ async def create_interview(
     response_model=InterviewStatusResponse,
     summary="Get interview status",
 )
-async def get_interview(
+def get_interview(
     interview_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -69,7 +68,7 @@ async def get_interview(
     response_model=InterviewPlanResponse,
     summary="Get interview plan",
 )
-async def get_interview_plan(
+def get_interview_plan(
     interview_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -87,7 +86,7 @@ async def get_interview_plan(
     response_model=BlueprintApprovalResponse,
     summary="Approve or override interview blueprint",
 )
-async def approve_blueprint(
+def approve_blueprint(
     interview_id: str,
     request: BlueprintApprovalRequest,
     db: Session = Depends(get_db),
@@ -106,7 +105,7 @@ async def approve_blueprint(
     response_model=InterviewAnswerResponse,
     summary="Submit answer for a question",
 )
-async def submit_answer(
+def submit_answer(
     interview_id: str,
     request: InterviewAnswerRequest,
     db: Session = Depends(get_db),
@@ -128,7 +127,7 @@ async def submit_answer(
     response_model=InterviewStatusResponse,
     summary="Pause interview",
 )
-async def pause_interview(
+def pause_interview(
     interview_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -146,7 +145,7 @@ async def pause_interview(
     response_model=InterviewStatusResponse,
     summary="Resume interview",
 )
-async def resume_interview(
+def resume_interview(
     interview_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -164,7 +163,7 @@ async def resume_interview(
     response_model=InterviewStatusResponse,
     summary="Explicitly complete interview",
 )
-async def complete_interview(
+def complete_interview(
     interview_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

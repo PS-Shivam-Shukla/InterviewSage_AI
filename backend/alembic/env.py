@@ -21,8 +21,8 @@ from app.models.base import Base
 # Alembic Config object
 config = context.config
 
-# Override sqlalchemy.url with value from app settings
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Override sqlalchemy.url with value from app settings (escape '%' for configparser)
+config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
 
 # Interpret the config file for Python logging if present
 if config.config_file_name is not None:

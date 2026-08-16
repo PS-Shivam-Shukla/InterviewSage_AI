@@ -5,8 +5,10 @@ Implements:
   - Full context bundle assembly (resume, JD, history, competency target)
   - Adaptive difficulty based on running competency scores
   - 40/20/20/20 question-type distribution
-  - Two-layer repetition avoidance: history injection + cosine-similarity guard
-  - Categorized negative retry feedback optimization
+  - Multi-angle same-competency retries (5 preferred cognitive angles)
+  - Layered duplicate detection (GATE 5) against accepted history only
+  - Seed-bank fallback recovery with preserved competency & round type
+  - Sanitized domain-level retry feedback (no infrastructure leak)
 """
 
 from __future__ import annotations
@@ -14,6 +16,7 @@ from __future__ import annotations
 import random
 import re
 import time
+from typing import Any
 
 from pydantic import BaseModel, field_validator
 
@@ -30,11 +33,41 @@ logger = get_logger(__name__)
 _DISTRIBUTION = {
     "fundamentals": 0.40,
     "advanced": 0.20,
-    "industry": 0.20,  # "industry standards" questions
-    "company": 0.20,  # company-specific / JD-specific
+    "industry": 0.20,
+    "company": 0.20,
 }
 
 _DIFFICULTY_LADDER = ["EASY", "MEDIUM", "HARD", "ADVANCED"]
+
+PRIMARY_COGNITIVE_ANGLES = [
+    "fundamentals_and_concepts",
+    "implementation_and_usage",
+    "debugging_and_failure_investigation",
+    "architecture_and_design_tradeoffs",
+    "performance_and_optimization",
+]
+
+COGNITIVE_ANGLES = [
+    "fundamentals_and_concepts",
+    "implementation_and_usage",
+    "debugging_and_failure_investigation",
+    "architecture_and_design_tradeoffs",
+    "performance_and_optimization",
+    "production_scalability",
+    "security_and_reliability",
+    "real_world_scenario",
+]
+
+ANGLE_FRAMING_INSTRUCTIONS = {
+    "fundamentals_and_concepts": "Focus on core mechanics, principles, and underlying definitions (e.g., 'Explain the core mechanism of...').",
+    "implementation_and_usage": "Focus on practical code patterns, API usage, and standard library constructs (e.g., 'How would you implement...').",
+    "debugging_and_failure_investigation": "Focus on diagnosing production errors, stack traces, and failure modes (e.g., 'A production system experiences X... How would you diagnose...').",
+    "architecture_and_design_tradeoffs": "Focus on design patterns, component interactions, and structural trade-offs (e.g., 'Compare two approaches and explain when you would choose each...').",
+    "performance_and_optimization": "Focus on memory/CPU profiling, query planning, indexing, and bottleneck elimination (e.g., 'A system experiences a bottleneck... How would you optimize...').",
+    "production_scalability": "Focus on high-concurrency, connection pooling, caching, and horizontal scale (e.g., 'Design an architecture for high-volume scale...').",
+    "security_and_reliability": "Focus on fault tolerance, hardening, input sanitization, and graceful degradation (e.g., 'What security/reliability risks would you consider...').",
+    "real_world_scenario": "Focus on operational decision making, operational trade-offs, and incident response (e.g., 'You are operating this system in production and... What would you do?').",
+}
 
 
 # ── Output schema ─────────────────────────────────────────────
@@ -114,10 +147,12 @@ def _adaptive_difficulty(competency: str, evaluations: list[dict]) -> str:
     return "EASY"
 
 
-def _is_duplicate(new_text: str, existing: list[dict], threshold: float = 0.85) -> bool:
-    """Simple word-overlap similarity check (cosine substitute — no embedding needed in tests)."""
+def _is_duplicate(new_text: str, existing: list[dict], threshold: float = 0.75) -> bool:
+    """Word overlap duplicate check against existing questions."""
     new_words = set(new_text.lower().split())
     for q in existing:
+        if not isinstance(q, dict):
+            continue
         old_words = set(q.get("question_text", "").lower().split())
         if not old_words or not new_words:
             continue
@@ -126,29 +161,6 @@ def _is_duplicate(new_text: str, existing: list[dict], threshold: float = 0.85) 
         if union > 0 and intersection / union > threshold:
             return True
     return False
-
-
-COGNITIVE_ANGLES = [
-    "fundamentals_and_concepts",
-    "implementation_and_usage",
-    "debugging_and_failure_investigation",
-    "performance_and_optimization",
-    "architecture_and_design_tradeoffs",
-    "production_scalability",
-    "security_and_reliability",
-    "real_world_scenario",
-]
-
-ANGLE_FRAMING_INSTRUCTIONS = {
-    "fundamentals_and_concepts": "Focus on core mechanics, principles, and underlying definitions (e.g., 'Explain the core mechanism of...').",
-    "implementation_and_usage": "Focus on practical code patterns, API usage, and standard library constructs (e.g., 'How would you implement...').",
-    "debugging_and_failure_investigation": "Focus on diagnosing production errors, stack traces, and failure modes (e.g., 'A production system experiences X... How would you diagnose...').",
-    "performance_and_optimization": "Focus on memory/CPU profiling, query planning, indexing, and bottleneck elimination (e.g., 'A system experiences a bottleneck... How would you optimize...').",
-    "architecture_and_design_tradeoffs": "Focus on design patterns, component interactions, and structural trade-offs (e.g., 'Compare two approaches and explain when you would choose each...').",
-    "production_scalability": "Focus on high-concurrency, connection pooling, caching, and horizontal scale (e.g., 'Design an architecture for high-volume scale...').",
-    "security_and_reliability": "Focus on fault tolerance, hardening, input sanitization, and graceful degradation (e.g., 'What security/reliability risks would you consider...').",
-    "real_world_scenario": "Focus on operational decision making, operational trade-offs, and incident response (e.g., 'You are operating this system in production and... What would you do?').",
-}
 
 
 def _pick_fallback_competency(
@@ -178,10 +190,11 @@ class QuestionGeneratorAgent(BaseAgent):
 
     def __init__(self, round_type: str = "HR", llm_client=None):
         super().__init__(llm_client)
-        self.round_type = round_type  # "HR" or "TECHNICAL"
+        self.round_type = round_type
+        self.max_retries = 1
 
     def _temperature(self) -> float:
-        return 0.6  # variety in questions
+        return 0.6
 
     def _run(self, state: InterviewState, retry_feedback: str | None = None) -> dict:
         t_attempt_start = time.monotonic()
@@ -194,7 +207,10 @@ class QuestionGeneratorAgent(BaseAgent):
         asked_in_round = [q for q in asked if q.get("round_type") == self.round_type]
         asked_types = [q.get("question_type", "fundamentals") for q in asked]
 
-        is_hr_round = (self.round_type or "").strip().upper() == "HR"
+        round_type_upper = (self.round_type or "").strip().upper()
+        is_hr_round = round_type_upper == "HR"
+        is_aptitude_round = round_type_upper == "APTITUDE"
+
         if is_hr_round:
             target_matrix = [
                 {
@@ -218,43 +234,54 @@ class QuestionGeneratorAgent(BaseAgent):
                     "description": "Alignment with company values, growth mindset, and motivations",
                 },
             ]
+        elif is_aptitude_round:
+            target_matrix = [
+                {
+                    "name": "Quantitative Aptitude",
+                    "weight": 25,
+                    "description": "Numerical reasoning and math problem solving",
+                },
+                {
+                    "name": "Logical Reasoning",
+                    "weight": 25,
+                    "description": "Deductive logic and pattern recognition",
+                },
+                {
+                    "name": "Verbal Ability",
+                    "weight": 25,
+                    "description": "Comprehension and analytical reasoning",
+                },
+                {
+                    "name": "Data Interpretation",
+                    "weight": 25,
+                    "description": "Chart and data analysis reasoning",
+                },
+            ]
         else:
             target_matrix = matrix
 
         t_prompt_start = time.monotonic()
-        target_competency = _pick_competency(target_matrix, asked_in_round)
+        target_competency = state.get("target_competency") or _pick_competency(target_matrix, asked_in_round)
         q_type = _pick_question_type(asked_types)
 
-        # ── Bounded Generation Strategy State Machine ─────────────────────────
+        # ── Bounded Multi-Angle Generation Strategy State Machine ─────────────
+        # Rotate through cognitive angles against the SAME competency before switching.
         attempt_num = 1
         if retry_feedback:
-            if (
-                "[ATTEMPT 2 FAILED]" in retry_feedback
-                or "strategy=ALTERNATIVE_ANGLE" in retry_feedback
-            ):
-                attempt_num = 3
+            match_att = re.search(r"\[ATTEMPT\s+(\d+)\s+FAILED\]", retry_feedback)
+            if match_att:
+                attempt_num = int(match_att.group(1)) + 1
             else:
                 attempt_num = 2
 
-        failed_competencies = set()
+        selected_competency = target_competency
         if attempt_num == 1:
             generation_strategy = "PRIMARY"
-            selected_competency = target_competency
-        elif attempt_num == 2:
-            fb_lower = retry_feedback.lower()
-            if (
-                "duplicate" in fb_lower
-                or "paraphrase" in fb_lower
-                or "gate 5" in fb_lower
-                or "too similar" in fb_lower
-            ):
-                generation_strategy = "ALTERNATIVE_ANGLE"
-                selected_competency = target_competency  # Preserve intended competency!
-            else:
-                generation_strategy = "PRIMARY_RETRY"
-                selected_competency = target_competency
-        else:  # attempt_num == 3
-            failed_competencies.add(target_competency)
+        elif attempt_num <= len(PRIMARY_COGNITIVE_ANGLES):
+            generation_strategy = "ALTERNATIVE_ANGLE"
+        else:
+            # Exhausted all 5 cognitive angles for target_competency
+            failed_competencies = {target_competency}
             fallback_comp = _pick_fallback_competency(
                 target_matrix, asked_in_round, failed_competencies
             )
@@ -266,20 +293,24 @@ class QuestionGeneratorAgent(BaseAgent):
                 selected_competency = target_competency
                 q_type = _pick_alternative_q_type(asked_types, q_type)
 
-        # History-Aware Pre-Generation Cognitive Angle Selector
+        # Select cognitive angle for selected_competency
         used_angles_for_comp = [
             q.get("cognitive_angle")
             for q in asked
             if q.get("competency_targeted") == selected_competency and q.get("cognitive_angle")
         ]
-        unused_angles = [a for a in COGNITIVE_ANGLES if a not in used_angles_for_comp]
+        unused_angles = [a for a in PRIMARY_COGNITIVE_ANGLES if a not in used_angles_for_comp]
         if unused_angles:
             cognitive_angle = unused_angles[(attempt_num - 1) % len(unused_angles)]
         else:
-            angle_idx = (len(asked) + abs(hash(selected_competency)) + (attempt_num - 1)) % len(
-                COGNITIVE_ANGLES
-            )
-            cognitive_angle = COGNITIVE_ANGLES[angle_idx]
+            all_unused = [a for a in COGNITIVE_ANGLES if a not in used_angles_for_comp]
+            if all_unused:
+                cognitive_angle = all_unused[(attempt_num - 1) % len(all_unused)]
+            else:
+                angle_idx = (len(asked) + abs(hash(selected_competency)) + (attempt_num - 1)) % len(
+                    PRIMARY_COGNITIVE_ANGLES
+                )
+                cognitive_angle = PRIMARY_COGNITIVE_ANGLES[angle_idx]
 
         # Deterministic Question Difficulty Policy & Relevance Classification
         from app.services.difficulty_policy import QuestionDifficultyPolicy
@@ -306,9 +337,13 @@ class QuestionGeneratorAgent(BaseAgent):
         difficulty = policy_res.recommended_difficulty
 
         # Classify Candidate & JD Skills into 4 Tiers
+        raw_exp = resume_data.get("experience", [])
+        if isinstance(raw_exp, dict):
+            raw_exp = raw_exp.get("work_experience") or raw_exp.get("experience") or []
         work_exp_bullets = [
             str(e.get("description", "")) + " " + " ".join(e.get("technologies", []))
-            for e in resume_data.get("experience", [])
+            for e in raw_exp
+            if isinstance(e, dict)
         ]
         candidate_skills = resume_data.get("skills", [])
         jd_skills = jd_data.get("required_skills", [])
@@ -348,16 +383,23 @@ class QuestionGeneratorAgent(BaseAgent):
             ang_tag = q.get("cognitive_angle", "fundamentals")
             q_text = q.get("question_text", "")
             history_lines.append(
-                f'{i}. competency={comp_tag} | angle={ang_tag} | question="{q_text[:90]}"'
+                f'{i}. competency={comp_tag} | angle={ang_tag} | question="{q_text[:160]}"'
             )
 
         history_block = "\n".join(history_lines)
 
-        round_instruction = (
-            "CRITICAL REQUIREMENT: This is an HR / Behavioural round question. The question MUST be about candidate soft skills, teamwork, conflict resolution, work ethic, or career background. It MUST NOT be a technical coding, database, or software engineering question."
-            if self.round_type == "HR"
-            else "CRITICAL REQUIREMENT: This is a TECHNICAL round question testing core software engineering, programming concepts, framework internals, or backend architecture. It MUST NOT be an HR, career motivation, or behavioral soft skills question."
-        )
+        if round_type_upper == "HR":
+            round_instruction = (
+                "CRITICAL REQUIREMENT: This is an HR / Behavioural round question. The question MUST be about candidate soft skills, teamwork, conflict resolution, work ethic, or career background. It MUST NOT be a technical coding, database, or software engineering question."
+            )
+        elif round_type_upper == "APTITUDE":
+            round_instruction = (
+                "CRITICAL REQUIREMENT: This is an APTITUDE round question testing quantitative math, logical reasoning, verbal ability, or data interpretation. It MUST NOT be a software engineering, coding, framework, or technical question."
+            )
+        else:
+            round_instruction = (
+                "CRITICAL REQUIREMENT: This is a TECHNICAL round question testing core software engineering, programming concepts, framework internals, or backend architecture. It MUST NOT be an HR, career motivation, or behavioral soft skills question."
+            )
 
         framing_guidance = ANGLE_FRAMING_INSTRUCTIONS.get(cognitive_angle, "")
 
@@ -383,7 +425,7 @@ class QuestionGeneratorAgent(BaseAgent):
         if generation_strategy == "ALTERNATIVE_ANGLE":
             user_content += (
                 f"\n\nSTRATEGY: ALTERNATIVE ANGLE (Attempt {attempt_num})\n"
-                f"The previous generated question was rejected because it was too similar to an existing question.\n"
+                f"The previous generated question was rejected because it was too similar or lacked angle distinction.\n"
                 f"You MUST preserve the target competency strictly as '{selected_competency}'.\n"
                 f"You MUST NOT ask about the same conceptual dimension.\n"
                 f"Use this cognitive angle: '{cognitive_angle.upper()}'.\n"
@@ -397,12 +439,12 @@ class QuestionGeneratorAgent(BaseAgent):
         elif generation_strategy == "FALLBACK_COMPETENCY":
             user_content += (
                 f"\n\nSTRATEGY: FALLBACK COMPETENCY (Attempt {attempt_num})\n"
-                f"Bounded attempts for competency '{target_competency}' reached similarity limits.\n"
+                f"Bounded attempts for competency '{target_competency}' reached limits.\n"
                 f"Switching deterministically to alternative eligible competency '{selected_competency}' from candidate interview plan.\n"
                 f"Generate a high-quality question for '{selected_competency}' testing cognitive angle '{cognitive_angle.replace('_', ' ').upper()}'."
             )
 
-        # Categorized Negative Retry Feedback
+        # Clean domain-level feedback (Never inject stack traces, SQLAlchemy logs, WebSocket errors, URLs, or JWTs)
         if retry_feedback:
             fb_lower = retry_feedback.lower()
             if "placeholder" in fb_lower or "gate 0" in fb_lower:
@@ -413,17 +455,29 @@ class QuestionGeneratorAgent(BaseAgent):
                 or "gate 5" in fb_lower
                 or "too similar" in fb_lower
             ):
-                cat_feedback = f"Previous attempt was too similar to an existing question. Generate a substantially different question for target competency '{selected_competency}' using cognitive angle '{cognitive_angle}'."
+                cat_feedback = (
+                    f"Previous attempt was too similar to an existing question. "
+                    f"Generate a distinctly different question for target competency '{selected_competency}' "
+                    f"using the '{cognitive_angle.replace('_', ' ')}' angle."
+                )
             elif "competency" in fb_lower or "mismatch" in fb_lower or "gate 6" in fb_lower:
-                cat_feedback = f"Previous attempt tested a different competency. Stay strictly within the target competency '{selected_competency}'."
-            elif "relevance" in fb_lower or "gate 2" in fb_lower:
-                cat_feedback = f"Previous attempt was not sufficiently grounded in candidate/role skills. Ensure the question directly tests {selected_competency} skills."
+                cat_feedback = f"Previous attempt tested a different topic. Stay strictly focused on '{selected_competency}'."
+            elif "relevance" in fb_lower or "gate 2" in fb_lower or "unrelated tech" in fb_lower:
+                cat_feedback = f"Previous attempt introduced technologies outside the candidate's verified background. Focus strictly on '{selected_competency}'."
+            elif "difficulty" in fb_lower or "gate 1" in fb_lower:
+                cat_feedback = f"Previous attempt exceeded candidate seniority ceiling. Provide an appropriately calibrated question for '{selected_competency}'."
             else:
-                cat_feedback = f"Previous attempt failed validation: {retry_feedback[:120]}"
+                cat_feedback = f"Previous attempt failed validation. Generate a clear, concise question focused strictly on '{selected_competency}'."
 
             rej_match = re.search(r"['\"]([^'\"]{10,120})['\"]", retry_feedback)
             rej_text_snippet = (
-                f'\nPrevious attempt snippet: "{rej_match.group(1)}"' if rej_match else ""
+                f'\nPrevious attempt snippet: "{rej_match.group(1)}"'
+                if rej_match
+                and not any(
+                    k in rej_match.group(1).lower()
+                    for k in ["traceback", "websocket", "select ", "insert ", "token", "http", "psycopg"]
+                )
+                else ""
             )
             user_content += f'\n\nPREVIOUS ATTEMPT FEEDBACK:\n"{cat_feedback}"{rej_text_snippet}'
 
@@ -442,6 +496,27 @@ class QuestionGeneratorAgent(BaseAgent):
         )
         t_llm_end = time.monotonic()
         llm_gen_ms = int((t_llm_end - t_llm_start) * 1000)
+
+        # Clean mechanical experience strings immediately
+        clean_text = re.sub(
+            r"\s*,?\s*while connecting the candidate's \d+\s*(?:-|\s+)?months?(?:\s+of)?\s+experience.*?(?=\?|\.|$)",
+            "",
+            question.question_text,
+            flags=re.IGNORECASE,
+        )
+        clean_text = re.sub(
+            r"\s*,?\s*with \d+\s*(?:-|\s+)?months?(?:\s+of)?\s+experience.*?(?=\?|\.|$)",
+            "",
+            clean_text,
+            flags=re.IGNORECASE,
+        )
+        clean_text = re.sub(
+            r"\s*,?\s*in a backend with \d+\s*(?:-|\s+)?months?.*?(?=\?|\.|$)",
+            "",
+            clean_text,
+            flags=re.IGNORECASE,
+        )
+        question.question_text = clean_text.strip()
 
         # Multi-Gate Question Relevance Validation Contract
         t_val_start = time.monotonic()
@@ -477,6 +552,8 @@ class QuestionGeneratorAgent(BaseAgent):
                 f"  total_validation_ms={val_ms}\n"
                 f"  result=REJECTED\n"
                 f"  rejection_gate=GATE_0\n"
+                f"  fallback_used=False\n"
+                f"  fallback_type=None\n"
                 f"  total_attempt_ms={total_att_ms}"
             )
             raise ValueError(
@@ -512,6 +589,8 @@ class QuestionGeneratorAgent(BaseAgent):
                 rej_gate = "GATE_6"
             elif "GATE 2" in rel_res.reason or "Unrelated Tech" in rel_res.reason:
                 rej_gate = "GATE_2"
+            elif "GATE 1" in rel_res.reason or "Difficulty Ceiling" in rel_res.reason:
+                rej_gate = "GATE_1"
             else:
                 rej_gate = "RELEVANCE_GATE"
 
@@ -536,6 +615,8 @@ class QuestionGeneratorAgent(BaseAgent):
                 f"  total_validation_ms={val_ms}\n"
                 f"  result=REJECTED\n"
                 f"  rejection_gate={rej_gate}\n"
+                f"  fallback_used=False\n"
+                f"  fallback_type=None\n"
                 f"  total_attempt_ms={total_att_ms}"
             )
 
@@ -545,6 +626,8 @@ class QuestionGeneratorAgent(BaseAgent):
                 rel_res.duplicate_score > 0.45
                 or "Unrelated Tech" in rel_res.reason
                 or "Competency Mismatch" in rel_res.reason
+                or "GATE 2" in rel_res.reason
+                or "GATE 4" in rel_res.reason
             ):
                 raise ValueError(
                     f"[ATTEMPT {attempt_num} FAILED] [strategy={generation_strategy}] "
@@ -578,6 +661,8 @@ class QuestionGeneratorAgent(BaseAgent):
                 f"  total_validation_ms={val_ms}\n"
                 f"  result=REJECTED\n"
                 f"  rejection_gate=NEGATIVE_CONSTRAINT\n"
+                f"  fallback_used=False\n"
+                f"  fallback_type=None\n"
                 f"  total_attempt_ms={total_att_ms}"
             )
             raise ValueError(
@@ -607,8 +692,25 @@ class QuestionGeneratorAgent(BaseAgent):
             f"  total_validation_ms={val_ms}\n"
             f"  result=ACCEPTED\n"
             f"  rejection_gate=NONE\n"
+            f"  fallback_used=False\n"
+            f"  fallback_type=None\n"
             f"  total_attempt_ms={total_att_ms}"
         )
+
+        # Clean mechanical experience strings if present
+        clean_text = re.sub(
+            r"\s*,?\s*with \d+\s*(?:-|\s+)?months?(?:\s+of)?\s+experience.*?(?=\?|\.|$)",
+            "",
+            question.question_text,
+            flags=re.IGNORECASE,
+        )
+        clean_text = re.sub(
+            r"\s*,?\s*in a backend with \d+\s*(?:-|\s+)?months?.*?(?=\?|\.|$)",
+            "",
+            clean_text,
+            flags=re.IGNORECASE,
+        )
+        question.question_text = clean_text.strip()
 
         q_dict = {
             **question.model_dump(),
@@ -618,52 +720,52 @@ class QuestionGeneratorAgent(BaseAgent):
             "sequence_number": len(asked) + 1,
             "required_seniority": seniority,
             "required_experience_months": relevant_months,
+            "fallback_used": False,
+            "fallback_type": None,
         }
         return {"current_question": q_dict}
 
     def _on_failure(self, state: InterviewState, error: str) -> dict:
-        """Fall back to seed question bank."""
-        role = (state.get("jd_data") or {}).get("target_role", "engineer")
+        """
+        Fall back to seed question bank when all LLM attempts are exhausted.
+        Preserves requested competency, round type, and difficulty.
+        """
         asked = state.get("questions_asked") or []
-        plan = state.get("interview_plan") or {}
-        difficulty = _adaptive_difficulty("General", state.get("evaluations") or [])
+        matrix = state.get("competency_matrix") or []
 
-        bank_result = (
-            mcp_server.read_resource(
-                f"resource://question-bank/{role.lower().replace(' ','-')}/{difficulty}"
-            )
-            or {}
+        # Determine target competency and difficulty
+        target_comp = state.get("target_competency")
+        if not target_comp and matrix:
+            target_comp = matrix[0].get("name")
+        if not target_comp:
+            target_comp = "Technical" if self.round_type.upper() == "TECHNICAL" else "Communication"
+
+        difficulty = _adaptive_difficulty(target_comp, state.get("evaluations") or [])
+
+        from app.strategy.seed_question_bank import get_seed_question
+        seed_q = get_seed_question(
+            round_type=self.round_type,
+            competency=target_comp,
+            difficulty=difficulty,
+            asked_questions=asked,
         )
-        seed_questions = bank_result.get("questions", [])
 
-        # Pick first seed not already asked
-        for sq in seed_questions:
-            if not _is_duplicate(sq.get("text", ""), asked, threshold=0.7):
-                return {
-                    "current_question": {
-                        "question_text": sq["text"],
-                        "competency_targeted": sq.get("competency_targeted", "General"),
-                        "difficulty": sq.get("difficulty", "MEDIUM"),
-                        "question_type": (
-                            sq.get("question_type") or sq.get("round_type") or "HR"
-                        ).lower(),
-                        "round_type": self.round_type,
-                        "sequence_number": len(asked) + 1,
-                    },
-                    "error_log": [
-                        {"agent": self.agent_name, "error": error, "fallback": "seed_bank"}
-                    ],
-                }
-
-        # Absolute last resort
         return {
             "current_question": {
-                "question_text": "Tell me about a challenging project you worked on recently.",
-                "competency_targeted": "Communication",
-                "difficulty": "MEDIUM",
-                "question_type": "behavioral",
+                "question_text": seed_q["question_text"],
+                "competency_targeted": seed_q["competency_targeted"],
+                "difficulty": seed_q["difficulty"],
+                "question_type": seed_q["question_type"],
                 "round_type": self.round_type,
                 "sequence_number": len(asked) + 1,
+                "fallback_used": True,
+                "fallback_type": "seed_bank",
             },
-            "error_log": [{"agent": self.agent_name, "error": error, "fallback": "hardcoded"}],
+            "error_log": [
+                {
+                    "agent": self.agent_name,
+                    "error": error[:120] if error else "LLM validation retries exhausted",
+                    "fallback": "seed_bank",
+                }
+            ],
         }

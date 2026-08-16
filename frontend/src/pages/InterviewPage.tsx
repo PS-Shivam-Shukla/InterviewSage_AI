@@ -133,10 +133,10 @@ export default function InterviewPage() {
       setActiveQuestion({
         id: nextQuestionPending.id,
         sequence_number: nextQuestionPending.sequence_number,
-        round_type: nextQuestionPending.round_type || 'TECHNICAL',
-        competency: nextQuestionPending.competency || 'System Architecture',
+        round_type: nextQuestionPending.round_type || nextQuestionPending.type || 'TECHNICAL',
+        competency: nextQuestionPending.competency_targeted || nextQuestionPending.competency || 'General',
         difficulty: nextQuestionPending.difficulty || 'MEDIUM',
-        text: nextQuestionPending.text,
+        text: nextQuestionPending.question_text || nextQuestionPending.text || '',
       });
       setNextQuestionPending(null);
     }

@@ -2,10 +2,12 @@
 LLM Client unit tests — all tests use FakeLLMClient (zero real API calls).
 """
 
+import pytest
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel
 
-from app.core.llm_client import FakeLLMClient, LLMClient
+from app.core.config import settings
+from app.core.llm_client import FakeLLMClient, LLMClient, _build_chat_model
 from app.prompts.loader import get_developer_prompt, get_system_prompt, load_prompt
 
 
@@ -91,3 +93,46 @@ class TestPromptLoader:
     def test_competency_mapping_has_sum_rule(self):
         prompt = get_developer_prompt("competency_mapping_agent", "v1")
         assert "100" in prompt
+
+
+class TestBuildChatModel:
+    def test_ollama_provider_creates_chat_ollama(self, monkeypatch):
+        monkeypatch.setattr(settings, "llm_provider", "ollama")
+        model = _build_chat_model("qwen3:0.6b", 0.1, 2000)
+        from langchain_ollama import ChatOllama
+        from langchain_openai import ChatOpenAI
+
+        assert isinstance(model, ChatOllama)
+        assert not isinstance(model, ChatOpenAI)
+
+    def test_openai_provider_creates_chat_openai(self, monkeypatch):
+        monkeypatch.setattr(settings, "llm_provider", "openai")
+        model = _build_chat_model("gpt-4o", 0.1, 2000)
+        from langchain_ollama import ChatOllama
+        from langchain_openai import ChatOpenAI
+
+        assert isinstance(model, ChatOpenAI)
+        assert not isinstance(model, ChatOllama)
+
+    def test_unsupported_provider_raises_value_error(self, monkeypatch):
+        monkeypatch.setattr(settings, "llm_provider", "unknown_provider")
+        with pytest.raises(ValueError, match="Unsupported LLM provider"):
+            _build_chat_model("some-model", 0.1, 2000)
+
+    def test_ollama_structured_output_binding_uses_chat_ollama(self, monkeypatch):
+        monkeypatch.setattr(settings, "llm_provider", "ollama")
+        client = LLMClient(model_name="qwen3:0.6b")
+        from langchain_ollama import ChatOllama
+        from langchain_openai import ChatOpenAI
+
+        assert isinstance(client._primary, ChatOllama)
+        assert not isinstance(client._primary, ChatOpenAI)
+        assert isinstance(client._fallback, ChatOllama)
+        assert not isinstance(client._fallback, ChatOpenAI)
+
+        structured_model = client._primary.with_structured_output(SampleOutput)
+        first_stage = structured_model.first
+        bound_model = getattr(first_stage, "bound", first_stage)
+        assert isinstance(bound_model, ChatOllama)
+        assert not isinstance(bound_model, ChatOpenAI)
+

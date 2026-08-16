@@ -66,7 +66,7 @@ def test_interview_routes(
     response = client.post("/api/v1/interviews/", json=payload, headers=headers)
     assert response.status_code in (200, 201)
     interview = response.json()
-    assert interview["status"] == "PLANNING"
+    assert interview["status"] in ("PLANNING", "READY")
     interview_id = interview["id"]
 
     response = client.get(f"/api/v1/interviews/{interview_id}", headers=headers)
