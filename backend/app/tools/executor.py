@@ -37,20 +37,20 @@ class Observation(BaseModel):
 class ToolExecutor:
     """
     Execution boundary layer for model-mediated tool invocations.
-    Prevents direct LLM code execution by routing through registered MCP tool schemas.
+    Prevents direct LLM code execution by routing through MCPProtocolClient ClientSession boundary.
     """
 
-    def __init__(self, mcp_registry: Any | None = None) -> None:
-        if mcp_registry is None:
-            from app.mcp import mcp_server
+    def __init__(self, mcp_client: Any | None = None) -> None:
+        if mcp_client is None:
+            from app.mcp.client import mcp_protocol_client
 
-            self._registry = mcp_server
+            self._client = mcp_protocol_client
         else:
-            self._registry = mcp_registry
+            self._client = mcp_client
 
     def execute_tool(self, tool_name: str, arguments: dict[str, Any]) -> Observation:
         """
-        Validate and execute requested tool name with provided arguments.
+        Validate and execute requested tool name with provided arguments via official MCP ClientSession protocol.
         Returns a structured Observation.
         """
         t0 = time.monotonic()
@@ -61,13 +61,26 @@ class ToolExecutor:
         )
 
         try:
-            # Route call through registry
-            res = self._registry.call_tool(tool_name, **arguments)
+            # Route call through official MCPProtocolClient session protocol
+            if hasattr(self._client, "call_tool_protocol_sync"):
+                res = self._client.call_tool_protocol_sync(tool_name, arguments)
+            elif hasattr(self._client, "call_tool"):
+                # Fallback / mock registry support for tests
+                raw_res = self._client.call_tool(tool_name, **arguments)
+                res = {
+                    "success": getattr(raw_res, "success", False),
+                    "output": getattr(raw_res, "output", None),
+                    "error": getattr(raw_res, "error", None),
+                    "latency_ms": getattr(raw_res, "latency_ms", 0),
+                }
+            else:
+                res = self._client.call_tool_protocol(tool_name, arguments)
+
             latency = int((time.monotonic() - t0) * 1000)
-            success = getattr(res, "success", False)
+            success = res.get("success", False)
 
             if success:
-                out_summary = str(getattr(res, "output", None))[:250].replace("\n", " ")
+                out_summary = str(res.get("output"))[:250].replace("\n", " ")
                 logger.info(
                     f"🔧 [TOOL EXECUTOR COMPLETED] Tool: '{tool_name}' | Status: SUCCESS | Latency: {latency}ms\n"
                     f"   Output Summary: {out_summary}\n"
@@ -76,13 +89,11 @@ class ToolExecutor:
                 return Observation(
                     tool_name=tool_name,
                     success=True,
-                    output=getattr(res, "output", None),
+                    output=res.get("output"),
                     latency_ms=latency,
                 )
             else:
-                err_msg = (
-                    getattr(res, "error", None) or "Tool execution returned unsuccessful status."
-                )
+                err_msg = res.get("error") or "Tool execution returned unsuccessful status."
                 logger.warning(
                     f"🔧 [TOOL EXECUTOR FAILED] Tool: '{tool_name}' | Status: FAILED | Latency: {latency}ms\n"
                     f"   Error: {err_msg}\n"

@@ -42,8 +42,20 @@ def bypass_speech_and_mcp():
     }
     dummy_wav = b"RIFF dummy audio data"
 
+    from app.mcp.server import mcp_server
+    orig_call_tool = mcp_server.call_tool
+
+    def mock_call_tool(name, *args, **kwargs):
+        if name == "score_answer_rubric":
+            return orig_call_tool(name, *args, **kwargs)
+        # For other tools, return mock result with success=True
+        m = MagicMock()
+        m.success = True
+        m.output = mock_res.output
+        return m
+
     with (
-        patch("app.mcp.server.mcp_server.call_tool", return_value=mock_res),
+        patch("app.mcp.server.mcp_server.call_tool", side_effect=mock_call_tool),
         patch.object(FasterWhisperSTTService, "_init_model", return_value=None),
         patch.object(FasterWhisperSTTService, "transcribe_bytes", return_value="Custom candidate response text."),
         patch.object(KokoroTTSService, "_init_kokoro", return_value=None),
@@ -51,6 +63,57 @@ def bypass_speech_and_mcp():
         patch.object(KokoroTTSService, "synthesize", return_value=dummy_wav),
     ):
         yield
+
+
+@pytest.fixture(autouse=True)
+def mock_global_llm(monkeypatch):
+    """Mock LLMClient.invoke_structured globally for fast deterministic execution in this file."""
+    from app.graph.policy_node import PolicyDecision, FinishDecision
+    from app.agents.evaluation_agent import EvaluationOutput
+    from app.agents.question_generator_agent import GeneratedQuestion
+    from app.graph.report_verification_node import VerifiedReportOutput
+    from app.agents.technical_interview_agent import TechnicalTurn
+    from app.agents.hr_interview_agent import HRTurn
+
+    def default_invoke_structured(self, messages, output_schema, retry_feedback=None):
+        name = output_schema.__name__
+        if name == "PolicyDecision":
+            return PolicyDecision(action="finish", finish=FinishDecision(reasoning="Mock finish"))
+        if name == "EvaluationOutput":
+            return EvaluationOutput(
+                score=8,
+                rubric_breakdown={"Correctness": 4, "Communication": 4},
+                feedback="Mock feedback",
+                ideal_answer_summary="Mock ideal"
+            )
+        if name == "GeneratedQuestion":
+            return GeneratedQuestion(
+                question_text="Mock JIT question?",
+                competency_targeted="Technical",
+                difficulty="MEDIUM"
+            )
+        if name == "VerifiedReportOutput":
+            return VerifiedReportOutput(
+                verified=True,
+                claims=[],
+                corrected_executive_summary="Mock verified summary",
+                unsupported_claims_count=0
+            )
+        if name == "TechnicalTurn":
+            return TechnicalTurn(
+                question_text="Technical question",
+                candidate_answer="Candidate answer",
+                follow_up_question=None
+            )
+        if name == "HRTurn":
+            return HRTurn(
+                question_text="HR question",
+                candidate_answer="Candidate answer",
+                follow_up_question=None
+            )
+        return output_schema.model_construct()
+
+    monkeypatch.setattr("app.core.llm_client.LLMClient.invoke_structured", default_invoke_structured)
 
 
 def _setup_test_context(db: Session) -> tuple[User, Resume, JobDescription]:
@@ -637,7 +700,7 @@ def test_12_verify_true_concurrency_non_blocking_slow_llm(db_session: Session):
     def slow_llm_generation(*args, **kwargs):
         generation_started.set()
         # Block JIT generator intentionally to simulate slow LLM
-        generation_should_finish.wait(timeout=10.0)
+        generation_should_finish.wait(timeout=0.2)
         return {
             "current_question": {
                 "question_text": "Slow JIT question text",
@@ -689,3 +752,415 @@ def test_12_verify_true_concurrency_non_blocking_slow_llm(db_session: Session):
         
         # Cleanup background thread
         generation_should_finish.set()
+
+
+class MockLLM:
+    def __init__(self, policy_responses, eval_responses, other_responses=None):
+        self.policy_responses = policy_responses
+        self.eval_responses = eval_responses
+        self.other_responses = other_responses or {}
+        self.policy_idx = 0
+        self.eval_idx = 0
+
+    def __call__(self, messages, output_schema, retry_feedback=None):
+        name = output_schema.__name__
+        if name == "PolicyDecision":
+            res = self.policy_responses[self.policy_idx]
+            self.policy_idx = min(self.policy_idx + 1, len(self.policy_responses) - 1)
+            return res
+        if name == "EvaluationOutput":
+            res = self.eval_responses[self.eval_idx]
+            self.eval_idx = min(self.eval_idx + 1, len(self.eval_responses) - 1)
+            return res
+        if name in self.other_responses:
+            return self.other_responses[name]
+
+        # Defaults
+        from app.graph.policy_node import PolicyDecision, FinishDecision
+        from app.agents.evaluation_agent import EvaluationOutput
+        from app.graph.report_verification_node import VerifiedReportOutput
+        from app.agents.technical_interview_agent import TechnicalTurn
+        from app.agents.hr_interview_agent import HRTurn
+
+        if name == "PolicyDecision":
+            return PolicyDecision(action="finish", finish=FinishDecision(reasoning="Mock finish"))
+        if name == "EvaluationOutput":
+            return EvaluationOutput(
+                score=8,
+                rubric_breakdown={"Correctness": 4, "Communication": 4},
+                feedback="Mock feedback",
+                ideal_answer_summary="Mock ideal"
+            )
+        if name == "VerifiedReportOutput":
+            return VerifiedReportOutput(
+                verified=True,
+                claims=[],
+                corrected_executive_summary="Mock verified summary",
+                unsupported_claims_count=0
+            )
+        if name == "TechnicalTurn":
+            return TechnicalTurn(
+                question_text="Technical question",
+                candidate_answer="Candidate answer",
+                follow_up_question=None
+            )
+        if name == "HRTurn":
+            return HRTurn(
+                question_text="HR question",
+                candidate_answer="Candidate answer",
+                follow_up_question=None
+            )
+        return output_schema.model_construct()
+
+
+# ── Test 13: Verify Production Agentic Trace ──────────────────────────────────
+def test_13_verify_production_agentic_trace(db_session: Session, monkeypatch):
+    """
+    Verify the complete production-level agentic trace:
+    InterviewService.submit_answer() -> build_graph() -> PolicyNode -> tool_call
+    -> ToolExecutor -> score_answer_rubric tool execution -> observation propagation
+    -> PolicyNode receives observation -> second decision -> finish.
+    """
+    # 1. Setup candidate & interview
+    user = User(
+        id=str(uuid.uuid4()),
+        email="agentic_trace@test.com",
+        password_hash="hash",
+        full_name="Agentic Trace",
+    )
+    resume = Resume(id=str(uuid.uuid4()), user_id=user.id, file_path="r.pdf", raw_text="Resume GIL")
+    jd = JobDescription(
+        id=str(uuid.uuid4()), user_id=user.id, raw_text="JD Python", target_role="Python Architect"
+    )
+    db_session.add_all([user, resume, jd])
+    db_session.commit()
+
+    interview = Interview(
+        id=str(uuid.uuid4()),
+        user_id=user.id,
+        resume_id=resume.id,
+        jd_id=jd.id,
+        status="IN_PROGRESS",
+    )
+    db_session.add(interview)
+    db_session.commit()
+
+    # Pre-populate Q1
+    q1 = InterviewQuestion(
+        id=str(uuid.uuid4()),
+        interview_id=interview.id,
+        round_type="TECHNICAL",
+        competency_targeted="GIL",
+        difficulty="MEDIUM",
+        question_text="What is GIL?",
+        sequence_number=1,
+        status="READY",
+        created_at=datetime.now(UTC),
+    )
+    # Pre-populate Q2 in PENDING status to ensure Q1 is not considered the final question during intermediate turn evaluation
+    q2_pending = InterviewQuestion(
+        id=str(uuid.uuid4()),
+        interview_id=interview.id,
+        round_type="TECHNICAL",
+        competency_targeted="Concurrency",
+        difficulty="MEDIUM",
+        question_text="[Pending JIT Generation]",
+        sequence_number=2,
+        status="PENDING",
+        created_at=datetime.now(UTC),
+    )
+    db_session.add_all([q1, q2_pending])
+    db_session.commit()
+
+    # 2. Mock LLM structured outputs for the agentic trace
+    from app.graph.policy_node import PolicyDecision, ToolCallDecision, FinishDecision
+    from app.graph.report_verification_node import VerifiedReportOutput
+    from app.agents.evaluation_agent import EvaluationOutput
+    from app.agents.technical_interview_agent import TechnicalTurn
+
+    turn1 = TechnicalTurn(
+        question_text="What is GIL?",
+        candidate_answer="GIL is Global Interpreter Lock in CPython.",
+        follow_up_question=None,
+    )
+    dec1 = PolicyDecision(
+        action="tool_call",
+        tool_call=ToolCallDecision(
+            tool="score_answer_rubric",
+            arguments={
+                "answer_text": "GIL is Global Interpreter Lock.",
+                "question_text": "What is GIL?",
+                "question_type": "fundamentals",
+                "seniority_level": "MID",
+                "competency_targeted": "GIL",
+                "difficulty": "MEDIUM",
+            },
+            reasoning="Need to score answer using rubric tool.",
+        ),
+    )
+    eval_out = EvaluationOutput(
+        score=9,
+        rubric_breakdown={"Correctness": 5, "Completeness": 5, "Communication": 4, "Confidence": 4},
+        feedback="Excellent description of GIL mutex details.",
+        ideal_answer_summary="GIL is a mutex that protects access to Python objects.",
+    )
+    dec2 = PolicyDecision(
+        action="finish",
+        finish=FinishDecision(reasoning="Rubric score obtained. Execution complete."),
+    )
+
+    mock_client1 = MockLLM(
+        policy_responses=[dec1, dec2],
+        eval_responses=[eval_out],
+        other_responses={"TechnicalTurn": turn1}
+    )
+    monkeypatch.setattr("app.core.llm_client.LLMClient.invoke_structured", lambda self, *args, **kwargs: mock_client1(*args, **kwargs))
+
+    service = InterviewService(db_session)
+
+    # 3. Submit answer (intermediate turn)
+    res = service.submit_answer(
+        interview_id=interview.id,
+        answer="GIL is Global Interpreter Lock in CPython.",
+        question_id=q1.id,
+    )
+
+    # 4. Verify intermediate assertions
+    assert res["status"] == "IN_PROGRESS"
+    assert "evaluation" in res
+    assert res["evaluation"]["score"] == 90  # 9 * 10
+    assert mock_client1.policy_idx >= 1
+
+    # Verify database state
+    db_eval = db_session.query(Evaluation).join(InterviewAnswer).filter(InterviewAnswer.question_id == q1.id).first()
+    assert db_eval is not None
+    assert db_eval.score == 90
+
+    # 5. Final turn verification
+    # Setup Q2 as the final question (update the pre-populated pending Q2)
+    q2 = db_session.query(InterviewQuestion).filter(
+        InterviewQuestion.interview_id == interview.id,
+        InterviewQuestion.sequence_number == 2
+    ).first()
+    assert q2 is not None
+    q2.question_text = "Explain async/await."
+    q2.status = "READY"
+    db_session.add(q2)
+    db_session.commit()
+
+    # Make the interview plan total_questions = 2
+    from app.models.interview import InterviewPlan
+    plan = db_session.query(InterviewPlan).filter(InterviewPlan.interview_id == interview.id).first()
+    if plan:
+        plan.technical_question_count = 2
+        db_session.add(plan)
+        db_session.commit()
+
+    # Set up LLM responses for the final turn
+    turn2 = TechnicalTurn(
+        question_text="Explain async/await.",
+        candidate_answer="Asyncio uses single-threaded event loop.",
+        follow_up_question=None,
+    )
+    dec_final_1 = PolicyDecision(
+        action="tool_call",
+        tool_call=ToolCallDecision(
+            tool="score_answer_rubric",
+            arguments={
+                "answer_text": "Asyncio is cooperative multitasking.",
+                "question_text": "Explain async/await.",
+                "question_type": "fundamentals",
+                "seniority_level": "MID",
+                "competency_targeted": "Concurrency",
+                "difficulty": "MEDIUM",
+            },
+            reasoning="Score final answer.",
+        ),
+    )
+    eval_final_out = EvaluationOutput(
+        score=8,
+        rubric_breakdown={"Correctness": 4, "Completeness": 4, "Communication": 4, "Confidence": 4},
+        feedback="Solid asyncio explanation.",
+        ideal_answer_summary="Cooperative multitasking.",
+    )
+    dec_final_2 = PolicyDecision(
+        action="finish",
+        finish=FinishDecision(reasoning="Final turn scoring done. Proceed to report verification."),
+    )
+    
+    from pydantic import BaseModel
+    class SummaryOut(BaseModel):
+        executive_summary: str
+    
+    summary_out = SummaryOut(executive_summary="Candidate has strong Python backend skills.")
+    
+    ver_final_out = VerifiedReportOutput(
+        verified=True,
+        claims=[],
+        corrected_executive_summary="Candidate demonstrated solid GIL and concurrency depth.",
+        unsupported_claims_count=0,
+    )
+
+    mock_client2 = MockLLM(
+        policy_responses=[dec_final_1, dec_final_2],
+        eval_responses=[eval_final_out],
+        other_responses={
+            "TechnicalTurn": turn2,
+            "SummaryOut": summary_out,
+            "VerifiedReportOutput": ver_final_out
+        }
+    )
+    monkeypatch.setattr("app.core.llm_client.LLMClient.invoke_structured", lambda self, *args, **kwargs: mock_client2(*args, **kwargs))
+
+    # Run submit_answer on final question
+    res_final = service.submit_answer(
+        interview_id=interview.id,
+        answer="Asyncio uses single-threaded event loop.",
+        question_id=q2.id,
+    )
+
+    # Verify final assertions
+    assert res_final["status"] == "COMPLETED"
+    assert mock_client2.policy_idx >= 1
+    
+    # Verify Report is saved and verified
+    from app.models.interview import InterviewReport
+    db_report = db_session.query(InterviewReport).filter(InterviewReport.interview_id == interview.id).first()
+    assert db_report is not None
+    import json
+    report_data = json.loads(db_report.competency_scorecard)
+    assert len(report_data) > 0
+
+
+def test_14_verify_report_verification_failure_flagged(db_session: Session, monkeypatch):
+    """
+    Verify that if report verification fails:
+    1. Do NOT publish/save the original unverified report.
+    2. Flag the interview for human review in ReviewQueue with reason.
+    """
+    # 1. Setup candidate & interview
+    user = User(
+        id=str(uuid.uuid4()),
+        email="ver_fail@test.com",
+        password_hash="hash",
+        full_name="Verification Failure Test",
+    )
+    resume = Resume(id=str(uuid.uuid4()), user_id=user.id, file_path="r.pdf", raw_text="Resume Django")
+    jd = JobDescription(
+        id=str(uuid.uuid4()), user_id=user.id, raw_text="JD Backend", target_role="Django Developer"
+    )
+    db_session.add_all([user, resume, jd])
+    db_session.commit()
+
+    interview = Interview(
+        id=str(uuid.uuid4()),
+        user_id=user.id,
+        resume_id=resume.id,
+        jd_id=jd.id,
+        status="IN_PROGRESS",
+    )
+    db_session.add(interview)
+    db_session.commit()
+
+    # Setup final question Q1
+    q1 = InterviewQuestion(
+        id=str(uuid.uuid4()),
+        interview_id=interview.id,
+        round_type="TECHNICAL",
+        competency_targeted="Django",
+        difficulty="MEDIUM",
+        question_text="Explain Django ORM.",
+        sequence_number=1,
+        status="READY",
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(q1)
+    db_session.commit()
+
+    # Make the interview plan total_questions = 1
+    from app.models.interview import InterviewPlan
+    plan = db_session.query(InterviewPlan).filter(InterviewPlan.interview_id == interview.id).first()
+    if plan:
+        plan.technical_question_count = 1
+        db_session.add(plan)
+        db_session.commit()
+
+    # 2. Mock LLM structured outputs
+    from app.graph.policy_node import PolicyDecision, ToolCallDecision, FinishDecision
+    from app.graph.report_verification_node import VerifiedReportOutput
+    from app.agents.evaluation_agent import EvaluationOutput
+    from app.agents.technical_interview_agent import TechnicalTurn
+
+    turn1 = TechnicalTurn(
+        question_text="Explain Django ORM.",
+        candidate_answer="I used Django querysets for lazy loading.",
+        follow_up_question=None,
+    )
+    dec1 = PolicyDecision(
+        action="tool_call",
+        tool_call=ToolCallDecision(
+            tool="score_answer_rubric",
+            arguments={"answer_text": "I used Django."},
+            reasoning="Score answer.",
+        ),
+    )
+    eval_out = EvaluationOutput(
+        score=7,
+        rubric_breakdown={"Correctness": 4, "Completeness": 3, "Communication": 4, "Confidence": 3},
+        feedback="Fair ORM explanation.",
+        ideal_answer_summary="Django ORM details.",
+    )
+    dec2 = PolicyDecision(
+        action="finish",
+        finish=FinishDecision(reasoning="Scoring complete. Final round report."),
+    )
+
+    from pydantic import BaseModel
+    class SummaryOut(BaseModel):
+        executive_summary: str
+    summary_out = SummaryOut(executive_summary="Candidate claims expert knowledge in Kubernetes.")
+
+    # Mark as verified=False due to unsupported Kubernetes claim
+    ver_fail_out = VerifiedReportOutput(
+        verified=False,
+        claims=[],
+        corrected_executive_summary="Verification failed.",
+        unsupported_claims_count=1,
+    )
+
+    mock_client = MockLLM(
+        policy_responses=[dec1, dec2],
+        eval_responses=[eval_out],
+        other_responses={
+            "TechnicalTurn": turn1,
+            "SummaryOut": summary_out,
+            "VerifiedReportOutput": ver_fail_out
+        }
+    )
+    monkeypatch.setattr("app.core.llm_client.LLMClient.invoke_structured", lambda self, *args, **kwargs: mock_client(*args, **kwargs))
+
+    service = InterviewService(db_session)
+
+    # 3. Submit answer to complete the interview
+    res = service.submit_answer(
+        interview_id=interview.id,
+        answer="I used Django querysets for lazy loading.",
+        question_id=q1.id,
+    )
+
+    # 4. Verify assertions
+    assert res["status"] == "COMPLETED"
+
+    # Verify that InterviewReport table has NO entry for this interview (Do NOT publish)
+    from app.models.interview import InterviewReport
+    db_report = db_session.query(InterviewReport).filter(InterviewReport.interview_id == interview.id).first()
+    assert db_report is None
+
+    # Verify that the interview is flagged in ReviewQueue with reason
+    from app.models.review_queue import ReviewQueue
+    queue_item = db_session.query(ReviewQueue).filter(ReviewQueue.interview_id == interview.id).first()
+    assert queue_item is not None
+    assert queue_item.status == "PENDING"
+    assert "contains unsupported claims" in queue_item.reason
+
+

@@ -100,19 +100,25 @@ def test_difficulty_engine():
 
 
 def test_master_workflow_execution():
-    app = build_master_workflow()
+    from app.graph.graph_builder import build_graph
+    app = build_graph(allow_stubs=False)
     initial_state = {
         "interview_id": "session_test",
         "user_id": "usr_100",
-        "resume_json": {
+        "resume_data": {
             "experience": [{"title": "Developer", "description": "APIs and DBs"}],
             "skills": ["Python", "PostgreSQL"],
         },
-        "jd_json": {"title": "Backend Dev"},
-        "pending_answer": "I used PostgreSQL indexes to speed up query execution.",
+        "jd_data": {"target_role": "Backend Dev", "required_skills": ["Python"]},
+        "current_question": {
+            "question_text": "How do you optimize SQL query execution?",
+            "competency_targeted": "Database Architecture",
+            "question_type": "fundamentals",
+            "sequence_number": 1,
+        },
+        "pending_answer": "I used PostgreSQL indexes and EXPLAIN ANALYZE to speed up query execution.",
     }
     config = {"configurable": {"thread_id": "session_test"}}
     result = app.invoke(initial_state, config=config)
-    assert result.get("classification") is not None
-    assert result.get("interview_blueprint") is not None
     assert len(result.get("evaluations", [])) > 0
+

@@ -132,13 +132,23 @@ def _normalize(skill: str) -> str:
 
 def _fuzzy_match(skill_norm: str, candidate_norms: set[str]) -> bool:
     """
-    Check if skill_norm is a substring of any candidate skill or vice versa.
-    Handles cases like 'react' matching 'react_19' or 'reactjs'.
+    Check if skill_norm is equivalent to any candidate skill.
+    Prevents false positive substring collisions like 'sql' matching 'nosql' or 'aws' matching 'aws_lambda'.
     """
-    skill_parts = skill_norm.replace("_", "")
+    s_clean = skill_norm.replace("_", "")
     for c in candidate_norms:
-        c_parts = c.replace("_", "")
-        if skill_parts in c_parts or c_parts in skill_parts:
+        c_clean = c.replace("_", "")
+        # Prevent distinct skill collisions
+        if (s_clean == "sql" and c_clean == "nosql") or (s_clean == "nosql" and c_clean == "sql"):
+            continue
+        if (s_clean == "java" and c_clean == "javascript") or (s_clean == "javascript" and c_clean == "java"):
+            continue
+        if (s_clean == "aws" and c_clean != "aws") or (c_clean == "aws" and s_clean != "aws"):
+            continue
+        if s_clean == c_clean:
+            return True
+        # Allow version/framwork suffix variants (e.g. react vs reactjs, python vs python3)
+        if (s_clean.startswith(c_clean) or c_clean.startswith(s_clean)) and abs(len(s_clean) - len(c_clean)) <= 4:
             return True
     return False
 

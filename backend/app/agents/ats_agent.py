@@ -56,14 +56,27 @@ class ATSAgent(BaseAgent):
             }
 
         # ── Full skill matrix via map_skills MCP tool ─────────
-        resume_skills = resume_data.get("skills", [])
+        resume_skills_raw = resume_data.get("skills") or resume_data.get("technical_skills") or []
         # Handle skills as dict (old schema) or list (new schema)
-        if isinstance(resume_skills, dict):
+        if isinstance(resume_skills_raw, dict):
             all_skills: list[str] = []
-            for v in resume_skills.values():
+            for v in resume_skills_raw.values():
                 if isinstance(v, list):
                     all_skills.extend(str(s) for s in v)
-            resume_skills = all_skills
+                elif isinstance(v, str):
+                    all_skills.append(v)
+            resume_skills_raw = all_skills
+
+        # Normalize and strip category headers (e.g. "Languages: Python, SQL")
+        resume_skills: list[str] = []
+        for item in (resume_skills_raw if isinstance(resume_skills_raw, list) else [str(resume_skills_raw)]):
+            if not item:
+                continue
+            cleaned = str(item).split(":", 1)[-1] if ":" in str(item) else str(item)
+            for part in cleaned.split(","):
+                part_stripped = part.strip()
+                if part_stripped and part_stripped not in resume_skills:
+                    resume_skills.append(part_stripped)
 
         jd_required = jd_data.get("required_skills", []) or jd_data.get("mandatory_skills", [])
         jd_preferred = jd_data.get("preferred_skills", [])

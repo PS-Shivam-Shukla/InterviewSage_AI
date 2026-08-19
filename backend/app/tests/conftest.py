@@ -61,8 +61,14 @@ def mock_llm_agents(monkeypatch):
                         "reasoning": "Evaluated via EvaluationAgent test double.",
                         "ideal_answer_summary": "Comprehensive architectural solution.",
                         "answer_quality": "VALID_ANSWER",
+                        "question_id": current_q.get("sequence_number"),
+                        "competency_targeted": current_q.get("competency_targeted", ""),
+                        "question_type": current_q.get("question_type", ""),
                     }
-                ]
+                ],
+                # Clear pending_answer so the HR graph loop terminates at END
+                # instead of cycling back through hr_interview_agent.
+                "pending_answer": None,
             }
 
         def mock_gen_call(self, state):
@@ -80,6 +86,79 @@ def mock_llm_agents(monkeypatch):
                 }
             }
 
+        # Mock LLMClient.invoke_structured at the class level.
+        # This reaches ALL LLMClient instances (including the PolicyNode singleton's
+        # self.llm) because Python looks up instance methods on the class first.
+        # Tests that need specific scripted responses (test_13, test_14) can override
+        # this again with monkeypatch.setattr(LLMClient, "invoke_structured", custom_mock).
+        from app.core.llm_client import LLMClient
+        from app.graph.policy_node import PolicyDecision, FinishDecision
+        from app.agents.evaluation_agent import EvaluationOutput
+        from app.agents.career_coach_agent import CoachingPlanOutput
+        from app.agents.report_generator_agent import ReportOutput
+
+        def default_llm_invoke_structured(self, messages, output_schema, retry_feedback=None):
+            """Fast deterministic LLM stub for offline test execution.
+            Covers all agent schemas so no ValueError is raised during graph traversal."""
+            name = output_schema.__name__
+            if name == "PolicyDecision":
+                return PolicyDecision(action="finish", finish=FinishDecision(reasoning="Default mock finish"))
+            if name == "EvaluationOutput":
+                return EvaluationOutput(
+                    score=9,
+                    rubric_breakdown={"Technical Depth": 5, "Problem Solving": 4},
+                    feedback="Mock evaluation via conftest default.",
+                    ideal_answer_summary="Comprehensive solution.",
+                )
+            if name == "CoachingPlanOutput":
+                return CoachingPlanOutput(items=[], partial_data=True)
+            if name == "ReportOutput":
+                from datetime import datetime as _dt
+                return ReportOutput(
+                    overall_score=90.0,
+                    executive_summary="Mock executive summary for test environment.",
+                    competency_scorecard=[],
+                    improvement_plan=[],
+                    transcript_snapshot=[],
+                    generated_at=_dt.utcnow().isoformat(),
+                )
+            # VerifiedReportOutput and any future schema
+            try:
+                # Try constructing with minimal required fields
+                from app.graph.report_verification_node import VerifiedReportOutput
+                if output_schema is VerifiedReportOutput:
+                    return VerifiedReportOutput(
+                        verified=True,
+                        claims=[],
+                        corrected_executive_summary="Mock verified summary for test environment.",
+                        unsupported_claims_count=0,
+                    )
+            except Exception:
+                pass
+            # Last-resort: attempt constructing with default/mock values
+            try:
+                fields = {}
+                for field_name, field_info in output_schema.model_fields.items():
+                    annotation = field_info.annotation
+                    if annotation is str:
+                        fields[field_name] = f"Mock text for {field_name}"
+                    elif annotation is int:
+                        fields[field_name] = 1
+                    elif annotation is float:
+                        fields[field_name] = 1.0
+                    elif annotation is bool:
+                        fields[field_name] = True
+                    elif getattr(annotation, "__origin__", None) is list or annotation is list:
+                        fields[field_name] = []
+                    elif getattr(annotation, "__origin__", None) is dict or annotation is dict:
+                        fields[field_name] = {}
+                    else:
+                        fields[field_name] = None
+                return output_schema.model_construct(**fields)
+            except Exception:
+                raise ValueError(f"No mock defined for schema: {name}")
+
+        monkeypatch.setattr(LLMClient, "invoke_structured", default_llm_invoke_structured)
         monkeypatch.setattr(EvaluationAgent, "__call__", mock_eval_call)
         monkeypatch.setattr(QuestionGeneratorAgent, "__call__", mock_gen_call)
     except Exception:

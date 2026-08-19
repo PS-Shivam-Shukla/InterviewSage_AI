@@ -19,14 +19,14 @@ from app.prompts.loader import get_developer_prompt, get_system_prompt
 
 class ExperienceEntry(BaseModel):
     id: str | None = None
-    title: str = ""
-    company: str = ""
-    period: str = ""
-    start_date: str = ""
-    end_date: str = ""
+    title: str | None = None
+    company: str | None = None
+    period: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
     is_current: bool = False
-    employment_type: str = ""
-    description: str = ""
+    employment_type: str | None = None
+    description: str | None = None
     highlights: list[str] = Field(default_factory=list)
     technologies: list[str] = Field(default_factory=list)
     ownership_bullets: list[str] = Field(
@@ -46,14 +46,38 @@ class ExperienceEntry(BaseModel):
         description="Factual evidence of high scale, performance optimization, or complex technical delivery",
     )
 
+    @field_validator(
+        "highlights",
+        "technologies",
+        "ownership_bullets",
+        "architecture_bullets",
+        "leadership_bullets",
+        "complexity_bullets",
+        mode="before",
+    )
+    @classmethod
+    def coerce_to_list(cls, v: Any) -> list:
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str) and v:
+            return [v]
+        return []
+
 
 class EducationEntry(BaseModel):
     id: str | None = None
-    degree: str = ""
-    institution: str = ""
-    field_of_study: str = ""
-    graduation_year: str = ""
-    gpa: str | None = None
+    degree: str | None = None
+    institution: str | None = None
+    field_of_study: str | None = None
+    graduation_year: str | float | int | None = None
+    gpa: str | float | int | None = None
+
+    @field_validator("gpa", "graduation_year", mode="before")
+    @classmethod
+    def stringify_nums(cls, v: Any) -> str | None:
+        if v is None:
+            return None
+        return str(v)
 
 
 class ProjectEntry(BaseModel):
@@ -67,9 +91,16 @@ class ProjectEntry(BaseModel):
 
 class CertificationEntry(BaseModel):
     id: str | None = None
-    name: str = ""
-    issuer: str = ""
-    issue_date: str = ""
+    name: str | None = ""
+    issuer: str | None = ""
+    issue_date: str | None = ""
+
+    @field_validator("name", "issuer", "issue_date", mode="before")
+    @classmethod
+    def null_to_empty_str(cls, v: Any) -> str:
+        if v is None:
+            return ""
+        return str(v)
 
 
 class ResumeAnalysis(BaseModel):
@@ -112,6 +143,25 @@ class ResumeAnalysis(BaseModel):
     weaknesses: list[str] = Field(
         default_factory=list, description="Areas for candidate improvement"
     )
+    achievements: list[str] = Field(
+        default_factory=list, description="Notable awards, metrics, or achievements"
+    )
+
+    @field_validator(
+        "technical_skills",
+        "soft_skills",
+        "certifications",
+        "achievements",
+        mode="before",
+    )
+    @classmethod
+    def coerce_to_list(cls, v: Any) -> list:
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str) and v:
+            return [v]
+        return []
+    
     career_level: str | None = Field(
         default="UNKNOWN",
         description="Deprecated. Final seniority is computed deterministically by SeniorityEngine in Python.",

@@ -147,6 +147,10 @@ class SupervisorAgent:
 
         # 1. INITIALIZING -> RESUME_ANALYSIS
         if current_stage == WorkflowState.INITIALIZING:
+            if (state.get("resume_data") or state.get("resume_json")) and (state.get("jd_data") or state.get("jd_json")):
+                return "interview_planner_agent"
+            if state.get("resume_data") or state.get("resume_json"):
+                return "jd_agent"
             valid, err = self.validate_prerequisites(WorkflowState.RESUME_ANALYSIS.value, state)
             if valid:
                 return "resume_agent"
@@ -155,13 +159,13 @@ class SupervisorAgent:
 
         # 2. RESUME_ANALYSIS -> JD_ANALYSIS
         if current_stage == WorkflowState.RESUME_ANALYSIS:
-            if state.get("resume_data"):
+            if state.get("resume_data") or state.get("resume_json"):
                 return "jd_agent"
             return "resume_agent"
 
         # 3. JD_ANALYSIS -> INTERVIEW_PLANNING
         if current_stage == WorkflowState.JD_ANALYSIS:
-            if state.get("jd_data"):
+            if state.get("jd_data") or state.get("jd_json"):
                 return "interview_planner_agent"
             return "jd_agent"
 
@@ -182,7 +186,11 @@ class SupervisorAgent:
         # 6. WAITING_FOR_ANSWER -> ANSWER_EVALUATION
         if current_stage == WorkflowState.WAITING_FOR_ANSWER:
             current_round = state.get("current_round", "TECHNICAL")
-            return "evaluation_agent_hr" if current_round == "HR" else "evaluation_agent_tech"
+            asked = state.get("questions_asked") or []
+            answers = state.get("answers") or []
+            if len(answers) < len(asked):
+                return "hr_interview_agent" if current_round == "HR" else "technical_interview_agent"
+            return "evaluation_agent_hr" if current_round == "HR" else "policy_node"
 
         # 7. ANSWER_EVALUATION -> NEXT_QUESTION or ROUND_COMPLETE
         if current_stage == WorkflowState.ANSWER_EVALUATION:

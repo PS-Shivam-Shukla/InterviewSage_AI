@@ -31,9 +31,6 @@ export const InterviewEvaluationCard: React.FC<InterviewEvaluationCardProps> = (
 
   const score = evaluation.score ?? 0;
   const reasoning = evaluation.reasoning || evaluation.feedback || 'No feedback provided.';
-  const techScore = evaluation.technical_score ?? evaluation.technical_coverage ?? score;
-  const commDisplay = evaluation.communication_score != null ? `${evaluation.communication_score}%` : 'N/A';
-  const confDisplay = evaluation.confidence_score != null ? `${evaluation.confidence_score}%` : 'N/A';
 
   const getScoreColor = (val: number) => {
     if (val >= 85) return 'text-emerald-400 bg-emerald-950/60 border-emerald-800/60';
@@ -41,13 +38,25 @@ export const InterviewEvaluationCard: React.FC<InterviewEvaluationCardProps> = (
     return 'text-rose-400 bg-rose-950/60 border-rose-800/60';
   };
 
+  const isAptitude = (evaluation as any).round_type === 'APTITUDE' || (evaluation as any).scorecard_type === 'APTITUDE';
+  const isHR = evaluation.round_type === 'HR' || evaluation.scorecard_type === 'HR';
+
+  const dim1Label = isAptitude ? 'Accuracy' : (isHR ? 'Behavioral' : 'Technical');
+  const dim1Val = isAptitude ? (evaluation.correctness ?? score) : (evaluation.technical_score ?? evaluation.technical_coverage ?? score);
+
+  const dim2Label = isAptitude ? 'Reasoning' : 'Communication';
+  const dim2Val = isAptitude ? (evaluation.relevance ?? score) : (evaluation.communication_score ?? score);
+
+  const dim3Label = isAptitude ? 'Clarity' : (isHR ? 'Impact' : 'Confidence');
+  const dim3Val = isAptitude ? (evaluation.communication_score ?? score) : (evaluation.confidence_score ?? score);
+
   return (
     <div className={cn('p-6 rounded-2xl bg-gradient-to-b from-indigo-950/40 via-slate-900 to-slate-950 border border-indigo-900/40 shadow-2xl space-y-5 animate-fadeIn', className)}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-indigo-900/30 pb-4">
         <div className="flex items-center space-x-2">
           <Brain className="w-5 h-5 text-indigo-400" />
           <h3 className="text-base font-bold text-slate-100 uppercase tracking-wide">
-            Evaluation Feedback
+            Evaluation Feedback {isAptitude ? '(Aptitude)' : isHR ? '(HR)' : '(Technical)'}
           </h3>
         </div>
 
@@ -59,16 +68,16 @@ export const InterviewEvaluationCard: React.FC<InterviewEvaluationCardProps> = (
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col items-center justify-center">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Technical</span>
-          <span className="text-lg font-bold font-mono text-emerald-400">{techScore}%</span>
+          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{dim1Label}</span>
+          <span className="text-lg font-bold font-mono text-emerald-400">{dim1Val}%</span>
         </div>
         <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col items-center justify-center">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Communication</span>
-          <span className="text-lg font-bold font-mono text-indigo-400">{commDisplay}</span>
+          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{dim2Label}</span>
+          <span className="text-lg font-bold font-mono text-indigo-400">{dim2Val}%</span>
         </div>
         <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col items-center justify-center">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Confidence</span>
-          <span className="text-lg font-bold font-mono text-amber-400">{confDisplay}</span>
+          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{dim3Label}</span>
+          <span className="text-lg font-bold font-mono text-amber-400">{dim3Val}%</span>
         </div>
       </div>
 

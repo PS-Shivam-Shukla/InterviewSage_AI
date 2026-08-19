@@ -29,27 +29,68 @@ Graph topology:
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 from langgraph.graph import END, StateGraph
 
 from app.agents.supervisor_agent import SupervisorAgent
 from app.graph.state import InterviewState
 
+_allow_stubs_global = True
 _supervisor = SupervisorAgent()
+
+
+def _compute_workflow_stage(state: InterviewState) -> str:
+    stage = "INITIALIZING"
+    if state.get("resume_data") or state.get("resume_json"):
+        stage = "RESUME_ANALYSIS"
+    if (state.get("resume_data") or state.get("resume_json")) and (state.get("jd_data") or state.get("jd_json")):
+        stage = "JD_ANALYSIS"
+    if state.get("interview_plan"):
+        stage = "INTERVIEW_PLANNING"
+
+    asked = state.get("questions_asked") or []
+    answers = state.get("answers") or []
+    evals = state.get("evaluations") or []
+
+    if stage == "INTERVIEW_PLANNING" and asked:
+        stage = "QUESTION_GENERATION"
+
+    if stage == "QUESTION_GENERATION" and len(answers) < len(asked):
+        stage = "WAITING_FOR_ANSWER"
+
+    if stage == "QUESTION_GENERATION" and len(answers) == len(asked) and asked:
+        if len(evals) == len(answers):
+            stage = "ANSWER_EVALUATION"
+        else:
+            stage = "WAITING_FOR_ANSWER"
+
+    if stage == "ANSWER_EVALUATION" and state.get("final_report"):
+        stage = "REPORT_GENERATION"
+
+    if state.get("final_report"):
+        stage = "COMPLETED"
+    return stage
 
 
 def supervisor_node(state: InterviewState) -> dict:
     """Supervisor node handler — inspects state and updates next_node and workflow_stage."""
-    next_node = _supervisor.decide_next_step(state)
+    stage = _compute_workflow_stage(state)
+    temp_state = dict(state)
+    temp_state["workflow_stage"] = stage
+    next_node = _supervisor.decide_next_step(temp_state)
     return {
         "next_node": next_node,
-        "workflow_stage": state.get("workflow_stage", "INITIALIZING"),
+        "workflow_stage": stage,
     }
 
 
 def route_after_supervisor(state: InterviewState) -> str:
     """Entry & hub routing powered by SupervisorAgent decision engine."""
-    return _supervisor.decide_next_step(state)
+    stage = _compute_workflow_stage(state)
+    temp_state = dict(state)
+    temp_state["workflow_stage"] = stage
+    return _supervisor.decide_next_step(temp_state)
 
 
 def route_after_planner(state: InterviewState) -> str:
@@ -67,14 +108,23 @@ def route_after_hr_evaluation(state: InterviewState) -> str:
     """
     After each HR answer is evaluated, decide:
       - Ask another HR question, OR
-      - Advance to technical round.
+      - Advance to technical round (if technical questions remain), OR
+      - Move to post-interview (career coach).
     """
     plan = state.get("interview_plan") or {}
     hr_target = plan.get("hr_question_count", 5)
+    tech_target = plan.get("technical_question_count", 7)
+
     hr_asked = sum(1 for q in (state.get("questions_asked") or []) if q.get("round_type") == "HR")
+    tech_asked = sum(
+        1 for q in (state.get("questions_asked") or []) if q.get("round_type") == "TECHNICAL"
+    )
+
     if hr_asked < hr_target:
         return "question_generator_hr"
-    return "question_generator_tech"
+    if tech_asked < tech_target:
+        return "question_generator_tech"
+    return "career_coach_agent"
 
 
 def route_after_tech_evaluation(state: InterviewState) -> str:
@@ -91,6 +141,20 @@ def route_after_tech_evaluation(state: InterviewState) -> str:
     if tech_asked < tech_target:
         return "question_generator_tech"
     return "career_coach_agent"
+
+
+def route_after_qgen_hr(state: InterviewState, allow_stubs: bool = True) -> str:
+    """Route after HR question generation: pause if no pending answer is present."""
+    if not state.get("pending_answer"):
+        return END
+    return "hr_interview_agent"
+
+
+def route_after_qgen_tech(state: InterviewState, allow_stubs: bool = True) -> str:
+    """Route after Technical question generation: pause if no pending answer is present."""
+    if not state.get("pending_answer"):
+        return END
+    return "technical_interview_agent"
 
 
 def _stub(name: str) -> Callable:
@@ -123,9 +187,18 @@ def tool_executor_handler(state: InterviewState) -> dict:
     }
 
 
-def route_after_policy(state: InterviewState) -> str:
+def route_after_policy(state: InterviewState, allow_stubs: bool = False) -> str:
     """Dynamic router after PolicyNode decision."""
-    return state.get("next_node") or "report_generator_agent"
+    nxt = state.get("next_node") or "report_generator_agent"
+    if nxt == "report_generator_agent":
+        if allow_stubs:
+            return nxt
+        plan = state.get("interview_plan") or {}
+        target_count = plan.get("total_questions", 5)
+        current_seq = state.get("current_question", {}).get("sequence_number") or len(state.get("questions_asked") or [])
+        if current_seq < target_count:
+            return END
+    return nxt
 
 
 # ─────────────────────────────────────────────────────────────
@@ -150,7 +223,8 @@ def build_graph(
     report_generator_agent: Callable = None,
     policy_node_handler: Callable = None,
     report_verification_handler: Callable = None,
-    allow_stubs: bool = True,
+    allow_stubs: bool = False,
+    checkpointer: Any = None,
 ) -> StateGraph:
     """
     Build and compile the interview workflow StateGraph.
@@ -194,7 +268,7 @@ def build_graph(
         report_generator_agent = report_generator_agent or ReportGeneratorAgent()
 
     nodes = {
-        "supervisor": _stub("supervisor"),
+        "supervisor": supervisor_node,
         "resume_agent": resume_agent or _stub("resume_agent"),
         "jd_agent": jd_agent or _stub("jd_agent"),
         "ats_agent": ats_agent or _stub("ats_agent"),
@@ -229,7 +303,21 @@ def build_graph(
     graph.add_conditional_edges(
         "supervisor",
         route_after_supervisor,
-        {"resume_agent": "resume_agent"},
+        {
+            "resume_agent": "resume_agent",
+            "jd_agent": "jd_agent",
+            "interview_planner_agent": "interview_planner_agent",
+            "question_generator_hr": "question_generator_hr",
+            "question_generator_tech": "question_generator_tech",
+            "hr_interview_agent": "hr_interview_agent",
+            "technical_interview_agent": "technical_interview_agent",
+            "evaluation_agent_hr": "evaluation_agent_hr",
+            "evaluation_agent_tech": "evaluation_agent_tech",
+            "policy_node": "policy_node",
+            "report_generator_agent": "report_generator_agent",
+            "COMPLETED": END,
+            "FAILED": END,
+        },
     )
     graph.add_edge("resume_agent", "jd_agent")
     graph.add_edge("jd_agent", "ats_agent")
@@ -247,8 +335,25 @@ def build_graph(
         },
     )
 
+    # Scoped routing functions bound to this graph's allow_stubs parameter
+    def _route_after_qgen_hr(state: InterviewState) -> str:
+        return route_after_qgen_hr(state, allow_stubs=allow_stubs)
+
+    def _route_after_qgen_tech(state: InterviewState) -> str:
+        return route_after_qgen_tech(state, allow_stubs=allow_stubs)
+
+    def _route_after_policy(state: InterviewState) -> str:
+        return route_after_policy(state, allow_stubs=allow_stubs)
+
     # ── HR round loop ─────────────────────────────────────────
-    graph.add_edge("question_generator_hr", "hr_interview_agent")
+    graph.add_conditional_edges(
+        "question_generator_hr",
+        _route_after_qgen_hr,
+        {
+            "hr_interview_agent": "hr_interview_agent",
+            END: END,
+        },
+    )
     graph.add_edge("hr_interview_agent", "evaluation_agent_hr")
     graph.add_conditional_edges(
         "evaluation_agent_hr",
@@ -256,21 +361,33 @@ def build_graph(
         {
             "question_generator_hr": "question_generator_hr",
             "question_generator_tech": "question_generator_tech",
+            "career_coach_agent": "career_coach_agent",
+            "report_generator_agent": "report_generator_agent",
+            END: END,
         },
     )
 
     # ── Technical round loop with PolicyNode tool loop ────────
-    graph.add_edge("question_generator_tech", "technical_interview_agent")
+    graph.add_conditional_edges(
+        "question_generator_tech",
+        _route_after_qgen_tech,
+        {
+            "technical_interview_agent": "technical_interview_agent",
+            END: END,
+        },
+    )
     graph.add_edge("technical_interview_agent", "evaluation_agent_tech")
     graph.add_edge("evaluation_agent_tech", "policy_node")
 
     # Model-Mediated Policy Node loop: policy_node -> tool_executor -> policy_node OR finish
     graph.add_conditional_edges(
         "policy_node",
-        route_after_policy,
+        _route_after_policy,
         {
             "tool_executor_node": "tool_executor_node",
+            "policy_node": "policy_node",
             "report_generator_agent": "career_coach_agent",
+            END: END,
         },
     )
     graph.add_edge("tool_executor_node", "policy_node")
@@ -280,4 +397,4 @@ def build_graph(
     graph.add_edge("report_generator_agent", "report_verification_node")
     graph.add_edge("report_verification_node", END)
 
-    return graph.compile()
+    return graph.compile(checkpointer=checkpointer)

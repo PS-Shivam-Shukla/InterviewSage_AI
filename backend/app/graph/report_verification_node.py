@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.core.llm_client import LLMClient
 from app.core.logging import get_logger
@@ -46,13 +46,29 @@ class VerifiedReportOutput(BaseModel):
     """Final verified report output schema."""
 
     verified: bool = Field(
+        default=True,
         description="True if all claims are supported or successfully corrected."
     )
     claims: list[ClaimVerification] = Field(default_factory=list)
     corrected_executive_summary: str = Field(
+        default="",
         description="Executive summary with unsupported claims removed or corrected."
     )
     unsupported_claims_count: int = Field(default=0)
+
+    @model_validator(mode="before")
+    @classmethod
+    def wrap_flat_output(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "verified" not in data:
+                data["verified"] = True
+            if "corrected_executive_summary" not in data:
+                data["corrected_executive_summary"] = (
+                    data.get("summary") or data.get("executive_summary") or "Verified report summary."
+                )
+            if "claims" not in data:
+                data["claims"] = []
+        return data
 
 
 # ── Report Verification Node Implementation ───────────────────────────────────
@@ -64,7 +80,19 @@ class ReportVerificationNode:
     """
 
     def __init__(self, llm_client: LLMClient | None = None) -> None:
-        self.llm = llm_client or LLMClient(temperature=0.1)
+        # Lazy init: only build the client on first use, not at import time.
+        self._llm: LLMClient | None = llm_client
+
+    @property
+    def llm(self) -> LLMClient:
+        """Lazy LLM client accessor."""
+        if self._llm is None:
+            self._llm = LLMClient(temperature=0.1)
+        return self._llm
+
+    @llm.setter
+    def llm(self, value: LLMClient | None) -> None:
+        self._llm = value
 
     def __call__(self, state: InterviewState) -> dict:
         """LangGraph node handler for report reflection verification."""
@@ -131,11 +159,31 @@ class ReportVerificationNode:
         )
 
         try:
-            verified_out: VerifiedReportOutput = self.llm.invoke_structured(
+            raw_out = self.llm.invoke_structured(
                 messages, VerifiedReportOutput
             )
-            unsupported = [c for c in verified_out.claims if c.status == "unsupported"]
+            if isinstance(raw_out, dict):
+                verified_out = VerifiedReportOutput.model_validate(raw_out)
+            else:
+                verified_out = raw_out
+            unsupported = [c for c in verified_out.claims if getattr(c, "status", None) == "unsupported" or (isinstance(c, dict) and c.get("status") == "unsupported")]
             verified_out.unsupported_claims_count = len(unsupported)
+
+            # ── 3. Numeric Score Grounding Assertion ──────────────────────────────
+            report_overall = final_report.get("overall_score")
+            if report_overall is not None and evaluations:
+                scores = []
+                for e in evaluations:
+                    s = e.get("score", 0)
+                    scores.append(s * 10 if 0 < s <= 10 else s)
+                if scores:
+                    expected_avg = sum(scores) / len(scores)
+                    if abs(float(report_overall) - expected_avg) > 25.0:
+                        logger.warning(
+                            f"Numeric grounding check failed: report overall {report_overall} diverges from turn avg {expected_avg:.1f}"
+                        )
+                        verified_out.verified = False
+                        verified_out.unsupported_claims_count += 1
 
             logger.info(
                 f"🔍 [REFLECTION COMPLETED] Verified: {verified_out.verified} | "
@@ -144,27 +192,39 @@ class ReportVerificationNode:
                 f"================================================================================"
             )
 
-            # Update final_report in place with corrected summary
+            # Update final_report in place with corrected summary and verification flags
             updated_report = dict(final_report)
             updated_report["executive_summary"] = verified_out.corrected_executive_summary
+            updated_report["verified"] = verified_out.verified
+            updated_report["human_review_required"] = not verified_out.verified
+            if not verified_out.verified or len(unsupported) > 0:
+                updated_report["status"] = "UNVERIFIED_NEEDS_HUMAN_REVIEW"
 
             return {
                 "verification_report": verified_out.model_dump(),
                 "final_report": updated_report,
+                "human_review_required": not verified_out.verified,
             }
 
         except Exception as exc:
             logger.warning(
-                f"ReportVerificationNode verification failed: {exc}. Retaining baseline summary safely."
+                f"ReportVerificationNode verification failed: {exc}. Failing closed safely."
             )
+            failed_report = dict(final_report)
+            failed_report["verified"] = False
+            failed_report["human_review_required"] = True
+            failed_report["status"] = "VERIFICATION_FAILED_NEEDS_HUMAN_REVIEW"
+            failed_report["executive_summary"] = f"Verification failed: {exc}"
             return {
                 "verification_report": {
                     "verified": False,
                     "claims": [],
-                    "corrected_executive_summary": draft_summary,
+                    "corrected_executive_summary": f"Verification failed: {exc}",
                     "unsupported_claims_count": 0,
                     "error": str(exc),
-                }
+                },
+                "final_report": failed_report,
+                "human_review_required": True,
             }
 
 

@@ -1,0 +1,13 @@
+============================================================
+INTERVIEWSAGE AI — INTERVIEW REPORT
+============================================================
+Interview ID : 88f6c213-0212-4797-a877-9a9374c64336
+Overall Score: 30.0 / 10
+
+─── Competency Scorecard ───────────────────────────────
+  Go                             30.0/10
+
+─── Improvement Plan ───────────────────────────────────
+  1. [Go] Study the core concepts of Goroutines in Go, including their role in concurrency, thread management, and the benefits over traditional threads. Practice by writing simple Goroutine examples in Go. Focus on understanding the differences and advantages of Goroutines over traditional threads.
+
+============================================================

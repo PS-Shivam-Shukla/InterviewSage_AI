@@ -1,0 +1,13 @@
+============================================================
+INTERVIEWSAGE AI — INTERVIEW REPORT
+============================================================
+Interview ID : 6b53b08d-e390-490e-914c-fc9c9e22d8ce
+Overall Score: 0.0 / 10
+
+─── Competency Scorecard ───────────────────────────────
+  General                        0.0/10
+
+─── Improvement Plan ───────────────────────────────────
+  1. [Python Concurrency] Study specific I/O multiplexing techniques or resources to better understand the non-blocking nature of AsyncIO.
+
+============================================================

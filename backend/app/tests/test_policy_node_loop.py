@@ -11,6 +11,7 @@ from app.graph.policy_node import (
     PolicyNode,
     ToolCallDecision,
 )
+from app.mcp.client import mcp_protocol_client
 from app.mcp.server import mcp_server
 from app.tools.executor import tool_executor
 
@@ -22,13 +23,13 @@ def make_test_state(observations=None, iteration=0):
         "answers": [{"answer_text": "GIL is Global Interpreter Lock in CPython."}],
         "observations": observations or [],
         "policy_iteration_count": iteration,
-        "available_tools": mcp_server.list_tools(),
+        "available_tools": mcp_protocol_client.list_tools_protocol_sync(),
     }
 
 
 def test_a_tool_discovery():
-    """Test A: Policy receives discovered tool schemas from registry."""
-    tools = mcp_server.list_tools()
+    """Test A: Policy receives discovered tool schemas from MCPProtocolClient."""
+    tools = mcp_protocol_client.list_tools_protocol_sync()
     tool_names = [t["name"] for t in tools]
     assert "map_skills" in tool_names
     assert "compute_ats_score" in tool_names
@@ -209,3 +210,53 @@ def test_i_tool_execution_failure_handled():
     obs = tool_executor.execute_tool("failing_test_tool", {})
     assert obs.success is False
     assert "Database connection timeout" in obs.error
+
+
+def test_j_bounded_repeated_failure_loop_termination():
+    """Test J: Repeated PolicyNode errors terminate safely at MAX_POLICY_ITERATIONS without infinite loop."""
+    class FailingPolicyLLM(FakeLLMClient):
+        def invoke_structured(self, messages, output_schema, retry_feedback=None):
+            raise RuntimeError("LLM Service Unavailable")
+
+    node = PolicyNode(llm_client=FailingPolicyLLM())
+
+    # Iteration 1 fails -> records error obs, requests retry at policy_node
+    state_1 = make_test_state(iteration=0)
+    res_1 = node(state_1)
+    assert res_1["next_node"] == "policy_node"
+    assert len(res_1["observations"]) == 1
+    assert res_1["observations"][0]["success"] is False
+
+    # At MAX_POLICY_ITERATIONS -> safe fallback to finish (report_generator_agent)
+    state_max = make_test_state(iteration=MAX_POLICY_ITERATIONS)
+    res_max = node(state_max)
+    assert res_max["next_node"] == "report_generator_agent"
+    assert res_max["policy_decisions"][0]["action"] == "finish"
+
+
+def test_k_real_llm_client_unavailable_bounded_loop(monkeypatch):
+    """Test K: Real LLMClient with _primary=None & _fallback=None raises RuntimeError, which PolicyNode converts into an error observation and safely bounds at MAX_POLICY_ITERATIONS."""
+    monkeypatch.undo()
+    from app.core.llm_client import LLMClient
+    client = LLMClient()
+    client._primary = None
+    client._fallback = None
+
+    node = PolicyNode(llm_client=client)
+
+    # Invoking PolicyNode with un-monkeypatched client whose models are None
+    state_0 = make_test_state(iteration=0)
+    res_0 = node(state_0)
+    assert res_0["next_node"] == "policy_node"
+    assert len(res_0["observations"]) == 1
+    assert res_0["observations"][0]["success"] is False
+    assert "No LLM provider available" in res_0["observations"][0]["error"]
+
+    # When iteration reaches MAX_POLICY_ITERATIONS -> safe finish transition
+    state_max = make_test_state(iteration=MAX_POLICY_ITERATIONS)
+    res_max = node(state_max)
+    assert res_max["next_node"] == "report_generator_agent"
+    assert res_max["policy_decisions"][0]["action"] == "finish"
+
+
+

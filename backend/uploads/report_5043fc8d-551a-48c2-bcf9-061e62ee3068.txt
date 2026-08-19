@@ -1,0 +1,13 @@
+============================================================
+INTERVIEWSAGE AI — INTERVIEW REPORT
+============================================================
+Interview ID : 5043fc8d-551a-48c2-bcf9-061e62ee3068
+Overall Score: 30.0 / 10
+
+─── Competency Scorecard ───────────────────────────────
+  Python                         30.0/10
+
+─── Improvement Plan ───────────────────────────────────
+  1. [Python] Study Python's memory management in detail, focusing on reference counting and the generational garbage collector. Practice answering technical questions related to memory management in Python, such as explaining the differences between reference counting and garbage collection.
+
+============================================================

@@ -17,6 +17,11 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+import json
+from mcp.server import Server as OfficialServer
+import mcp.types as types
+
+
 # ─────────────────────────────────────────────────────────────
 # Data structures
 # ─────────────────────────────────────────────────────────────
@@ -69,15 +74,9 @@ class ToolCallResult:
 
 class MCPServer:
     """
-    In-process MCP server.
-
-    Agents interact exclusively through:
-        server.call_tool(name, **kwargs)
-        server.read_resource(uri)
-        server.get_prompt(name, version)
-
-    All invocations are logged to the internal call log for
-    observability (surfaced in the Admin Dashboard).
+    Model Context Protocol (MCP) Server.
+    Exposes application tools, resources, and prompts over the official MCP protocol
+    via mcp.server.Server instance and JSON-RPC 2.0 handlers.
     """
 
     def __init__(self) -> None:
@@ -85,6 +84,63 @@ class MCPServer:
         self._resources: list[ResourceSchema] = []
         self._prompts: dict[str, PromptSchema] = {}
         self._call_log: list[dict[str, Any]] = []
+
+        # Official MCP SDK Server instance
+        self.official_server = OfficialServer("interviewsage-mcp-server")
+        self._setup_official_handlers()
+
+    def _setup_official_handlers(self) -> None:
+        """Register official MCP JSON-RPC request handlers for tools/list and tools/call."""
+
+        async def handle_list_tools(ctx, params):
+            tool_objects = []
+            for t in self._tools.values():
+                tool_objects.append(
+                    types.Tool(
+                        name=t.name,
+                        description=t.description,
+                        input_schema={
+                            "type": "object",
+                            "properties": t.parameters,
+                            "required": t.required_params,
+                        },
+                    )
+                )
+            return types.ListToolsResult(tools=tool_objects)
+
+        async def handle_call_tool(ctx, params):
+            tool_name = params.name
+            arguments = params.arguments or {}
+            result = self.call_tool(tool_name, **arguments)
+
+            if not result.success:
+                return types.CallToolResult(
+                    is_error=True,
+                    content=[
+                        types.TextContent(
+                            type="text",
+                            text=f"Error executing tool '{tool_name}': {result.error}",
+                        )
+                    ],
+                )
+
+            out_data = result.output
+            if isinstance(out_data, (dict, list)):
+                text_payload = json.dumps(out_data)
+            else:
+                text_payload = str(out_data)
+
+            return types.CallToolResult(
+                is_error=False,
+                content=[types.TextContent(type="text", text=text_payload)],
+            )
+
+        self.official_server.add_request_handler(
+            "tools/list", types.PaginatedRequestParams, handle_list_tools
+        )
+        self.official_server.add_request_handler(
+            "tools/call", types.CallToolRequestParams, handle_call_tool
+        )
 
     # ── Tool registry ─────────────────────────────────────────
 

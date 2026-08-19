@@ -12,9 +12,12 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.agents.base import BaseAgent
 from app.core.llm_client import LLMClient
+from app.core.logging import get_logger
 from app.graph.state import InterviewState
 from app.mcp import mcp_server
 from app.prompts.loader import get_developer_prompt, get_system_prompt
+
+logger = get_logger(__name__)
 
 # ── Output schema ─────────────────────────────────────────────
 
@@ -89,15 +92,34 @@ class EvaluationAgent(BaseAgent):
 
         latest_answer = answers[-1]
         answer_text = latest_answer.get("answer_text", "")
+
+        # ── 1. Enforce Question Identity & State Isolation ───────────────
+        q_seq = current_q.get("sequence_number")
+        ans_seq = latest_answer.get("sequence_number")
+        if q_seq is not None and ans_seq is not None and q_seq != ans_seq:
+            logger.warning(f"QUESTION_CONTEXT_MISMATCH detected in state: current_q seq={q_seq} != latest_ans seq={ans_seq}")
+            questions_asked = state.get("questions_asked") or []
+            matched_q = next(
+                (q for q in questions_asked if q.get("sequence_number") == ans_seq or q.get("id") == latest_answer.get("question_id")),
+                None,
+            )
+            if matched_q:
+                logger.info(f"Recovered exact question context for seq {ans_seq}: '{matched_q.get('question_text', '')[:60]}'")
+                current_q = matched_q
+            else:
+                raise ValueError(f"QUESTION_CONTEXT_MISMATCH: current_question seq ({q_seq}) does not match submitted answer seq ({ans_seq}).")
+
         competency = (
             current_q.get("competency_targeted")
             or latest_answer.get("competency_targeted")
             or "General"
         )
-        q_type = (
-            current_q.get("question_type") or latest_answer.get("question_type") or "fundamentals"
-        )
         round_type = (current_q.get("round_type") or latest_answer.get("round_type") or "").upper()
+        q_type = (
+            "aptitude"
+            if round_type == "APTITUDE"
+            else (current_q.get("question_type") or latest_answer.get("question_type") or "fundamentals")
+        )
 
         # ── Deterministic Answer Sanity Guard ─────────────────────────
         from app.services.answer_sanity_guard import AnswerSanityGuard
@@ -125,9 +147,9 @@ class EvaluationAgent(BaseAgent):
                 "question_type": q_type,
                 "answer_quality": sanity_res.answer_quality,
             }
-            return {"evaluations": [eval_record]}
+            return {"evaluations": [eval_record], "pending_answer": None}
 
-        # ── Deterministic Aptitude Evaluation ─────────────────────────
+        # ── Deterministic Aptitude Evaluation for Bank Questions ─────────
         if round_type == "APTITUDE":
             from app.strategy.aptitude_bank import APTITUDE_20_BANK
 
@@ -137,60 +159,63 @@ class EvaluationAgent(BaseAgent):
 
             def _q_match(bank_item: dict) -> bool:
                 b_clean = re.sub(r"[^\w\s]", "", bank_item["question_text"].lower()).strip()
-                return bool(b_clean and (b_clean in q_text_clean or q_text_clean in b_clean))
+                if not q_text_clean or not b_clean:
+                    return False
+                return bool(b_clean in q_text_clean or q_text_clean in b_clean)
 
             matched_apt = next((item for item in APTITUDE_20_BANK if _q_match(item)), None)
-            expected_raw = matched_apt.get("correct_answer", "") if matched_apt else ""
+            if matched_apt:
+                expected_raw = matched_apt.get("correct_answer", "")
 
-            def _norm(s: str) -> str:
-                return (
-                    s.lower()
-                    .replace(" ", "")
-                    .replace("$", "")
-                    .replace("₹", "")
-                    .replace("€", "")
-                    .replace("£", "")
-                    .replace("rupees", "")
-                    .replace("dollars", "")
-                    .replace("km", "")
-                    .replace("days", "")
-                    .replace("%", "")
+                def _norm(s: str) -> str:
+                    return (
+                        s.lower()
+                        .replace(" ", "")
+                        .replace("$", "")
+                        .replace("₹", "")
+                        .replace("€", "")
+                        .replace("£", "")
+                        .replace("rupees", "")
+                        .replace("dollars", "")
+                        .replace("km", "")
+                        .replace("days", "")
+                        .replace("%", "")
+                    )
+
+                ans_norm = _norm(answer_text)
+                exp_norm = _norm(expected_raw)
+
+                is_correct = bool(
+                    exp_norm and ((ans_norm == exp_norm) or (ans_norm != "" and (ans_norm in exp_norm or exp_norm in ans_norm)))
+                )
+                score_val = 10 if is_correct else 0
+                feedback_str = (
+                    f"Correct answer. Candidate provided '{answer_text}' which matches expected answer '{expected_raw}'."
+                    if is_correct
+                    else f"Incorrect answer. Candidate provided '{answer_text}'. Expected answer: '{expected_raw}'."
                 )
 
-            ans_norm = _norm(answer_text)
-            exp_norm = _norm(expected_raw)
-
-            is_correct = bool(
-                exp_norm and ((ans_norm == exp_norm) or (ans_norm != "" and ans_norm in exp_norm))
-            )
-            score_val = 10 if is_correct else 0
-            feedback_str = (
-                f"Correct answer. Candidate provided '{answer_text}' which matches expected answer '{expected_raw}'."
-                if is_correct
-                else f"Incorrect answer. Candidate provided '{answer_text}'. Expected answer: '{expected_raw}'."
-            )
-
-            eval_record = {
-                "score": score_val,
-                "rubric_breakdown": {
-                    "Correctness": 5 if is_correct else 1,
-                    "Communication": 5 if is_correct else 1,
-                    "Confidence": 5 if is_correct else 1,
-                },
-                "feedback": feedback_str,
-                "ideal_answer_summary": (
-                    f"The correct answer is {expected_raw}."
-                    if expected_raw
-                    else "Quantitative / logical problem solving."
-                ),
-                "needs_human_review": False,
-                "l2_recommendation": None,
-                "question_id": current_q.get("sequence_number"),
-                "competency_targeted": competency,
-                "question_type": "aptitude",
-                "answer_quality": "VALID_ANSWER",
-            }
-            return {"evaluations": [eval_record]}
+                eval_record = {
+                    "score": score_val,
+                    "rubric_breakdown": {
+                        "Correctness & Accuracy": 5 if is_correct else 1,
+                        "Reasoning & Approach": 5 if is_correct else 1,
+                        "Clarity & Structure": 5 if is_correct else 1,
+                    },
+                    "feedback": feedback_str,
+                    "ideal_answer_summary": (
+                        f"The correct answer is {expected_raw}."
+                        if expected_raw
+                        else "Quantitative / logical problem solving."
+                    ),
+                    "needs_human_review": False,
+                    "l2_recommendation": None,
+                    "question_id": current_q.get("sequence_number"),
+                    "competency_targeted": competency,
+                    "question_type": "aptitude",
+                    "answer_quality": "VALID_ANSWER",
+                }
+                return {"evaluations": [eval_record], "pending_answer": None}
 
         # Role and skill context for the LLM prompt
         role = jd_data.get("target_role", "") or ""
@@ -229,22 +254,36 @@ class EvaluationAgent(BaseAgent):
         weight = next((c.get("weight", 10) for c in matrix if c.get("name") == competency), 10)
 
         developer = get_developer_prompt("evaluation_agent", self.prompt_version)
-        user_content = (
-            f"Role being interviewed for: {role}\n"
-            f"JD required skills: {jd_skills_str}\n"
-            f"Candidate skills from resume: {resume_skills_str}\n"
-            f"Question: {current_q.get('question_text', '')}\n"
-            f"Competency being tested: {competency} (weight: {weight}%)\n"
-            f"Question type: {q_type} | Round type: {round_type} | Seniority: {seniority}\n"
-            f"Candidate answer:\n{answer_text}\n\n"
-            f"Scoring rubric:\n{rubric}\n\n"
-            f"EVALUATION INSTRUCTIONS:\n{rubric_instruction}\n"
-            "Evaluate candidate calibrating expectations to their experience level.\n"
-            "CRITICAL SCORING RULE: If the answer is semantically irrelevant to the question "
-            "(e.g., random characters, celebrity names, gibberish, unrelated personal statements, "
-            "or content completely unrelated to the topic), you MUST assign score=1 and all rubric dimension values=1.\n"
-            "Return ONLY JSON matching the schema."
-        )
+        if round_type == "APTITUDE":
+            user_content = (
+                f"Round: APTITUDE (Quantitative & Logical Reasoning)\n"
+                f"Category / Competency: {competency}\n"
+                f"Question: {current_q.get('question_text', '')}\n"
+                f"Candidate answer:\n{answer_text}\n\n"
+                f"Scoring rubric:\n{rubric}\n\n"
+                f"EVALUATION INSTRUCTIONS:\n{rubric_instruction}\n"
+                "Evaluate candidate's mathematical, quantitative, or logical answer to the specific question above.\n"
+                "CRITICAL RULE: DO NOT evaluate against technical software architecture patterns (such as Repository pattern, Adapter pattern, or MVC). "
+                "Evaluate ONLY whether the candidate's mathematical or logical solution to the question above is correct and well-explained.\n"
+                "Return ONLY JSON matching the schema."
+            )
+        else:
+            user_content = (
+                f"Role being interviewed for: {role}\n"
+                f"JD required skills: {jd_skills_str}\n"
+                f"Candidate skills from resume: {resume_skills_str}\n"
+                f"Question: {current_q.get('question_text', '')}\n"
+                f"Competency being tested: {competency} (weight: {weight}%)\n"
+                f"Question type: {q_type} | Round type: {round_type} | Seniority: {seniority}\n"
+                f"Candidate answer:\n{answer_text}\n\n"
+                f"Scoring rubric:\n{rubric}\n\n"
+                f"EVALUATION INSTRUCTIONS:\n{rubric_instruction}\n"
+                "Evaluate candidate calibrating expectations to their experience level.\n"
+                "CRITICAL SCORING RULE: If the answer is semantically irrelevant to the question "
+                "(e.g., random characters, celebrity names, gibberish, unrelated personal statements, "
+                "or content completely unrelated to the topic), you MUST assign score=1 and all rubric dimension values=1.\n"
+                "Return ONLY JSON matching the schema."
+            )
 
         messages = LLMClient.build_messages(
             system_prompt=get_system_prompt("evaluation_agent", self.prompt_version),
@@ -274,7 +313,10 @@ class EvaluationAgent(BaseAgent):
             "question_type": q_type,
             "answer_quality": "VALID_ANSWER",
         }
-        return {"evaluations": [eval_record]}
+        return {
+            "evaluations": [eval_record],
+            "pending_answer": None,
+        }
 
     def _on_failure(self, state: InterviewState, error: str) -> dict:
         current_q = state.get("current_question") or {}
@@ -307,4 +349,5 @@ class EvaluationAgent(BaseAgent):
                 }
             ],
             "error_log": [{"agent": self.agent_name, "error": error}],
+            "pending_answer": None,
         }

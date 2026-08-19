@@ -80,6 +80,20 @@ class AnswerSanityGuard:
 
         lower_clean = clean.lower()
 
+        # Prompt Injection Guardrail Check
+        from app.kernel.guardrails import Guardrails
+        guard = Guardrails()
+        is_injection, _ = guard.scan_prompt_injection(clean)
+        if is_injection:
+            return SanityGuardResult(
+                is_valid_answer=False,
+                answer_quality="INVALID_FORMAT",
+                score_1_10=0,
+                score_pct=0,
+                reason="Prompt injection detected in candidate input.",
+                needs_llm_eval=False,
+            )
+
         # 1. Exact or phrase match for explicit "I don't know" non-answers
         if lower_clean in NON_ANSWER_PHRASES or any(lower_clean == p for p in NON_ANSWER_PHRASES):
             return SanityGuardResult(

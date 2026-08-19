@@ -30,6 +30,22 @@ class JDAnalysis(BaseModel):
     industry: str = "NOT_SPECIFIED"
     company_values: list[str] = Field(default_factory=list)
 
+    @field_validator(
+        "company_values",
+        "required_skills",
+        "preferred_skills",
+        "negative_skills",
+        "responsibilities",
+        mode="before",
+    )
+    @classmethod
+    def coerce_to_list(cls, v: Any) -> list:
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str) and v:
+            return [v]
+        return []
+
     @field_validator("seniority_level")
     @classmethod
     def validate_seniority(cls, v: str) -> str:

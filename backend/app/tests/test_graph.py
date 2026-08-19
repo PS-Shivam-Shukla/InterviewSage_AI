@@ -213,28 +213,28 @@ class TestFullStubRun:
             return {"interview_plan": {"hr_question_count": 1, "technical_question_count": 1}}
 
         def qgen_hr(state):
-            return {"current_question": {"round_type": "HR", "text": "Tell me about yourself"}}
+            return {"current_question": {"sequence_number": 1, "round_type": "HR", "question_text": "Tell me about yourself"}}
 
         def hr_agent(state):
             return {
-                "questions_asked": [{"round_type": "HR", "text": "Tell me about yourself"}],
-                "answers": [{"question_id": "q1", "text": "I did X"}],
+                "questions_asked": [{"sequence_number": 1, "round_type": "HR", "question_text": "Tell me about yourself"}],
+                "answers": [{"sequence_number": 1, "question_id": "q1", "answer_text": "I did X"}],
             }
 
         def eval_hr(state):
-            return {"evaluations": [{"score": 7, "feedback": "OK"}]}
+            return {"evaluations": [{"sequence_number": 1, "score": 7, "feedback": "OK"}]}
 
         def qgen_tech(state):
-            return {"current_question": {"round_type": "TECHNICAL", "text": "Design a system"}}
+            return {"current_question": {"sequence_number": 2, "round_type": "TECHNICAL", "question_text": "Design a system"}}
 
         def tech_agent(state):
             return {
-                "questions_asked": [{"round_type": "TECHNICAL", "text": "Design a system"}],
-                "answers": [{"question_id": "q2", "text": "I would use microservices"}],
+                "questions_asked": [{"sequence_number": 2, "round_type": "TECHNICAL", "question_text": "Design a system"}],
+                "answers": [{"sequence_number": 2, "question_id": "q2", "answer_text": "I would use microservices"}],
             }
 
         def eval_tech(state):
-            return {"evaluations": [{"score": 8, "feedback": "Good"}]}
+            return {"evaluations": [{"sequence_number": 2, "score": 8, "feedback": "Good"}]}
 
         def policy_handler(state):
             return {
@@ -258,6 +258,7 @@ class TestFullStubRun:
             resume_raw_text="Experienced Senior Python Backend Engineer.",
             jd_raw_text="Requires Senior Backend Engineer with Python and FastAPI.",
             interview_plan={"hr_question_count": 1, "technical_question_count": 1},
+            pending_answer="Experienced developer response to interview question.",
         )
         result = graph.invoke(initial_state)
 

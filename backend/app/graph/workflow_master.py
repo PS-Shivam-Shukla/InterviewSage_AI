@@ -245,29 +245,14 @@ def personalize_question_node(state: GraphState) -> dict[str, Any]:
 
 
 def evaluate_answer_node(state: GraphState) -> dict[str, Any]:
-    """Node: Evaluates candidate answer and runs real-time difficulty adaptation."""
+    """Node: Evaluates candidate answer via EvaluationAgent and runs real-time difficulty adaptation."""
     start_t = time.perf_counter()
     logger.info("LangGraph Node Started: evaluate_answer_node")
     try:
-        current_q = state.get("current_question") or {}
-        answer_text = state.get("pending_answer") or "Standard baseline response."
+        from app.agents.evaluation_agent import EvaluationAgent
 
-        is_contam, sanitized_answer = guardrails.scan_prompt_injection(answer_text)
-        eval_score = 80.0 if not is_contam else 40.0
-
-        diff = current_q.get("target_difficulty", 3)
-        adaptation = difficulty_engine.adapt_difficulty(diff, eval_score, sanitized_answer)
-
-        eval_result = {
-            "sequence_number": current_q.get("sequence_number", 1),
-            "question_text": current_q.get("question_text", ""),
-            "candidate_answer": sanitized_answer,
-            "score": eval_score,
-            "adaptation_reason": adaptation.adaptation_reason,
-            "next_difficulty": adaptation.next_difficulty,
-            "trigger_follow_up": adaptation.trigger_follow_up,
-            "follow_up_topic": adaptation.follow_up_topic,
-        }
+        eval_agent = EvaluationAgent()
+        eval_dict = eval_agent(state)
 
         duration_ms = int((time.perf_counter() - start_t) * 1000)
         GRAPH_EXECUTION_SECONDS.labels(node_name="evaluate_answer", status="success").observe(
@@ -279,16 +264,7 @@ def evaluate_answer_node(state: GraphState) -> dict[str, Any]:
             extra={"duration_ms": duration_ms, "workflow_stage": "ANSWER_EVALUATED"},
         )
 
-        return {
-            "evaluations": [eval_result],
-            "answers": [
-                {
-                    "sequence_number": current_q.get("sequence_number", 1),
-                    "answer_text": sanitized_answer,
-                }
-            ],
-            "workflow_stage": "ANSWER_EVALUATED",
-        }
+        return eval_dict
     except Exception as exc:
         duration_ms = int((time.perf_counter() - start_t) * 1000)
         GRAPH_EXECUTION_SECONDS.labels(node_name="evaluate_answer", status="error").observe(
@@ -320,29 +296,9 @@ def route_next_step(state: GraphState) -> str:
 
 def build_master_workflow(checkpointer: BaseCheckpointSaver | None = None) -> Any:
     """Assembles master execution graph combining DISE, AI Kernel, Checkpointer, and Observability."""
-    graph = StateGraph(InterviewState)
-
-    graph.add_node("classify_candidate", classify_candidate_node)
-    graph.add_node("generate_blueprint", generate_blueprint_node)
-    graph.add_node("personalize_question", personalize_question_node)
-    graph.add_node("evaluate_answer", evaluate_answer_node)
-
-    graph.set_entry_point("classify_candidate")
-
-    graph.add_edge("classify_candidate", "generate_blueprint")
-    graph.add_edge("generate_blueprint", "personalize_question")
-    graph.add_edge("personalize_question", "evaluate_answer")
-
-    graph.add_conditional_edges(
-        "evaluate_answer",
-        route_next_step,
-        {
-            "personalize_question": "personalize_question",
-            "end": END,
-        },
-    )
+    from app.graph.graph_builder import build_graph
 
     if checkpointer is None:
-        checkpointer = MemorySaver()
+        checkpointer = get_checkpointer()
 
-    return graph.compile(checkpointer=checkpointer)
+    return build_graph(allow_stubs=False, checkpointer=checkpointer)

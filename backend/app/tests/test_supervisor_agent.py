@@ -76,7 +76,7 @@ def test_answer_to_evaluation(supervisor):
         "current_question": {"question_text": "What is IoC?"},
     }
     next_node = supervisor.decide_next_step(state)
-    assert next_node == "evaluation_agent_tech"
+    assert next_node == "policy_node"
 
 
 # 7. Evaluation -> next question

@@ -18,10 +18,27 @@ from typing_extensions import TypedDict
 
 
 def _append(existing: list | None, new: list | None) -> list:
-    """Reducer: append new items to an existing list."""
+    """Reducer: append or update new items to an existing list, deduplicating by sequence_number/question_id/id."""
     res = list(existing) if existing is not None else []
-    if new:
-        res.extend(new)
+    if not new:
+        return res
+    for item in new:
+        if not isinstance(item, dict):
+            if item not in res:
+                res.append(item)
+            continue
+        seq = item.get("sequence_number") or item.get("question_id") or item.get("id")
+        if seq is not None:
+            for idx, existing_item in enumerate(res):
+                ex_seq = existing_item.get("sequence_number") or existing_item.get("question_id") or existing_item.get("id")
+                if ex_seq == seq:
+                    res[idx] = {**existing_item, **item}
+                    break
+            else:
+                res.append(item)
+        else:
+            if item not in res:
+                res.append(item)
     return res
 
 

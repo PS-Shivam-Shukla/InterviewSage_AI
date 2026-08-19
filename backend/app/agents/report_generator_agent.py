@@ -77,7 +77,14 @@ def _build_scorecard(
         weighted_sum += avg * weight
         total_weight += weight
 
-    overall = round(weighted_sum / total_weight, 1) if total_weight > 0 else 0.0
+    if total_weight > 0 and weighted_sum > 0:
+        overall = round(weighted_sum / total_weight, 1)
+    elif comp_scores:
+        all_flat = [s for score_list in comp_scores.values() for s in score_list]
+        overall = round(sum(all_flat) / len(all_flat), 1) if all_flat else 0.0
+    else:
+        overall = 0.0
+
     return scorecard, overall
 
 

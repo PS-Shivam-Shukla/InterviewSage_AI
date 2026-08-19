@@ -386,7 +386,7 @@ class ResumeService:
                 "resume_id": resume.id,
                 "file_name": resume.file_path,
                 "status": "COMPLETED",
-                "resume_quality_score": ai_dict.get("resume_quality_score", 85),
+                "resume_quality_score": ai_dict.get("resume_quality_score") or 85,
                 "seniority_signal": resume.seniority_signal
                 or seniority_eval.get("seniority_signal", "MID"),
                 "seniority_score": getattr(resume, "seniority_score", None)

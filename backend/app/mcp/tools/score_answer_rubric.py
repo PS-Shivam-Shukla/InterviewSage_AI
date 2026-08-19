@@ -6,12 +6,48 @@ question type, or evaluates an answer dynamically against the rubric when answer
 
 from typing import Any, Literal
 
-QuestionType = Literal["behavioral", "fundamentals", "advanced", "system_design"]
+QuestionType = Literal["behavioral", "fundamentals", "advanced", "system_design", "aptitude"]
 
 
 # ── Rubric templates ──────────────────────────────────────────────────────────
 
 _RUBRICS: dict[str, dict[str, Any]] = {
+    "aptitude": {
+        "dimensions": [
+            {
+                "name": "Correctness & Accuracy",
+                "weight": 40,
+                "description": "Mathematical, quantitative, or logical accuracy of the final solution",
+                "anchors": {
+                    1: "Factually or mathematically incorrect solution",
+                    3: "Partially correct approach with minor calculation error",
+                    5: "Flawlessly correct mathematical solution",
+                },
+            },
+            {
+                "name": "Reasoning & Approach",
+                "weight": 40,
+                "description": "Step-by-step logical derivation, calculation methodology, or analytical approach",
+                "anchors": {
+                    1: "No logical approach or random guessing",
+                    3: "Sound method with minor derivation gaps",
+                    5: "Clear, structured, and mathematically sound derivation",
+                },
+            },
+            {
+                "name": "Clarity & Structure",
+                "weight": 20,
+                "description": "Clear presentation of the quantitative answer and reasoning",
+                "anchors": {
+                    1: "Unclear or ambiguous final statement",
+                    3: "Understandable numerical response",
+                    5: "Crisp, concise, and structured presentation",
+                },
+            },
+        ],
+        "scoring_range": (1, 100),
+        "method": "weighted_average",
+    },
     "behavioral": {
         "dimensions": [
             {
@@ -249,8 +285,26 @@ def score_answer_rubric(
 ) -> dict[str, Any]:
     """
     Return the scoring rubric for a given question type and seniority level.
-    Rubric templates are consumed by EvaluationAgent for LLM structured evaluation.
+    If answer_text is provided, dynamically evaluates the answer using the authoritative EvaluationAgent.
     """
+    if answer_text is not None:
+        from app.agents.evaluation_agent import EvaluationAgent
+        # Construct the state payload expected by EvaluationAgent
+        state = {
+            "current_question": {
+                "question_text": question_text or "What is Python GIL?",
+                "competency_targeted": competency_targeted or "General",
+                "question_type": question_type or "fundamentals",
+                "difficulty": difficulty or "MEDIUM",
+            },
+            "answers": [{"answer_text": answer_text}],
+            "profile_summary": {"calibrated_seniority": seniority_level or "MID"},
+        }
+        agent = EvaluationAgent()
+        res = agent._run(state)
+        # Return the evaluated record dict
+        return res.get("evaluations", [{}])[0]
+
     normalised = (question_type or "fundamentals").lower().replace(" ", "_").replace("-", "_")
 
     aliases = {

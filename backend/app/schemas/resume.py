@@ -55,17 +55,17 @@ class ProjectItem(BaseModel):
 
 class CertificationItem(BaseModel):
     id: str
-    name: str
-    issuer: str
-    issue_date: str
+    name: str = ""
+    issuer: str = ""
+    issue_date: str | None = ""
 
 
 class ResumeAnalysisResponse(BaseModel):
     resume_id: str
     file_name: str
     status: str | None = "COMPLETED"
-    resume_quality_score: int
-    seniority_signal: str
+    resume_quality_score: int = 85
+    seniority_signal: str = "MID"
     seniority_score: int | None = 0
     experience_metrics: dict[str, int] | None = None
     seniority_breakdown: dict[str, int] | None = None

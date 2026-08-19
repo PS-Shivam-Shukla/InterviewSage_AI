@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from time import monotonic
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -27,7 +28,8 @@ from app.core.metrics import (
     MCP_TOOL_CALLS_TOTAL,
 )
 from app.core.request_context import set_request_context
-from app.graph.workflow_master import build_master_workflow, get_checkpointer
+from app.graph.graph_builder import build_graph
+from app.graph.workflow_master import get_checkpointer
 from app.models import (
     AgentLog,
     Evaluation,
@@ -50,7 +52,7 @@ from app.strategy.difficulty_engine import DifficultyEngine
 logger = get_logger(__name__)
 
 # Master LangGraph workflow instance compiled with persistent checkpointer
-master_workflow = build_master_workflow(checkpointer=get_checkpointer())
+master_workflow = build_graph(allow_stubs=False, checkpointer=get_checkpointer())
 difficulty_engine = DifficultyEngine()
 
 
@@ -1010,6 +1012,7 @@ class InterviewService:
         9. HTTP 503 on LLM failure — no silent fallback to generic questions
         """
         set_request_context(interview_id=interview_id)
+        start_t0 = monotonic()
 
         # Parse answer text
         if isinstance(answer, dict):
@@ -1023,6 +1026,13 @@ class InterviewService:
         interview_obj = self.get_interview(interview_id)
         if not interview_obj:
             raise HTTPException(status_code=404, detail=f"Interview '{interview_id}' not found.")
+
+        # Guard: PAUSED state
+        if interview_obj.status == "PAUSED":
+            raise HTTPException(
+                status_code=400,
+                detail="Interview is currently PAUSED. Resume interview to submit answers.",
+            )
 
         # Idempotency guard: already completed
         if interview_obj.status == "COMPLETED":
@@ -1045,8 +1055,8 @@ class InterviewService:
         )
         current_seq_from_count = len(existing_answered) + 1
 
-        # ── 2. Resolve actual DB question ─────────────────────────────────────
-        db_question: InterviewQuestion | None = None
+        # ── 2. Locate exact question record with strict isolation ─────────────
+        db_question = None
         question_needs_creating = False
 
         # Try by UUID (frontend sends actual DB ID now)
@@ -1077,7 +1087,11 @@ class InterviewService:
 
         # Extract question metadata (or prepare for ad-hoc creation)
         if not question_needs_creating:
-            q_text = db_question.question_text
+            q_text = (
+                question_text
+                if (question_text and (not db_question.question_text or db_question.question_text.startswith("[")))
+                else db_question.question_text
+            )
             competency = db_question.competency_targeted
             difficulty = db_question.difficulty
             round_type = db_question.round_type
@@ -1133,38 +1147,80 @@ class InterviewService:
                 # Store in 1-10 scale for the DifficultyEngine / QuestionGeneratorAgent
                 previous_evaluations.append(
                     {
+                        "question_id": item.get("sequence_number"),
                         "score": round(pct / 10) if pct > 10 else pct,
                         "competency_targeted": eval_d.get("competency_targeted", ""),
                         "question_type": eval_d.get("question_type", ""),
                     }
                 )
 
-        # ── 5. EvaluationAgent — PRIMARY LLM evaluator ───────────────────────
+        # ── 5. Run compiled production agentic graph ──────────────────────────
         MCP_TOOL_CALLS_TOTAL.labels(tool_name="evaluation_agent", status="success").inc()
 
-        eval_agent = EvaluationAgent()
-        agent_eval = eval_agent(
-            {
-                "interview_id": interview_id,
-                "current_question": {
-                    "question_text": q_text,
-                    "competency_targeted": competency,  # ← actual competency (was "System Architecture")
-                    "question_type": round_type.lower() if round_type else "fundamentals",
-                    "round_type": round_type,
-                    "difficulty": difficulty,
-                },
-                "answers": [{"answer_text": ans_str}],
-                "competency_matrix": competency_matrix,
-                "profile_summary": {"calibrated_seniority": seniority},
-                # Pass full resume/jd context so EvaluationAgent's LLM prompt is role-aware
-                "resume_data": resume_data,
-                "jd_data": jd_data,
-                "evaluations": previous_evaluations,
-            }
-        )
+        config = {"configurable": {"thread_id": interview_id}}
+
+        # Explicit immutable current question context for this specific turn
+        explicit_turn_q = {
+            "id": db_question.id if db_question else str(uuid.uuid4()),
+            "question_text": q_text,
+            "competency_targeted": competency,
+            "question_type": "aptitude" if round_type == "APTITUDE" else (round_type.lower() if round_type else "fundamentals"),
+            "round_type": round_type,
+            "difficulty": difficulty,
+            "sequence_number": current_seq,
+        }
+
+        initial_state = {
+            "interview_id": interview_id,
+            "user_id": interview_obj.user_id,
+            "resume_data": resume_data,
+            "jd_data": jd_data,
+            "competency_matrix": competency_matrix,
+            "interview_plan": {
+                "role": role_title,
+                "hr_question_count": 2,
+                "technical_question_count": 7 if is_fresher_candidate else 3,
+                "total_questions": total_questions,
+            },
+            "current_round": round_type,
+            "current_question": explicit_turn_q,
+            "questions_asked": [
+                {
+                    "id": q.id,
+                    "question_text": q.question_text,
+                    "competency_targeted": q.competency_targeted,
+                    "round_type": q.round_type,
+                    "difficulty": q.difficulty,
+                    "sequence_number": q.sequence_number,
+                }
+                for q in all_configured_questions
+                if q.sequence_number <= current_seq
+            ],
+            "answers": [
+                {
+                    "sequence_number": item.get("sequence_number", 1),
+                    "answer_text": item.get("candidate_answer", ""),
+                }
+                for item in existing_answered
+            ] + [{
+                "question_id": db_question.id if db_question else str(uuid.uuid4()),
+                "sequence_number": current_seq,
+                "answer_text": ans_str,
+                "round_type": round_type,
+                "competency_targeted": competency,
+            }],
+            "evaluations": previous_evaluations,
+            "workflow_stage": "WAITING_FOR_ANSWER",
+            "pending_answer": ans_str,
+            "policy_iteration_count": 0,
+            "policy_decisions": [],
+            "observations": [],
+        }
+
+        output_state = master_workflow.invoke(initial_state, config=config)
 
         # ── 6. Extract LLM evaluation — CORRECT KEY: "evaluations" list ──────
-        evaluations_list = agent_eval.get("evaluations", [])
+        evaluations_list = output_state.get("evaluations", [])
         if not evaluations_list:
             logger.error(f"EvaluationAgent returned no evaluations for {interview_id}")
             raise HTTPException(
@@ -1172,7 +1228,7 @@ class InterviewService:
                 detail="LLM evaluation failed — EvaluationAgent returned no result.",
             )
 
-        llm_eval = evaluations_list[0]
+        llm_eval = evaluations_list[-1]
 
         # Detect hard failure (_on_failure: score=0 + needs_human_review=True)
         if llm_eval.get("needs_human_review") and int(llm_eval.get("score", 0)) == 0:
@@ -1182,11 +1238,27 @@ class InterviewService:
                 detail="LLM evaluation failed. Ollama service may be unavailable.",
             )
 
+        # ── Safety Guard: Ensure evaluation context matches submitted question ───
+        eval_q_seq = llm_eval.get("question_id")
+        if eval_q_seq is not None and eval_q_seq != current_seq:
+            logger.error(
+                f"QUESTION_CONTEXT_MISMATCH: Evaluation returned for seq={eval_q_seq}, "
+                f"expected submitted question seq={current_seq}"
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=f"QUESTION_CONTEXT_MISMATCH: Evaluation generated for sequence {eval_q_seq} instead of submitted question {current_seq}.",
+            )
+
         # ── 7. Convert 1-10 → 0-100 ONCE at service boundary ─────────────────
         raw_val = int(llm_eval.get("score", 0))
         if raw_val == 0:
             llm_score_1_10 = 0
             score_pct = 0
+        elif raw_val > 10:
+            # Already on 0-100 scale (e.g. from conftest test double)
+            score_pct = raw_val
+            llm_score_1_10 = int(round(raw_val / 10))
         else:
             llm_score_1_10 = max(1, min(10, raw_val))
             score_pct = llm_score_1_10 * 10  # Single authoritative conversion
@@ -1199,7 +1271,7 @@ class InterviewService:
             if isinstance(sub, (int, float))
         }
 
-        # Build complete evaluation result with unambiguous canonical display score
+        # Build complete evaluation result with round-specific scorecards
         feedback_text = llm_eval.get("feedback", "")
         ideal_summary = llm_eval.get("ideal_answer_summary", "")
         display_str = f"{llm_score_1_10}/10 ({score_pct}%)"
@@ -1220,15 +1292,17 @@ class InterviewService:
         )
 
         eval_result = {
+            "question_id": current_seq,
             "score": score_pct,
             "score_1_10": llm_score_1_10,
             "display_score": display_str,
-            "technical_score": score_pct,
-            "communication_score": comm_val,
-            "confidence_score": conf_val,
-            "correctness": rubric_pct.get("Correctness", score_pct),
-            "relevance": rubric_pct.get("Completeness", score_pct),
-            "technical_quality": score_pct,
+            "scorecard_type": round_type,
+            "technical_score": score_pct if round_type == "TECHNICAL" else None,
+            "communication_score": comm_val if comm_val is not None else score_pct,
+            "confidence_score": conf_val if conf_val is not None else score_pct,
+            "correctness": rubric_pct.get("Correctness & Accuracy", rubric_pct.get("Correctness", score_pct)),
+            "relevance": rubric_pct.get("Reasoning & Approach", rubric_pct.get("Completeness", score_pct)),
+            "technical_quality": score_pct if round_type == "TECHNICAL" else None,
             "reasoning": feedback_text,
             "feedback": feedback_text,
             "ideal_answer_summary": ideal_summary,
@@ -1328,7 +1402,7 @@ class InterviewService:
                     }
                 ),
                 output_snapshot=json.dumps(eval_result),
-                latency_ms=0,
+                latency_ms=int((monotonic() - start_t0) * 1000),
                 retry_count=0,
                 prompt_version="1.0",
                 created_at=datetime.now(UTC),
@@ -1463,15 +1537,62 @@ class InterviewService:
                 status_code=500, detail=f"Failed to process answer: {str(exc)[:120]}"
             )
 
-        # Generate report on completion
+        # Save or queue report on completion
         if is_completed:
             try:
-                from app.services.report_service import ReportService
+                final_rep = output_state.get("final_report")
+                ver_rep = output_state.get("verification_report") or {}
+                needs_review = output_state.get("human_review_required", False) or not ver_rep.get("verified", True)
 
-                report_service = ReportService(self.db)
-                report_service.generate_report(interview_id)
+                if needs_review:
+                    # Verification failed: flag in ReviewQueue and do NOT publish
+                    from app.review.service import ReviewService
+
+                    ReviewService(self.db).flag_for_review(
+                        interview_id=interview_id,
+                        confidence=0.0,
+                        reason="Report verification failed: executive summary contains unsupported claims.",
+                    )
+                    self.db.commit()
+                    logger.warning(f"Report verification failed for {interview_id}. Flagged for review.")
+                else:
+                    # Verification succeeded: publish report
+                    if final_rep:
+                        scorecard = [
+                            c.model_dump() if hasattr(c, "model_dump") else c
+                            for c in final_rep.get("competency_scorecard", [])
+                        ]
+                        imp_plan = final_rep.get("improvement_plan", [])
+                        transcript = [
+                            t.model_dump() if hasattr(t, "model_dump") else t
+                            for t in final_rep.get("transcript_snapshot", [])
+                        ]
+
+                        from app.models.interview import InterviewReport
+
+                        report_obj = InterviewReport(
+                            interview_id=interview_id,
+                            competency_scorecard=json.dumps(scorecard),
+                            improvement_plan=json.dumps(imp_plan),
+                            transcript_snapshot=json.dumps(transcript),
+                            generated_at=datetime.now(UTC),
+                        )
+                        # Remove existing if any
+                        existing_rep = (
+                            self.db.query(InterviewReport)
+                            .filter(InterviewReport.interview_id == interview_id)
+                            .first()
+                        )
+                        if existing_rep:
+                            self.db.delete(existing_rep)
+                            self.db.flush()
+                        self.db.add(report_obj)
+                        self.db.commit()
+                        logger.info(f"Verified report published successfully for {interview_id}.")
             except Exception as exc:
-                logger.warning(f"Report generation warning for {interview_id}: {exc}")
+                logger.error(
+                    f"Failed to handle completed report for {interview_id}: {exc}", exc_info=True
+                )
 
         status_str = "COMPLETED" if is_completed else "IN_PROGRESS"
         return {

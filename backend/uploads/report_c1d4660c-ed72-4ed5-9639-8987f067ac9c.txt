@@ -1,0 +1,24 @@
+============================================================
+INTERVIEWSAGE AI — INTERVIEW REPORT
+============================================================
+Interview ID : c1d4660c-ed72-4ed5-9639-8987f067ac9c
+Overall Score: 8.4 / 10
+
+─── Competency Scorecard ───────────────────────────────
+  Python                         6.7/10
+  Backend development            5.0/10
+  Django                         55.0/10
+  Flask                          0.0/10
+  FastAPI                        0.0/10
+  ORM                            0.0/10
+  RESTful APIs                   0.0/10
+  SQL                            0.0/10
+  C, C++, Java, Python, HTML, SQL, JavaScript 0.0/10
+  Node.js, React.js, Express.js, Django, Tailwind CSS, FastAPI, Big Query, Pandas 0.0/10
+  Git, GitHub, PostMan, Cloudinary, Multer, JWT authentication, Rest APIs 0.0/10
+  SQL, MongoDB, SQLite           0.0/10
+
+─── Improvement Plan ───────────────────────────────────
+  1. [Leadership & Team Collaboration] Study leadership and teamwork principles in English and practice scenarios in a collaborative environment.
+
+============================================================

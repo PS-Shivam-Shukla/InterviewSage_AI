@@ -1,0 +1,17 @@
+============================================================
+INTERVIEWSAGE AI — INTERVIEW REPORT
+============================================================
+Interview ID : 4b92bdd2-c240-4997-9120-16917818ea0c
+Overall Score: 13.2 / 10
+
+─── Competency Scorecard ───────────────────────────────
+  Python                         0.0/10
+  FastAPI                        40.0/10
+  Kubernetes                     0.0/10
+
+─── Improvement Plan ───────────────────────────────────
+  1. [FastAPI] Study background tasks and dependency injection in FastAPI through the official documentation and practice problems on LeetCode focusing on real-world scenarios and edge cases.
+  2. [Python] Study Python best practices and advanced topics such as decorators, context managers, and metaclasses through Python official documentation and practice problems focusing on code clarity and efficiency.
+  3. [Kubernetes] Study Kubernetes advanced concepts such as StatefulSets, DaemonSets, and PersistentVolumeClaims through official Kubernetes documentation and practice problems focusing on real-world use cases and best practices.
+
+============================================================

@@ -125,12 +125,21 @@ class LLMClient:
         self._temperature = temperature if temperature is not None else settings.llm_temperature
         self._max_tokens = max_tokens or settings.llm_max_tokens
 
-        self._primary: BaseChatModel = _build_chat_model(
-            self._model_name, self._temperature, self._max_tokens
-        )
-        self._fallback: BaseChatModel = _build_chat_model(
-            settings.llm_fallback_model, self._temperature, self._max_tokens
-        )
+        try:
+            self._primary: BaseChatModel | None = _build_chat_model(
+                self._model_name, self._temperature, self._max_tokens
+            )
+        except (RuntimeError, ImportError) as exc:
+            logger.warning(f"Primary chat model build deferred: {exc}")
+            self._primary = None
+
+        try:
+            self._fallback: BaseChatModel | None = _build_chat_model(
+                settings.llm_fallback_model, self._temperature, self._max_tokens
+            )
+        except (RuntimeError, ImportError):
+            self._fallback = None
+
         self._consecutive_failures = 0
 
     # ── Core call ─────────────────────────────────────────────
@@ -141,6 +150,8 @@ class LLMClient:
         Falls back to the secondary model after 2 consecutive failures.
         """
         model = self._fallback if self._consecutive_failures >= 2 else self._primary
+        if model is None:
+            raise RuntimeError("No LLM provider available. Please configure an LLM provider or check package dependencies.")
         t0 = time.monotonic()
         try:
             response = model.invoke(messages)
@@ -166,6 +177,8 @@ class LLMClient:
         Uses LangChain's .with_structured_output() binding.
         """
         model = self._fallback if self._consecutive_failures >= 2 else self._primary
+        if model is None:
+            raise RuntimeError("No LLM provider available. Please configure an LLM provider or check package dependencies.")
         t0 = time.monotonic()
         try:
             if settings.llm_provider.lower() == "ollama":

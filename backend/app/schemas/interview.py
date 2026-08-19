@@ -65,5 +65,7 @@ class InterviewAnswerResponse(BaseModel):
     status: str | None = "IN_PROGRESS"
     evaluation: dict[str, Any] | None = None
     next_question: dict[str, Any] | None = None
+    report_id: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
